@@ -1,0 +1,38 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body>Love it! Each bubble is its <b>own</b> HTML document, so styles never leak between messages 🙌
+</body></html>
+
+== layout
+html 0 0 360 54.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 54.6
+    b 0 0 0 0
+
+== paint
+root 360x54.6 items=16
+  text bounds=(-8,-7,48,32) pos=(0,1,32,16) color=#000000ff text="Love" font=f1 glyphs=4 advance=32
+  text bounds=(32,-7,40,32) pos=(40,1,24,16) color=#000000ff text="it!" font=f1 glyphs=3 advance=24
+  text bounds=(64,-7,48,32) pos=(72,1,32,16) color=#000000ff text="Each" font=f1 glyphs=4 advance=32
+  text bounds=(104,-7,64,32) pos=(112,1,48,16) color=#000000ff text="bubble" font=f1 glyphs=6 advance=48
+  text bounds=(160,-7,32,32) pos=(168,1,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(184,-7,40,32) pos=(192,1,24,16) color=#000000ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(216,-7,40,32) pos=(224,1,24,16) color=#000000ff text="own" font=f2 glyphs=3 advance=24
+  text bounds=(248,-7,48,32) pos=(256,1,32,16) color=#000000ff text="HTML" font=f1 glyphs=4 advance=32
+  text bounds=(-8,11,88,32) pos=(0,19,72,16) color=#000000ff text="document," font=f1 glyphs=9 advance=72
+  text bounds=(72,11,32,32) pos=(80,19,16,16) color=#000000ff text="so" font=f1 glyphs=2 advance=16
+  text bounds=(96,11,64,32) pos=(104,19,48,16) color=#000000ff text="styles" font=f1 glyphs=6 advance=48
+  text bounds=(152,11,56,32) pos=(160,19,40,16) color=#000000ff text="never" font=f1 glyphs=5 advance=40
+  text bounds=(200,11,48,32) pos=(208,19,32,16) color=#000000ff text="leak" font=f1 glyphs=4 advance=32
+  text bounds=(240,11,72,32) pos=(248,19,56,16) color=#000000ff text="between" font=f1 glyphs=7 advance=56
+  text bounds=(-8,29,80,32) pos=(0,37,64,16) color=#000000ff text="messages" font=f1 glyphs=8 advance=64
+  text bounds=(64,29,48,32) pos=(72,37,32,16) color=#000000ff text="🙌" font=f1 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

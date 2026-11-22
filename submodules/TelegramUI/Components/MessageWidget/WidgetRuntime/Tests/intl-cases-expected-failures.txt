@@ -1,0 +1,4 @@
+# widget-sandbox v0.1.1's Intl cases (fixtures/intl-cases.json) that answer differently from V8 on iOS, end to end
+# through widget-sandbox's iOS glue (WidgetRuntimeIOS/Tests/WRIntlCasesTests.swift), one per line:
+# "ios <request as JSON> ## <reason>". Never a tolerance: each line is one case and why. The list only shrinks: a case
+# that answers as V8 must be removed. (The host's IntlCasesTests answers from the fixture itself and has no drift.)

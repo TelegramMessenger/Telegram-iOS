@@ -1,0 +1,24 @@
+<!-- Resize anchor (widget-sandbox v0.1.3): 'top', set at the start. From its first pointerdown it grows and shrinks by
+     120 px every 50 ms, 60 times, so a swipe that starts on it flings the chat while its height changes (its timer runs
+     only while it is on screen). Its log is the number of changes so far. -->
+<style>
+  body { margin: 0; }
+  #box { height: 300px; background: #f8c; }
+  #more { display: none; height: 120px; background: #fc8; }
+</style>
+<div id="box">toggles, top stays</div>
+<div id="more"></div>
+<script>
+  TelegramWidget.setResizeAnchor('top');
+  const more = document.getElementById('more');
+  let toggles = 0;
+  document.addEventListener('pointerdown', () => {
+    const timer = setInterval(() => {
+      more.style.display = more.style.display === 'block' ? 'none' : 'block';
+      document.documentElement.dataset.log = String(++toggles);
+      if (toggles >= 60) {
+        clearInterval(timer);
+      }
+    }, 50);
+  }, { once: true });
+</script>

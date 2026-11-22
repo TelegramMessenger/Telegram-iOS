@@ -1,0 +1,46 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div id="stage"><div class="ball" id="b1" style="transform: translate(151.6px,120.3px);"></div><div class="ball" id="b2" style="background: #f59e0b; transform: translate(87.9px,41.7px);"></div></div>
+<div id="info"><span id="frames">59</span> frames · <button id="stop">stop</button></div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 222.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 198.8
+    div 12 12 336 160
+      div 12 12 28 28
+      div 12 12 28 28
+    div 12 178 336 32.8
+      span 12 186 32 16.2
+      button 146 186 32 16.8
+
+== paint
+root 360x222.8 items=13
+  solid-fill bounds=(0,0,360,223) layer=(border=(0,0,360,223),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,223),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(20,178,32,32) pos=(28,186,16,16) color=#666666ff text="59" font=f1 glyphs=2 advance=16
+  text bounds=(44,178,64,32) pos=(52,186,48,16) color=#666666ff text="frames" font=f2 glyphs=6 advance=48
+  text bounds=(100,178,32,32) pos=(108,186,16,16) color=#666666ff text="·" font=f2 glyphs=2 advance=16
+  solid-fill bounds=(132,178,60,33) layer=(border=(132,178,60,33),radius=(8,8,8,8,8,8,8,8),clip=(132,178,60,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(138,178,48,32) pos=(146,186,32,16) color=#666666ff text="stop" font=f3 glyphs=4 advance=32
+  linear-gradient bounds=(12,12,336,160) layer=(border=(12,12,336,160),radius=(10,10,10,10,10,10,10,10),clip=(12,12,336,160),origin=(12,12,336,160),attachment=0,repeat=0,root=0) points=((0,#eef2ffff,-),(1,#e0e7ffff,-)) space=0 hue=0 start=(12,12) end=(12,172)
+  set-clip bounds=(12,12,336,160) pos=(12,12,336,160) radius=(10,10,10,10,10,10,10,10)
+  group opacity=1 matrix=(1,0,0,1,151.6,120.3) backface=0 bounds=(12,12,28,28) exact=0
+    box-shadow bounds=(2,2,48,48) box=(12,12,28,28) radius=(14,14,14,14,14,14,14,14) shadow=(0,2,6,0,#0000004d,0)
+    solid-fill bounds=(12,12,28,28) layer=(border=(12,12,28,28),radius=(14,14,14,14,14,14,14,14),clip=(12,12,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  group opacity=1 matrix=(1,0,0,1,87.9,41.7) backface=0 bounds=(12,12,28,28) exact=0
+    box-shadow bounds=(2,2,48,48) box=(12,12,28,28) radius=(14,14,14,14,14,14,14,14) shadow=(0,2,6,0,#0000004d,0)
+    solid-fill bounds=(12,12,28,28) layer=(border=(12,12,28,28),radius=(14,14,14,14,14,14,14,14),clip=(12,12,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

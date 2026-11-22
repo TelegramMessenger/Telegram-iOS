@@ -1,0 +1,231 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad eg" id="w">
+  <div class="row between"><span><b>Easing gallery</b><span class="tab on" data-action="tab" data-value="race">Race</span><span class="tab" data-action="tab" data-value="curve">Curve</span></span><button data-action="play">↻ Replay</button></div>
+  <div id="race" style="margin-top: 8px">
+    <div id="rows"><div class="r" data-action="pick" data-value="linear"><span class="n">linear</span><div class="track"><div class="dot" style="background-color: #8e8e93; transition: transform 1500ms linear(0.000,0.016,0.031,0.047,0.063,0.078,0.094,0.109,0.125,0.141,0.156,0.172,0.188,0.203,0.219,0.234,0.250,0.266,0.281,0.297,0.313,0.328,0.344,0.359,0.375,0.391,0.406,0.422,0.438,0.453,0.469,0.484,0.500,0.516,0.531,0.547,0.563,0.578,0.594,0.609,0.625,0.641,0.656,0.672,0.688,0.703,0.719,0.734,0.750,0.766,0.781,0.797,0.813,0.828,0.844,0.859,0.875,0.891,0.906,0.922,0.938,0.953,0.969,0.984,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="inQuad"><span class="n">inQuad</span><div class="track"><div class="dot" style="background-color: #ff9500; transition: transform 1500ms linear(0.000,0.000,0.001,0.002,0.004,0.006,0.009,0.012,0.016,0.020,0.024,0.030,0.035,0.041,0.048,0.055,0.063,0.071,0.079,0.088,0.098,0.108,0.118,0.129,0.141,0.153,0.165,0.178,0.191,0.205,0.220,0.235,0.250,0.266,0.282,0.299,0.316,0.334,0.353,0.371,0.391,0.410,0.431,0.451,0.473,0.494,0.517,0.539,0.563,0.586,0.610,0.635,0.660,0.686,0.712,0.739,0.766,0.793,0.821,0.850,0.879,0.908,0.938,0.969,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="outQuad"><span class="n">outQuad</span><div class="track"><div class="dot" style="background-color: #ffcc00; transition: transform 1500ms linear(0.000,0.031,0.062,0.092,0.121,0.150,0.179,0.207,0.234,0.261,0.288,0.314,0.340,0.365,0.390,0.414,0.438,0.461,0.483,0.506,0.527,0.549,0.569,0.590,0.609,0.629,0.647,0.666,0.684,0.701,0.718,0.734,0.750,0.765,0.780,0.795,0.809,0.822,0.835,0.847,0.859,0.871,0.882,0.892,0.902,0.912,0.921,0.929,0.938,0.945,0.952,0.959,0.965,0.970,0.976,0.980,0.984,0.988,0.991,0.994,0.996,0.998,0.999,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="inOutQuad"><span class="n">inOutQuad</span><div class="track"><div class="dot" style="background-color: #ff6b22; transition: transform 1500ms linear(0.000,0.000,0.002,0.004,0.008,0.012,0.018,0.024,0.031,0.040,0.049,0.059,0.070,0.083,0.096,0.110,0.125,0.141,0.158,0.176,0.195,0.215,0.236,0.258,0.281,0.305,0.330,0.356,0.383,0.411,0.439,0.469,0.500,0.531,0.561,0.589,0.617,0.644,0.670,0.695,0.719,0.742,0.764,0.785,0.805,0.824,0.842,0.859,0.875,0.890,0.904,0.917,0.930,0.941,0.951,0.960,0.969,0.976,0.982,0.988,0.992,0.996,0.998,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="outCubic"><span class="n">outCubic</span><div class="track"><div class="dot" style="background-color: #34c759; transition: transform 1500ms linear(0.000,0.046,0.091,0.134,0.176,0.217,0.256,0.294,0.330,0.365,0.399,0.432,0.464,0.494,0.523,0.551,0.578,0.604,0.629,0.652,0.675,0.697,0.717,0.737,0.756,0.774,0.791,0.807,0.822,0.836,0.850,0.863,0.875,0.886,0.897,0.907,0.916,0.925,0.933,0.940,0.947,0.954,0.959,0.965,0.969,0.974,0.978,0.981,0.984,0.987,0.990,0.992,0.993,0.995,0.996,0.997,0.998,0.999,0.999,1.000,1.000,1.000,1.000,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="inOutCubic"><span class="n">inOutCubic</span><div class="track"><div class="dot" style="background-color: #30b0c7; transition: transform 1500ms linear(0.000,0.000,0.000,0.000,0.001,0.002,0.003,0.005,0.008,0.011,0.015,0.020,0.026,0.034,0.042,0.051,0.063,0.075,0.089,0.105,0.122,0.141,0.162,0.186,0.211,0.238,0.268,0.300,0.335,0.372,0.412,0.455,0.500,0.545,0.588,0.628,0.665,0.700,0.732,0.762,0.789,0.814,0.838,0.859,0.878,0.895,0.911,0.925,0.938,0.949,0.958,0.966,0.974,0.980,0.985,0.989,0.992,0.995,0.997,0.998,0.999,1.000,1.000,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="outQuint"><span class="n">outQuint</span><div class="track"><div class="dot" style="background-color: #00c7be; transition: transform 1500ms linear(0.000,0.076,0.147,0.213,0.276,0.334,0.389,0.440,0.487,0.531,0.572,0.611,0.646,0.679,0.709,0.737,0.763,0.786,0.808,0.828,0.846,0.863,0.878,0.892,0.905,0.916,0.926,0.935,0.944,0.951,0.958,0.964,0.969,0.973,0.977,0.981,0.984,0.987,0.989,0.991,0.993,0.994,0.995,0.996,0.997,0.998,0.998,0.999,0.999,0.999,0.999,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="outExpo"><span class="n">outExpo</span><div class="track"><div class="dot" style="background-color: #32ade6; transition: transform 1500ms linear(0.000,0.103,0.195,0.277,0.352,0.418,0.478,0.531,0.580,0.623,0.661,0.696,0.727,0.755,0.780,0.803,0.823,0.841,0.858,0.872,0.885,0.897,0.908,0.917,0.926,0.933,0.940,0.946,0.952,0.957,0.961,0.965,0.969,0.972,0.975,0.977,0.980,0.982,0.984,0.985,0.987,0.988,0.989,0.991,0.991,0.992,0.993,0.994,0.994,0.995,0.996,0.996,0.996,0.997,0.997,0.997,0.998,0.998,0.998,0.998,0.998,0.999,0.999,0.999,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="inOutSine"><span class="n">inOutSine</span><div class="track"><div class="dot" style="background-color: #64d2ff; transition: transform 1500ms linear(0.000,0.001,0.002,0.005,0.010,0.015,0.022,0.029,0.038,0.048,0.059,0.071,0.084,0.098,0.113,0.130,0.146,0.164,0.183,0.202,0.222,0.243,0.264,0.286,0.309,0.332,0.355,0.379,0.402,0.427,0.451,0.475,0.500,0.525,0.549,0.573,0.598,0.621,0.645,0.668,0.691,0.714,0.736,0.757,0.778,0.798,0.817,0.836,0.854,0.870,0.887,0.902,0.916,0.929,0.941,0.952,0.962,0.971,0.978,0.985,0.990,0.995,0.998,0.999,1.000); transform: translateX(190px);"></div></div></div><div class="r sel" data-action="pick" data-value="outBack"><span class="n" style="color: #007aff;">outBack</span><div class="track"><div class="dot" style="background-color: #007aff; transition: transform 1500ms linear(0.000,0.072,0.141,0.207,0.269,0.330,0.387,0.441,0.493,0.542,0.589,0.633,0.674,0.713,0.750,0.785,0.817,0.848,0.876,0.902,0.926,0.949,0.969,0.988,1.005,1.021,1.034,1.047,1.058,1.067,1.075,1.082,1.088,1.092,1.096,1.098,1.099,1.100,1.100,1.099,1.097,1.094,1.091,1.088,1.084,1.079,1.074,1.069,1.064,1.059,1.053,1.048,1.042,1.037,1.031,1.026,1.021,1.017,1.013,1.009,1.006,1.003,1.002,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="inOutBack"><span class="n">inOutBack</span><div class="track"><div class="dot" style="background-color: #5e5ce6; transition: transform 1500ms linear(0.000,-0.001,-0.005,-0.010,-0.017,-0.025,-0.034,-0.043,-0.053,-0.063,-0.072,-0.080,-0.088,-0.094,-0.098,-0.100,-0.100,-0.097,-0.091,-0.081,-0.068,-0.051,-0.029,-0.003,0.028,0.065,0.108,0.156,0.211,0.272,0.341,0.417,0.500,0.583,0.659,0.728,0.789,0.844,0.892,0.935,0.972,1.003,1.029,1.051,1.068,1.081,1.091,1.097,1.100,1.100,1.098,1.094,1.088,1.080,1.072,1.063,1.053,1.043,1.034,1.025,1.017,1.010,1.005,1.001,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="outElastic"><span class="n">outElastic</span><div class="track"><div class="dot" style="background-color: #af52de; transition: transform 1500ms linear(0.000,0.150,0.361,0.599,0.832,1.038,1.200,1.309,1.364,1.370,1.336,1.272,1.193,1.108,1.029,0.962,0.912,0.881,0.868,0.873,0.889,0.914,0.944,0.973,1.000,1.021,1.036,1.045,1.047,1.043,1.036,1.026,1.016,1.005,0.997,0.990,0.986,0.984,0.984,0.986,0.989,0.992,0.996,0.999,1.002,1.004,1.005,1.006,1.006,1.005,1.004,1.002,1.001,1.000,0.999,0.998,0.998,0.998,0.998,0.998,0.999,0.999,1.000,1.000,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="outBounce"><span class="n">outBounce</span><div class="track"><div class="dot" style="background-color: #ff2d55; transition: transform 1500ms linear(0.000,0.002,0.007,0.017,0.030,0.046,0.066,0.090,0.118,0.150,0.185,0.223,0.266,0.312,0.362,0.415,0.473,0.534,0.598,0.667,0.739,0.814,0.894,0.977,0.970,0.931,0.897,0.865,0.838,0.814,0.794,0.778,0.766,0.757,0.752,0.750,0.752,0.758,0.768,0.781,0.798,0.818,0.843,0.871,0.903,0.938,0.977,0.991,0.973,0.958,0.948,0.941,0.938,0.938,0.942,0.950,0.962,0.977,0.996,0.992,0.987,0.984,0.986,0.991,1.000); transform: translateX(190px);"></div></div></div><div class="r" data-action="pick" data-value="spring"><span class="n">spring</span><div class="track"><div class="dot" style="background-color: #ff6482; transition: transform 1500ms linear(0.000,0.113,0.232,0.350,0.465,0.573,0.674,0.764,0.844,0.913,0.971,1.019,1.056,1.085,1.105,1.118,1.125,1.127,1.125,1.119,1.111,1.101,1.089,1.078,1.066,1.055,1.044,1.034,1.025,1.017,1.010,1.004,0.999,0.995,0.992,0.990,0.988,0.988,0.987,0.988,0.988,0.989,0.990,0.991,0.992,0.993,0.994,0.995,0.997,0.997,0.998,0.999,1.000,1.000,1.000,1.001,1.001,1.001,1.001,1.001,1.001,1.001,1.001,1.001,1.000); transform: translateX(190px);"></div></div></div></div>
+    <div class="tiny muted" style="margin-top: 6px">Tap a curve to plot it against linear</div>
+  </div>
+  <div id="curve" hidden="">
+    <div class="graph">
+      <svg width="372" height="180" viewBox="0 0 372 180" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0.5" y="0.5" width="371" height="179" rx="10" fill="#8e8e93" fill-opacity="0.07" stroke="#8e8e93" stroke-opacity="0.25"></rect>
+        <line x1="8" y1="150" x2="364" y2="150" stroke="#8e8e93" stroke-opacity="0.5" stroke-dasharray="3 4"></line>
+        <line x1="8" y1="50" x2="364" y2="50" stroke="#8e8e93" stroke-opacity="0.5" stroke-dasharray="3 4"></line>
+        <line x1="8" y1="150" x2="364" y2="50" stroke="#8e8e93" stroke-opacity="0.55" stroke-width="1.5"></line>
+        <path id="cpath" d="M8.0 150.0 L13.6 142.8 L19.1 135.9 L24.7 129.3 L30.3 123.1 L35.8 117.0 L41.4 111.3 L46.9 105.9 L52.5 100.7 L58.1 95.8 L63.6 91.1 L69.2 86.7 L74.8 82.6 L80.3 78.7 L85.9 75.0 L91.4 71.5 L97.0 68.3 L102.6 65.2 L108.1 62.4 L113.7 59.8 L119.3 57.4 L124.8 55.1 L130.4 53.1 L135.9 51.2 L141.5 49.5 L147.1 47.9 L152.6 46.6 L158.2 45.3 L163.8 44.2 L169.3 43.3 L174.9 42.5 L180.4 41.8 L186.0 41.2 L191.6 40.8 L197.1 40.4 L202.7 40.2 L208.3 40.1 L213.8 40.0 L219.4 40.0 L224.9 40.1 L230.5 40.3 L236.1 40.6 L241.6 40.9 L247.2 41.2 L252.8 41.6 L258.3 42.1 L263.9 42.6 L269.4 43.1 L275.0 43.6 L280.6 44.1 L286.1 44.7 L291.7 45.2 L297.3 45.8 L302.8 46.3 L308.4 46.9 L313.9 47.4 L319.5 47.9 L325.1 48.3 L330.6 48.7 L336.2 49.1 L341.8 49.4 L347.3 49.7 L352.9 49.8 L358.4 50.0 L364.0 50.0" fill="none" stroke="#007aff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path>
+      </svg>
+      <div class="cursor" id="cursor" style="transition: none; transform: translateX(364.0px);"></div>
+      <div class="gdot" id="gdot" style="background-color: #007aff; transition: none; left: 364.0px; top: 50.0px;"></div>
+    </div>
+    <div class="row between" style="margin-top: 6px"><span class="small"><b id="selname" style="color: #007aff;">outBack</b> <span class="muted" id="note">Overshoots by about 10%, then settles.</span></span></div>
+    <div class="lane"><div class="box" id="box1" style="background-color: #007aff; transition: none; transform: translateX(240.0px);"></div><span class="ln" id="ln1">outBack</span></div>
+    <div class="lane"><div class="box" id="box2" style="background-color: #8e8e93; transition: none; transform: translateX(240.0px);"></div><span class="ln">linear</span></div>
+    <div class="row between" style="margin-top: 6px"><span class="tiny muted" id="tv" style="font-family: ui-monospace, monospace">t 1.00 → 1.00</span><span class="durs" id="durs"><span data-action="dur" data-value="600">0.6 s</span><span data-action="dur" data-value="1200" class="on">1.2 s</span><span data-action="dur" data-value="2400">2.4 s</span></span></div>
+    <div class="chips" id="chips"><span data-action="pick" data-value="linear">linear</span><span data-action="pick" data-value="inQuad">inQuad</span><span data-action="pick" data-value="outQuad">outQuad</span><span data-action="pick" data-value="inOutQuad">inOutQuad</span><span data-action="pick" data-value="outCubic">outCubic</span><span data-action="pick" data-value="inOutCubic">inOutCubic</span><span data-action="pick" data-value="outQuint">outQuint</span><span data-action="pick" data-value="outExpo">outExpo</span><span data-action="pick" data-value="inOutSine">inOutSine</span><span data-action="pick" data-value="outBack" style="background-color: #007aff; color: #ffffff;">outBack</span><span data-action="pick" data-value="inOutBack">inOutBack</span><span data-action="pick" data-value="outElastic">outElastic</span><span data-action="pick" data-value="outBounce">outBounce</span><span data-action="pick" data-value="spring">spring</span></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 391.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 391.9
+    div 15 13 330 365.9
+      div 15 13 330 43.6
+        span 15 15.2 225.893 39.2
+          b 15 15.2 0 0
+          span 140 17.2 32 15.6
+          span 28 36.8 40 15.6
+        button 253.893 18 78.1071 33.6
+      div 15 64.6 330 314.3
+        div 15 64.6 330 294
+          div 15 64.6 330 21
+            span 21 67.95 84 14.3
+            div 109 74.1 204 2
+              div 111 69.1 12 12
+          div 15 85.6 330 21
+            span 21 88.95 84 14.3
+            div 109 95.1 204 2
+              div 111 90.1 12 12
+          div 15 106.6 330 21
+            span 21 109.95 84 14.3
+            div 109 116.1 204 2
+              div 111 111.1 12 12
+          div 15 127.6 330 21
+            span 21 130.95 84 14.3
+            div 109 137.1 204 2
+              div 111 132.1 12 12
+          div 15 148.6 330 21
+            span 21 151.95 84 14.3
+            div 109 158.1 204 2
+              div 111 153.1 12 12
+          div 15 169.6 330 21
+            span 21 172.95 84 14.3
+            div 109 179.1 204 2
+              div 111 174.1 12 12
+          div 15 190.6 330 21
+            span 21 193.95 84 14.3
+            div 109 200.1 204 2
+              div 111 195.1 12 12
+          div 15 211.6 330 21
+            span 21 214.95 84 14.3
+            div 109 221.1 204 2
+              div 111 216.1 12 12
+          div 15 232.6 330 21
+            span 21 235.95 84 14.3
+            div 109 242.1 204 2
+              div 111 237.1 12 12
+          div 15 253.6 330 21
+            span 21 256.95 84 14.3
+            div 109 263.1 204 2
+              div 109 256.1 16 16
+          div 15 274.6 330 21
+            span 21 277.95 84 14.3
+            div 109 284.1 204 2
+              div 111 279.1 12 12
+          div 15 295.6 330 21
+            span 21 298.95 84 14.3
+            div 109 305.1 204 2
+              div 111 300.1 12 12
+          div 15 316.6 330 21
+            span 21 319.95 84 14.3
+            div 109 326.1 204 2
+              div 111 321.1 12 12
+          div 15 337.6 330 21
+            span 21 340.95 84 14.3
+            div 109 347.1 204 2
+              div 111 342.1 12 12
+        div 15 364.6 330 14.3
+      div 0 0 0 0
+        div 0 0 0 0
+          svg 0 0 0 0
+            rect 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+            path 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+            b 0 0 0 0
+            span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+
+== paint
+root 360x391.9 items=61
+  solid-fill bounds=(0,0,360,392) layer=(border=(0,0,360,392),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,392),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,392) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,392) root=0
+  solid-fill bounds=(241,13,104,44) layer=(border=(241,13,104,44),radius=(8,8,8,8,8,8,8,8),clip=(241,13,104,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  solid-fill bounds=(15,254,330,21) layer=(border=(15,254,330,21),radius=(6,6,6,6,6,6,6,6),clip=(15,254,330,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff1a
+  text bounds=(7,9,64,32) pos=(15,17,48,16) color=#000000ff text="Easing" font=f1 glyphs=6 advance=48
+  text bounds=(63,9,72,32) pos=(71,17,56,16) color=#000000ff text="gallery" font=f1 glyphs=7 advance=56
+  solid-fill bounds=(130,15,52,20) layer=(border=(130,15,52,20),radius=(7,7,7,7,7,7,7,7),clip=(130,15,52,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  text bounds=(132,9,48,32) pos=(140,17,32,16) color=#007affff text="Race" font=f2 glyphs=4 advance=32
+  text bounds=(20,29,56,32) pos=(28,37,40,16) color=#000000ff text="Curve" font=f2 glyphs=5 advance=40
+  text bounds=(272.946,10,40,32) pos=(280.946,18,24,16) color=#000000ff text="↻" font=f1 glyphs=3 advance=24
+  text bounds=(260.946,27,64,32) pos=(268.946,35,48,16) color=#000000ff text="Replay" font=f1 glyphs=6 advance=48
+  text bounds=(13,60,64,32) pos=(21,68,48,16) color=#8e8e93ff text="linear" font=f3 glyphs=6 advance=48
+  text bounds=(13,81,64,32) pos=(21,89,48,16) color=#8e8e93ff text="inQuad" font=f3 glyphs=6 advance=48
+  text bounds=(13,102,72,32) pos=(21,110,56,16) color=#8e8e93ff text="outQuad" font=f3 glyphs=7 advance=56
+  text bounds=(13,123,88,32) pos=(21,131,72,16) color=#8e8e93ff text="inOutQuad" font=f3 glyphs=9 advance=72
+  text bounds=(13,144,80,32) pos=(21,152,64,16) color=#8e8e93ff text="outCubic" font=f3 glyphs=8 advance=64
+  text bounds=(13,165,96,32) pos=(21,173,80,16) color=#8e8e93ff text="inOutCubic" font=f3 glyphs=10 advance=80
+  text bounds=(13,186,80,32) pos=(21,194,64,16) color=#8e8e93ff text="outQuint" font=f3 glyphs=8 advance=64
+  text bounds=(13,207,72,32) pos=(21,215,56,16) color=#8e8e93ff text="outExpo" font=f3 glyphs=7 advance=56
+  text bounds=(13,228,88,32) pos=(21,236,72,16) color=#8e8e93ff text="inOutSine" font=f3 glyphs=9 advance=72
+  text bounds=(13,249,72,32) pos=(21,257,56,16) color=#007affff text="outBack" font=f4 glyphs=7 advance=56
+  text bounds=(13,270,88,32) pos=(21,278,72,16) color=#8e8e93ff text="inOutBack" font=f3 glyphs=9 advance=72
+  text bounds=(13,291,96,32) pos=(21,299,80,16) color=#8e8e93ff text="outElastic" font=f3 glyphs=10 advance=80
+  text bounds=(13,312,88,32) pos=(21,320,72,16) color=#8e8e93ff text="outBounce" font=f3 glyphs=9 advance=72
+  text bounds=(13,333,64,32) pos=(21,341,48,16) color=#8e8e93ff text="spring" font=f3 glyphs=6 advance=48
+  text bounds=(7,357,40,32) pos=(15,365,24,16) color=#6e6e73ff text="Tap" font=f5 glyphs=3 advance=24
+  text bounds=(39,357,24,32) pos=(47,365,8,16) color=#6e6e73ff text="a" font=f5 glyphs=1 advance=8
+  text bounds=(55,357,56,32) pos=(63,365,40,16) color=#6e6e73ff text="curve" font=f5 glyphs=5 advance=40
+  text bounds=(103,357,32,32) pos=(111,365,16,16) color=#6e6e73ff text="to" font=f5 glyphs=2 advance=16
+  text bounds=(127,357,48,32) pos=(135,365,32,16) color=#6e6e73ff text="plot" font=f5 glyphs=4 advance=32
+  text bounds=(167,357,32,32) pos=(175,365,16,16) color=#6e6e73ff text="it" font=f5 glyphs=2 advance=16
+  text bounds=(191,357,72,32) pos=(199,365,56,16) color=#6e6e73ff text="against" font=f5 glyphs=7 advance=56
+  text bounds=(255,357,64,32) pos=(263,365,48,16) color=#6e6e73ff text="linear" font=f5 glyphs=6 advance=48
+  solid-fill bounds=(109,74,204,2) layer=(border=(109,74,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,74,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,92.8382,0) backface=0 bounds=(111,69.1,12,12) exact=0
+    solid-fill bounds=(111,69,12,12) layer=(border=(111,69,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,69,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8e8e93ff
+  solid-fill bounds=(109,95,204,2) layer=(border=(109,95,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,95,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,45.4733,0) backface=0 bounds=(111,90.1,12,12) exact=0
+    solid-fill bounds=(111,90,12,12) layer=(border=(111,90,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,90,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(109,116,204,2) layer=(border=(109,116,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,116,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,140.338,0) backface=0 bounds=(111,111.1,12,12) exact=0
+    solid-fill bounds=(111,111,12,12) layer=(border=(111,111,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,111,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffcc00ff
+  solid-fill bounds=(109,137,204,2) layer=(border=(109,137,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,137,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,90.8116,0) backface=0 bounds=(111,132.1,12,12) exact=0
+    solid-fill bounds=(111,132,12,12) layer=(border=(111,132,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,132,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff6b22ff
+  solid-fill bounds=(109,158,204,2) layer=(border=(109,158,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,158,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,164.629,0) backface=0 bounds=(111,153.1,12,12) exact=0
+    solid-fill bounds=(111,153,12,12) layer=(border=(111,153,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,153,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(109,179,204,2) layer=(border=(109,179,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,179,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,88.92,0) backface=0 bounds=(111,174.1,12,12) exact=0
+    solid-fill bounds=(111,174,12,12) layer=(border=(111,174,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,174,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  solid-fill bounds=(109,200,204,2) layer=(border=(109,200,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,200,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,183.434,0) backface=0 bounds=(111,195.1,12,12) exact=0
+    solid-fill bounds=(111,195,12,12) layer=(border=(111,195,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,195,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00c7beff
+  solid-fill bounds=(109,221,204,2) layer=(border=(109,221,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,221,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,183.57,0) backface=0 bounds=(111,216.1,12,12) exact=0
+    solid-fill bounds=(111,216,12,12) layer=(border=(111,216,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,216,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#32ade6ff
+  solid-fill bounds=(109,242,204,2) layer=(border=(109,242,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,242,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,91.6222,0) backface=0 bounds=(111,237.1,12,12) exact=0
+    solid-fill bounds=(111,237,12,12) layer=(border=(111,237,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,237,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#64d2ffff
+  solid-fill bounds=(109,263,204,2) layer=(border=(109,263,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,263,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,205.909,0) backface=0 bounds=(109,256.1,16,16) exact=0
+    solid-fill bounds=(109,256,16,16) layer=(border=(109,256,16,16),radius=(8,8,8,8,8,8,8,8),clip=(109,256,16,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(109,284,204,2) layer=(border=(109,284,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,284,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,83.7858,0) backface=0 bounds=(111,279.1,12,12) exact=0
+    solid-fill bounds=(111,279,12,12) layer=(border=(111,279,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,279,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5e5ce6ff
+  solid-fill bounds=(109,305,204,2) layer=(border=(109,305,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,305,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,194.391,0) backface=0 bounds=(111,300.1,12,12) exact=0
+    solid-fill bounds=(111,300,12,12) layer=(border=(111,300,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,300,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  solid-fill bounds=(109,326,204,2) layer=(border=(109,326,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,326,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,147.161,0) backface=0 bounds=(111,321.1,12,12) exact=0
+    solid-fill bounds=(111,321,12,12) layer=(border=(111,321,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,321,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(109,347,204,2) layer=(border=(109,347,204,2),radius=(0,0,0,0,0,0,0,0),clip=(109,347,204,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  group opacity=1 matrix=(1,0,0,1,190.486,0) backface=0 bounds=(111,342.1,12,12) exact=0
+    solid-fill bounds=(111,342,12,12) layer=(border=(111,342,12,12),radius=(6,6,6,6,6,6,6,6),clip=(111,342,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff6482ff
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

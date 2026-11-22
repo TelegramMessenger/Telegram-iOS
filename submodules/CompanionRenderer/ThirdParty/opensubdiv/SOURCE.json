@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/PixarAnimationStudios/OpenSubdiv",
+  "commit": "9dab8a47bfbb1388ec8388fe61f5f916e6123f38",
+  "parts": [
+    "far",
+    "sdc",
+    "vtr",
+    "osd patch basis"
+  ]
+}

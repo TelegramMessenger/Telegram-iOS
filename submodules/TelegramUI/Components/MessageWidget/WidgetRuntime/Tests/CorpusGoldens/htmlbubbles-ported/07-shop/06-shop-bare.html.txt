@@ -1,0 +1,417 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card rc" id="root">
+  <div class="logo"><span id="logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="#34c759"><path d="M2 20 8 9l4 6 2.5-3.5L22 20Z"></path></svg></span><div style="font-weight: 800; font-size: 16px; margin-top: 2px">NORTHWIND OUTFITTERS</div><div class="tiny muted">Order #NW-58214 · 7 Oct 2026, 14:07</div></div>
+  <div class="pad" style="padding-top: 4px">
+    <div class="dash"></div>
+    <div class="tiny muted" style="padding: 0 6px 3px 6px">Tap an item for details or to start a return</div>
+    <div id="items"><div class="it" id="it-0"><div class="li"><div class="lr in" data-action="item" data-value="0" style="animation-delay: 0ms">
+      <span class="q muted">1×</span>
+      <div class="grow"><b class="">Trailhead Rain Jacket</b><div class="tiny muted">Forest · M</div></div>
+      <span class="p">129.00</span><span class="chev">›</span></div></div></div><div class="it" id="it-1"><div class="li"><div class="lr in" data-action="item" data-value="1" style="animation-delay: 75ms">
+      <span class="q muted">1×</span>
+      <div class="grow"><b class="">Dune Daypack 22L</b><div class="tiny muted">Sand · one size · −30%</div></div>
+      <span class="p">62.30</span><span class="chev">›</span></div></div></div><div class="it" id="it-2"><div class="li"><div class="lr in" data-action="item" data-value="2" style="animation-delay: 150ms">
+      <span class="q muted">2×</span>
+      <div class="grow"><b class="">Tide Water Bottle</b><div class="tiny muted">Ocean · 750 ml</div></div>
+      <span class="p">68.00</span><span class="chev">›</span></div></div></div><div class="it" id="it-3"><div class="li"><div class="lr in" data-action="item" data-value="3" style="animation-delay: 225ms">
+      <span class="q muted">3×</span>
+      <div class="grow"><b class="">Merino Hiking Socks</b><div class="tiny muted">Charcoal · 39–42</div></div>
+      <span class="p">45.00</span><span class="chev">›</span></div></div></div><div class="it" id="it-4"><div class="li"><div class="lr in" data-action="item" data-value="4" style="animation-delay: 300ms">
+      <span class="q muted">1×</span>
+      <div class="grow"><b class="">Packable Sun Hat</b><div class="tiny muted">Natural · L</div></div>
+      <span class="p">29.00</span><span class="chev">›</span></div></div></div><div class="it" id="it-5"><div class="li"><div class="lr in" data-action="item" data-value="5" style="animation-delay: 375ms">
+      <span class="q muted">1×</span>
+      <div class="grow"><b class="">Trail First-Aid Kit</b><div class="tiny muted">42 pieces</div></div>
+      <span class="p">24.90</span><span class="chev">›</span></div></div></div><div class="it" id="it-6"><div class="li"><div class="lr in" data-action="item" data-value="6" style="animation-delay: 450ms">
+      <span class="q muted">1×</span>
+      <div class="grow"><b class="">Gift wrap</b><div class="tiny muted">Recycled kraft paper</div></div>
+      <span class="p">3.50</span><span class="chev">›</span></div></div></div></div>
+    <div class="dash"></div>
+    <div class="m"><span id="subl">Subtotal (10 items)</span><span class="p" id="v-sub">359.40</span></div>
+    <div class="m"><span>Member discount (10%)</span><span class="p t-green" id="v-disc">−35.94</span></div>
+    <div class="m"><span>Coupon <code>TRAIL15</code></span><span class="p t-green" id="v-coupon">−14.90</span></div>
+    <div class="m"><span>Shipping · Express (1–2 days)</span><span class="p">0.00</span></div>
+    <div class="m" id="tiprow" hidden=""><span>Courier tip</span><span class="p" id="v-tip">0.00</span></div>
+    <div class="m"><span>VAT 19% (included)</span><span class="p" id="v-vat">49.27</span></div>
+    <div class="tot"><span>Total</span><span class="p" id="v-total">€308.56</span></div>
+    <div class="m" id="refrow" hidden=""><span>Refund to Visa ···· 4242</span><span class="p t-green" id="v-refund">+0.00</span></div>
+    <div class="dash"></div>
+    <div class="opt"><span class="grow">Tip your courier</span><span id="tips"><span class="tip on" data-action="tip" data-value="0">No tip</span><span class="tip" data-action="tip" data-value="1">€2</span><span class="tip" data-action="tip" data-value="2">€5</span><span class="tip" data-action="tip" data-value="3">€10</span></span></div>
+    <div class="opt tap" data-action="split"><span class="grow">Split the bill</span><span class="tg" id="tg"><span class="kn"></span></span></div>
+    <div class="splitp" id="splitp" hidden="">
+      <div class="row"><span class="grow small">Split between <b id="ppl">2</b> people</span><button data-action="ppl" data-value="-1">−</button><button data-action="ppl" data-value="1" style="margin-left: 4px">+</button></div>
+      <div class="avs" id="avs"></div>
+      <div class="row small"><span class="grow muted">Each pays <b class="fg mono" id="v-per">€154.27</b></span><span id="req"></span></div>
+    </div>
+    <div class="dash"></div>
+    <div class="m"><span>Paid with</span><span class="p"><span id="cardicon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#8e8e93"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><rect x="2" y="8" width="20" height="3" fill="#ffffff" fill-opacity="0.5"></rect></svg></span> Visa ···· 4242</span></div>
+    <div class="m"><span>Ship to</span><span class="p">Alex Morgan, Torstraße 12, Berlin</span></div>
+    <div class="m"><span>Points earned</span><span class="p t-orange" id="v-pts">+308 ✦</span></div>
+    <div class="center" style="margin-top: 12px"><div class="bc"></div><div class="tiny muted" style="font-family: ui-monospace, monospace">NW58214 2026 1007 1407</div></div>
+    <div class="center small" style="margin-top: 8px">Thank you for shopping sustainably 🌱</div>
+  </div>
+  <div class="zig"></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 877.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 877.9
+    div 1 1 358 875.9
+      div 1 17 358 63.1
+        span 1 17 0 0
+          svg 167 17 26 26
+            path 0 0 0 0
+        div 1 45 358 20.8
+        div 1 65.8 358 14.3
+      div 15 90.1 330 764.8
+        div 15 99.1 330 0
+        div 21 107.1 318 28.6
+        div 15 138.7 330 288.4
+          div 15 138.7 330 41.2
+            div 15 138.7 330 41.2
+              div 21 143.7 318 31.2
+                span 21 143.7 26 16.9
+                div 47 143.7 228 31.2
+                  b 47 143.7 0 0
+                  div 47 160.6 228 14.3
+                span 275 143.7 48 15.6
+                span 323 143.7 16 15.6
+          div 15 179.9 330 41.2
+            div 15 179.9 330 41.2
+              div 21 184.9 318 31.2
+                span 21 184.9 26 16.9
+                div 47 184.9 236 31.2
+                  b 47 184.9 0 0
+                  div 47 201.8 236 14.3
+                span 283 184.9 40 15.6
+                span 323 184.9 16 15.6
+          div 15 221.1 330 41.2
+            div 15 221.1 330 41.2
+              div 21 226.1 318 31.2
+                span 21 226.1 26 16.9
+                div 47 226.1 236 31.2
+                  b 47 226.1 0 0
+                  div 47 243 236 14.3
+                span 283 226.1 40 15.6
+                span 323 226.1 16 15.6
+          div 15 262.3 330 41.2
+            div 15 262.3 330 41.2
+              div 21 267.3 318 31.2
+                span 21 267.3 26 16.9
+                div 47 267.3 236 31.2
+                  b 47 267.3 0 0
+                  div 47 284.2 236 14.3
+                span 283 267.3 40 15.6
+                span 323 267.3 16 15.6
+          div 15 303.5 330 41.2
+            div 15 303.5 330 41.2
+              div 21 308.5 318 31.2
+                span 21 308.5 26 16.9
+                div 47 308.5 236 31.2
+                  b 47 308.5 0 0
+                  div 47 325.4 236 14.3
+                span 283 308.5 40 15.6
+                span 323 308.5 16 15.6
+          div 15 344.7 330 41.2
+            div 15 344.7 330 41.2
+              div 21 349.7 318 31.2
+                span 21 349.7 26 16.9
+                div 47 349.7 236 31.2
+                  b 47 349.7 0 0
+                  div 47 366.6 236 14.3
+                span 283 349.7 40 15.6
+                span 323 349.7 16 15.6
+          div 15 385.9 330 41.2
+            div 15 385.9 330 41.2
+              div 21 390.9 318 31.2
+                span 21 390.9 26 16.9
+                div 47 390.9 244 31.2
+                  b 47 390.9 0 0
+                  div 47 407.8 244 14.3
+                span 291 390.9 32 15.6
+                span 323 390.9 16 15.6
+        div 15 436.1 330 0
+        div 21 446.1 318 15.6
+          span 21 446.1 152 15.6
+          span 291 446.1 48 15.6
+        div 21 465.7 318 15.6
+          span 21 465.7 168 15.6
+          span 275 465.7 64 15.6
+        div 21 485.3 318 16.9
+          span 21 485.3 120 16.9
+            code 21 485.3 0 0
+          span 275 485.3 64 16.9
+        div 21 506.2 318 15.6
+          span 21 506.2 256 15.6
+          span 307 506.2 32 15.6
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 21 525.8 318 15.6
+          span 21 525.8 144 15.6
+          span 299 525.8 40 15.6
+        div 21 549.4 318 26
+          span 21 552 40 20.8
+          span 267 552 72 20.8
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 15 584.4 330 0
+        div 21 597.4 318 43.2
+          span 21 602.1 108.255 33.8
+          span 129.255 597.4 209.745 43.2
+            span 143.255 600.4 48 15.6
+            span 215.255 600.4 32 15.6
+            span 271.255 600.4 32 15.6
+            span 143.255 622 40 15.6
+        div 21 650.6 318 24
+          span 21 654.15 278 16.9
+          span 299 650.6 40 24
+            span 301 652.6 20 20
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+              b 0 0 0 0
+            button 0 0 0 0
+            button 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+              b 0 0 0 0
+            span 0 0 0 0
+        div 15 688.6 330 0
+        div 21 698.6 318 15.6
+          span 21 698.6 72 15.6
+          span 175 698.6 164 15.6
+            span 175 698.6 0 0
+              svg 175 701.6 12 12
+                rect 0 0 0 0
+                rect 0 0 0 0
+        div 21 718.2 318 31.2
+          span 21 718.2 46 31.2
+          span 67 718.2 272 31.2
+        div 21 753.4 318 15.6
+          span 21 753.4 104 15.6
+          span 275 753.4 64 15.6
+        div 15 783 330 48.3
+          div 70 783 220 34
+          div 15 817 330 14.3
+        div 15 839.3 330 15.6
+      div 1 866.9 358 10
+
+== paint
+root 360x877.9 items=182
+  solid-fill bounds=(0,0,360,878) layer=(border=(0,0,360,878),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,878),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,878) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,878) root=0
+  borders bounds=(15,98,330,1) borders=(left=(0,0,#000000ff),top=(1,3,#7f7f7f73),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,98,330,1) root=0
+  borders bounds=(15,435,330,1) borders=(left=(0,0,#000000ff),top=(1,3,#7f7f7f73),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,435,330,1) root=0
+  borders bounds=(15,583,330,1) borders=(left=(0,0,#000000ff),top=(1,3,#7f7f7f73),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,583,330,1) root=0
+  borders bounds=(15,688,330,1) borders=(left=(0,0,#000000ff),top=(1,3,#7f7f7f73),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,688,330,1) root=0
+  linear-gradient bounds=(1,867,358,10) layer=(border=(1,867,358,10),radius=(0,0,0,0,0,0,0,0),clip=(1,867,358,10),origin=(1,867,10,10),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.5,#00000000,-),(0.5,#7f7f7f00,-),(0.5,#7f7f7f2e,-),(1,#7f7f7f2e,-)) space=0 hue=0 start=(11,867) end=(1,877)
+  linear-gradient bounds=(1,867,358,10) layer=(border=(1,867,358,10),radius=(0,0,0,0,0,0,0,0),clip=(1,867,358,10),origin=(1,867,10,10),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.5,#00000000,-),(0.5,#7f7f7f00,-),(0.5,#7f7f7f2e,-),(1,#7f7f7f2e,-)) space=0 hue=0 start=(1,867) end=(11,877)
+  set-clip bounds=(167,17,26,26) pos=(167,17,26,26) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(167,17,26,26)
+    group opacity=1 matrix=(1.08333,0,0,1.08333,167,17) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1,8,22,13) ops=(0,1,1,1,1,4) points=(2,20,8,9,12,15,14.5,11.5,22,20) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(92,39,88,32) pos=(100,47,72,16) color=#000000ff text="NORTHWIND" font=f1 glyphs=9 advance=72
+  text bounds=(172,39,96,32) pos=(180,47,80,16) color=#000000ff text="OUTFITTERS" font=f1 glyphs=10 advance=80
+  text bounds=(28,58,56,32) pos=(36,66,40,16) color=#6e6e73ff text="Order" font=f2 glyphs=5 advance=40
+  text bounds=(76,58,88,32) pos=(84,66,72,16) color=#6e6e73ff text="#NW-58214" font=f2 glyphs=9 advance=72
+  text bounds=(156,58,32,32) pos=(164,66,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(180,58,24,32) pos=(188,66,8,16) color=#6e6e73ff text="7" font=f2 glyphs=1 advance=8
+  text bounds=(196,58,40,32) pos=(204,66,24,16) color=#6e6e73ff text="Oct" font=f2 glyphs=3 advance=24
+  text bounds=(228,58,56,32) pos=(236,66,40,16) color=#6e6e73ff text="2026," font=f2 glyphs=5 advance=40
+  text bounds=(276,58,56,32) pos=(284,66,40,16) color=#6e6e73ff text="14:07" font=f2 glyphs=5 advance=40
+  text bounds=(13,99,40,32) pos=(21,107,24,16) color=#6e6e73ff text="Tap" font=f2 glyphs=3 advance=24
+  text bounds=(45,99,32,32) pos=(53,107,16,16) color=#6e6e73ff text="an" font=f2 glyphs=2 advance=16
+  text bounds=(69,99,48,32) pos=(77,107,32,16) color=#6e6e73ff text="item" font=f2 glyphs=4 advance=32
+  text bounds=(109,99,40,32) pos=(117,107,24,16) color=#6e6e73ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(141,99,72,32) pos=(149,107,56,16) color=#6e6e73ff text="details" font=f2 glyphs=7 advance=56
+  text bounds=(205,99,32,32) pos=(213,107,16,16) color=#6e6e73ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(229,99,32,32) pos=(237,107,16,16) color=#6e6e73ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(253,99,56,32) pos=(261,107,40,16) color=#6e6e73ff text="start" font=f2 glyphs=5 advance=40
+  text bounds=(301,99,24,32) pos=(309,107,8,16) color=#6e6e73ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(13,113,64,32) pos=(21,121,48,16) color=#6e6e73ff text="return" font=f2 glyphs=6 advance=48
+  text bounds=(13,438,80,32) pos=(21,446,64,16) color=#8e8e93ff text="Subtotal" font=f3 glyphs=8 advance=64
+  text bounds=(85,438,40,32) pos=(93,446,24,16) color=#8e8e93ff text="(10" font=f3 glyphs=3 advance=24
+  text bounds=(117,438,64,32) pos=(125,446,48,16) color=#8e8e93ff text="items)" font=f3 glyphs=6 advance=48
+  text bounds=(283,438,64,32) pos=(291,446,48,16) color=#8e8e93ff text="359.40" font=f4 glyphs=6 advance=48
+  text bounds=(13,458,64,32) pos=(21,466,48,16) color=#8e8e93ff text="Member" font=f3 glyphs=6 advance=48
+  text bounds=(69,458,80,32) pos=(77,466,64,16) color=#8e8e93ff text="discount" font=f3 glyphs=8 advance=64
+  text bounds=(141,458,56,32) pos=(149,466,40,16) color=#8e8e93ff text="(10%)" font=f3 glyphs=5 advance=40
+  text bounds=(267,458,80,32) pos=(275,466,64,16) color=#34c759ff text="−35.94" font=f4 glyphs=8 advance=64
+  text bounds=(13,477,64,32) pos=(21,485,48,16) color=#8e8e93ff text="Coupon" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(77,484,64,18) layer=(border=(77,484,64,18),radius=(4,4,4,4,4,4,4,4),clip=(77,484,64,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(73,477,72,32) pos=(81,485,56,16) color=#8e8e93ff text="TRAIL15" font=f5 glyphs=7 advance=56
+  text bounds=(267,477,80,32) pos=(275,485,64,16) color=#34c759ff text="−14.90" font=f4 glyphs=8 advance=64
+  text bounds=(13,498,80,32) pos=(21,506,64,16) color=#8e8e93ff text="Shipping" font=f3 glyphs=8 advance=64
+  text bounds=(85,498,32,32) pos=(93,506,16,16) color=#8e8e93ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(109,498,72,32) pos=(117,506,56,16) color=#8e8e93ff text="Express" font=f3 glyphs=7 advance=56
+  text bounds=(173,498,64,32) pos=(181,506,48,16) color=#8e8e93ff text="(1–2" font=f3 glyphs=6 advance=48
+  text bounds=(229,498,56,32) pos=(237,506,40,16) color=#8e8e93ff text="days)" font=f3 glyphs=5 advance=40
+  text bounds=(299,498,48,32) pos=(307,506,32,16) color=#8e8e93ff text="0.00" font=f4 glyphs=4 advance=32
+  text bounds=(13,518,40,32) pos=(21,526,24,16) color=#8e8e93ff text="VAT" font=f3 glyphs=3 advance=24
+  text bounds=(45,518,40,32) pos=(53,526,24,16) color=#8e8e93ff text="19%" font=f3 glyphs=3 advance=24
+  text bounds=(77,518,96,32) pos=(85,526,80,16) color=#8e8e93ff text="(included)" font=f3 glyphs=10 advance=80
+  text bounds=(291,518,56,32) pos=(299,526,40,16) color=#8e8e93ff text="49.27" font=f4 glyphs=5 advance=40
+  text bounds=(13,546,56,32) pos=(21,554,40,16) color=#000000ff text="Total" font=f1 glyphs=5 advance=40
+  text bounds=(259,546,88,32) pos=(267,554,72,16) color=#000000ff text="€308.56" font=f6 glyphs=9 advance=72
+  text bounds=(13,594,40,32) pos=(21,602,24,16) color=#000000ff text="Tip" font=f7 glyphs=3 advance=24
+  text bounds=(45,594,48,32) pos=(53,602,32,16) color=#000000ff text="your" font=f7 glyphs=4 advance=32
+  text bounds=(13,611,72,32) pos=(21,619,56,16) color=#000000ff text="courier" font=f7 glyphs=7 advance=56
+  solid-fill bounds=(133,597,68,22) layer=(border=(133,597,68,22),radius=(10.8,10.8,10.8,10.8,10.8,10.8,10.8,10.8),clip=(133,597,68,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(135.255,592,32,32) pos=(143.255,600,16,16) color=#ffffffff text="No" font=f8 glyphs=2 advance=16
+  text bounds=(159.255,592,40,32) pos=(167.255,600,24,16) color=#ffffffff text="tip" font=f8 glyphs=3 advance=24
+  solid-fill bounds=(205,597,52,22) layer=(border=(205,597,52,22),radius=(10.8,10.8,10.8,10.8,10.8,10.8,10.8,10.8),clip=(205,597,52,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  text bounds=(207.255,592,48,32) pos=(215.255,600,32,16) color=#000000ff text="€2" font=f8 glyphs=4 advance=32
+  solid-fill bounds=(261,597,52,22) layer=(border=(261,597,52,22),radius=(10.8,10.8,10.8,10.8,10.8,10.8,10.8,10.8),clip=(261,597,52,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  text bounds=(263.255,592,48,32) pos=(271.255,600,32,16) color=#000000ff text="€5" font=f8 glyphs=4 advance=32
+  solid-fill bounds=(133,619,60,22) layer=(border=(133,619,60,22),radius=(10.8,10.8,10.8,10.8,10.8,10.8,10.8,10.8),clip=(133,619,60,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  text bounds=(135.255,614,56,32) pos=(143.255,622,40,16) color=#000000ff text="€10" font=f8 glyphs=5 advance=40
+  text bounds=(13,646,56,32) pos=(21,654,40,16) color=#000000ff text="Split" font=f7 glyphs=5 advance=40
+  text bounds=(61,646,40,32) pos=(69,654,24,16) color=#000000ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(93,646,48,32) pos=(101,654,32,16) color=#000000ff text="bill" font=f7 glyphs=4 advance=32
+  text bounds=(13,691,48,32) pos=(21,699,32,16) color=#8e8e93ff text="Paid" font=f3 glyphs=4 advance=32
+  text bounds=(53,691,48,32) pos=(61,699,32,16) color=#8e8e93ff text="with" font=f3 glyphs=4 advance=32
+  set-clip bounds=(175,701.6,12,12) pos=(175,701.6,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(175,701.6,12,12)
+    group opacity=1 matrix=(0.5,0,0,0.5,175,701.6) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1,4,22,16) ops=(0,1,3,1,3,1,3,1,3,4) points=(4.5,5,19.5,5,20.8807,5,22,6.11929,22,7.5,22,16.5,22,17.8807,20.8807,19,19.5,19,4.5,19,3.11929,19,2,17.8807,2,16.5,2,7.5,2,6.11929,3.11929,5,4.5,5) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(1,7,22,5) ops=(0,1,1,1,4) points=(2,8,22,8,22,11,2,11) fill=1 fill-color=#ffffff80 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(187,691,48,32) pos=(195,699,32,16) color=#8e8e93ff text="Visa" font=f4 glyphs=4 advance=32
+  text bounds=(227,691,80,32) pos=(235,699,64,16) color=#8e8e93ff text="····" font=f4 glyphs=8 advance=64
+  text bounds=(299,691,48,32) pos=(307,699,32,16) color=#8e8e93ff text="4242" font=f4 glyphs=4 advance=32
+  text bounds=(13,710,48,32) pos=(21,718,32,16) color=#8e8e93ff text="Ship" font=f3 glyphs=4 advance=32
+  text bounds=(13,726,32,32) pos=(21,734,16,16) color=#8e8e93ff text="to" font=f3 glyphs=2 advance=16
+  text bounds=(59,710,48,32) pos=(67,718,32,16) color=#8e8e93ff text="Alex" font=f4 glyphs=4 advance=32
+  text bounds=(99,710,72,32) pos=(107,718,56,16) color=#8e8e93ff text="Morgan," font=f4 glyphs=7 advance=56
+  text bounds=(163,710,96,32) pos=(171,718,80,16) color=#8e8e93ff text="Torstraße" font=f4 glyphs=10 advance=80
+  text bounds=(251,710,40,32) pos=(259,718,24,16) color=#8e8e93ff text="12," font=f4 glyphs=3 advance=24
+  text bounds=(283,710,64,32) pos=(291,718,48,16) color=#8e8e93ff text="Berlin" font=f4 glyphs=6 advance=48
+  text bounds=(13,745,64,32) pos=(21,753,48,16) color=#8e8e93ff text="Points" font=f3 glyphs=6 advance=48
+  text bounds=(69,745,64,32) pos=(77,753,48,16) color=#8e8e93ff text="earned" font=f3 glyphs=6 advance=48
+  text bounds=(267,745,48,32) pos=(275,753,32,16) color=#ff9500ff text="+308" font=f4 glyphs=4 advance=32
+  text bounds=(307,745,40,32) pos=(315,753,24,16) color=#ff9500ff text="✦" font=f4 glyphs=3 advance=24
+  linear-gradient bounds=(70,783,220,34) layer=(border=(70,783,220,34),radius=(0,0,0,0,0,0,0,0),clip=(70,783,220,34),origin=(70,783,220,34),attachment=0,repeat=0,root=0) points=((0,#1c1c1eff,-),(0.00454545,#1c1c1eff,-),(0.00454545,#1c1c1e00,-),(0.00454545,#00000000,-),(0.0136364,#00000000,-),(0.0136364,#1c1c1e00,-),(0.0136364,#1c1c1eff,-),(0.0272727,#1c1c1eff,-),(0.0272727,#1c1c1e00,-),(0.0272727,#00000000,-),(0.0318182,#00000000,-),(0.0318182,#1c1c1e00,-),(0.0318182,#1c1c1eff,-),(0.0363636,#1c1c1eff,-),(0.0363636,#1c1c1e00,-),(0.0363636,#00000000,-),(0.05,#00000000,-),(0.05,#1c1c1eff,-),(0.0545455,#1c1c1eff,-),(0.0545455,#1c1c1e00,-),(0.0545455,#00000000,-),(0.0636364,#00000000,-),(0.0636364,#1c1c1e00,-),(0.0636364,#1c1c1eff,-),(0.0772727,#1c1c1eff,-),(0.0772727,#1c1c1e00,-),(0.0772727,#00000000,-),(0.0818182,#00000000,-),(0.0818182,#1c1c1e00,-),(0.0818182,#1c1c1eff,-),(0.0863636,#1c1c1eff,-),(0.0863636,#1c1c1e00,-),(0.0863636,#00000000,-),(0.1,#00000000,-),(0.1,#1c1c1eff,-),(0.104545,#1c1c1eff,-),(0.104545,#1c1c1e00,-),(0.104545,#00000000,-),(0.113636,#00000000,-),(0.113636,#1c1c1e00,-),(0.113636,#1c1c1eff,-),(0.127273,#1c1c1eff,-),(0.127273,#1c1c1e00,-),(0.127273,#00000000,-),(0.131818,#00000000,-),(0.131818,#1c1c1e00,-),(0.131818,#1c1c1eff,-),(0.136364,#1c1c1eff,-),(0.136364,#1c1c1e00,-),(0.136364,#00000000,-),(0.15,#00000000,-),(0.15,#1c1c1eff,-),(0.154545,#1c1c1eff,-),(0.154545,#1c1c1e00,-),(0.154545,#00000000,-),(0.163636,#00000000,-),(0.163636,#1c1c1e00,-),(0.163636,#1c1c1eff,-),(0.177273,#1c1c1eff,-),(0.177273,#1c1c1e00,-),(0.177273,#00000000,-),(0.181818,#00000000,-),(0.181818,#1c1c1e00,-),(0.181818,#1c1c1eff,-),(0.186364,#1c1c1eff,-),(0.186364,#1c1c1e00,-),(0.186364,#00000000,-),(0.2,#00000000,-),(0.2,#1c1c1eff,-),(0.204545,#1c1c1eff,-),(0.204545,#1c1c1e00,-),(0.204545,#00000000,-),(0.213636,#00000000,-),(0.213636,#1c1c1e00,-),(0.213636,#1c1c1eff,-),(0.227273,#1c1c1eff,-),(0.227273,#1c1c1e00,-),(0.227273,#00000000,-),(0.231818,#00000000,-),(0.231818,#1c1c1e00,-),(0.231818,#1c1c1eff,-),(0.236364,#1c1c1eff,-),(0.236364,#1c1c1e00,-),(0.236364,#00000000,-),(0.25,#00000000,-),(0.25,#1c1c1eff,-),(0.254545,#1c1c1eff,-),(0.254545,#1c1c1e00,-),(0.254545,#00000000,-),(0.263636,#00000000,-),(0.263636,#1c1c1e00,-),(0.263636,#1c1c1eff,-),(0.277273,#1c1c1eff,-),(0.277273,#1c1c1e00,-),(0.277273,#00000000,-),(0.281818,#00000000,-),(0.281818,#1c1c1e00,-),(0.281818,#1c1c1eff,-),(0.286364,#1c1c1eff,-),(0.286364,#1c1c1e00,-),(0.286364,#00000000,-),(0.3,#00000000,-),(0.3,#1c1c1eff,-),(0.304545,#1c1c1eff,-),(0.304545,#1c1c1e00,-),(0.304545,#00000000,-),(0.313636,#00000000,-),(0.313636,#1c1c1e00,-),(0.313636,#1c1c1eff,-),(0.327273,#1c1c1eff,-),(0.327273,#1c1c1e00,-),(0.327273,#00000000,-),(0.331818,#00000000,-),(0.331818,#1c1c1e00,-),(0.331818,#1c1c1eff,-),(0.336364,#1c1c1eff,-),(0.336364,#1c1c1e00,-),(0.336364,#00000000,-),(0.35,#00000000,-),(0.35,#1c1c1eff,-),(0.354545,#1c1c1eff,-),(0.354545,#1c1c1e00,-),(0.354545,#00000000,-),(0.363636,#00000000,-),(0.363636,#1c1c1e00,-),(0.363636,#1c1c1eff,-),(0.377273,#1c1c1eff,-),(0.377273,#1c1c1e00,-),(0.377273,#00000000,-),(0.381818,#00000000,-),(0.381818,#1c1c1e00,-),(0.381818,#1c1c1eff,-),(0.386364,#1c1c1eff,-),(0.386364,#1c1c1e00,-),(0.386364,#00000000,-),(0.4,#00000000,-),(0.4,#1c1c1eff,-),(0.404545,#1c1c1eff,-),(0.404545,#1c1c1e00,-),(0.404545,#00000000,-),(0.413636,#00000000,-),(0.413636,#1c1c1e00,-),(0.413636,#1c1c1eff,-),(0.427273,#1c1c1eff,-),(0.427273,#1c1c1e00,-),(0.427273,#00000000,-),(0.431818,#00000000,-),(0.431818,#1c1c1e00,-),(0.431818,#1c1c1eff,-),(0.436364,#1c1c1eff,-),(0.436364,#1c1c1e00,-),(0.436364,#00000000,-),(0.45,#00000000,-),(0.45,#1c1c1eff,-),(0.454545,#1c1c1eff,-),(0.454545,#1c1c1e00,-),(0.454545,#00000000,-),(0.463636,#00000000,-),(0.463636,#1c1c1e00,-),(0.463636,#1c1c1eff,-),(0.477273,#1c1c1eff,-),(0.477273,#1c1c1e00,-),(0.477273,#00000000,-),(0.481818,#00000000,-),(0.481818,#1c1c1e00,-),(0.481818,#1c1c1eff,-),(0.486364,#1c1c1eff,-),(0.486364,#1c1c1e00,-),(0.486364,#00000000,-),(0.5,#00000000,-),(0.5,#1c1c1eff,-),(0.504546,#1c1c1eff,-),(0.504546,#1c1c1e00,-),(0.504546,#00000000,-),(0.513636,#00000000,-),(0.513636,#1c1c1e00,-),(0.513636,#1c1c1eff,-),(0.527273,#1c1c1eff,-),(0.527273,#1c1c1e00,-),(0.527273,#00000000,-),(0.531818,#00000000,-),(0.531818,#1c1c1e00,-),(0.531818,#1c1c1eff,-),(0.536364,#1c1c1eff,-),(0.536364,#1c1c1e00,-),(0.536364,#00000000,-),(0.55,#00000000,-),(0.55,#1c1c1eff,-),(0.554546,#1c1c1eff,-),(0.554546,#1c1c1e00,-),(0.554546,#00000000,-),(0.563636,#00000000,-),(0.563636,#1c1c1e00,-),(0.563636,#1c1c1eff,-),(0.577273,#1c1c1eff,-),(0.577273,#1c1c1e00,-),(0.577273,#00000000,-),(0.581818,#00000000,-),(0.581818,#1c1c1e00,-),(0.581818,#1c1c1eff,-),(0.586364,#1c1c1eff,-),(0.586364,#1c1c1e00,-),(0.586364,#00000000,-),(0.6,#00000000,-),(0.6,#1c1c1eff,-),(0.604546,#1c1c1eff,-),(0.604546,#1c1c1e00,-),(0.604546,#00000000,-),(0.613636,#00000000,-),(0.613636,#1c1c1e00,-),(0.613636,#1c1c1eff,-),(0.627273,#1c1c1eff,-),(0.627273,#1c1c1e00,-),(0.627273,#00000000,-),(0.631818,#00000000,-),(0.631818,#1c1c1e00,-),(0.631818,#1c1c1eff,-),(0.636364,#1c1c1eff,-),(0.636364,#1c1c1e00,-),(0.636364,#00000000,-),(0.65,#00000000,-),(0.65,#1c1c1eff,-),(0.654546,#1c1c1eff,-),(0.654546,#1c1c1e00,-),(0.654546,#00000000,-),(0.663636,#00000000,-),(0.663636,#1c1c1e00,-),(0.663636,#1c1c1eff,-),(0.677273,#1c1c1eff,-),(0.677273,#1c1c1e00,-),(0.677273,#00000000,-),(0.681818,#00000000,-),(0.681818,#1c1c1e00,-),(0.681818,#1c1c1eff,-),(0.686364,#1c1c1eff,-),(0.686364,#1c1c1e00,-),(0.686364,#00000000,-),(0.7,#00000000,-),(0.7,#1c1c1eff,-),(0.704546,#1c1c1eff,-),(0.704546,#1c1c1e00,-),(0.704546,#00000000,-),(0.713636,#00000000,-),(0.713636,#1c1c1e00,-),(0.713636,#1c1c1eff,-),(0.727273,#1c1c1eff,-),(0.727273,#1c1c1e00,-),(0.727273,#00000000,-),(0.731818,#00000000,-),(0.731818,#1c1c1e00,-),(0.731818,#1c1c1eff,-),(0.736364,#1c1c1eff,-),(0.736364,#1c1c1e00,-),(0.736364,#00000000,-),(0.75,#00000000,-),(0.75,#1c1c1eff,-),(0.754546,#1c1c1eff,-),(0.754546,#1c1c1e00,-),(0.754546,#00000000,-),(0.763636,#00000000,-),(0.763636,#1c1c1e00,-),(0.763636,#1c1c1eff,-),(0.777273,#1c1c1eff,-),(0.777273,#1c1c1e00,-),(0.777273,#00000000,-),(0.781818,#00000000,-),(0.781818,#1c1c1e00,-),(0.781818,#1c1c1eff,-),(0.786364,#1c1c1eff,-),(0.786364,#1c1c1e00,-),(0.786364,#00000000,-),(0.8,#00000000,-),(0.8,#1c1c1eff,-),(0.804546,#1c1c1eff,-),(0.804546,#1c1c1e00,-),(0.804546,#00000000,-),(0.813636,#00000000,-),(0.813636,#1c1c1e00,-),(0.813636,#1c1c1eff,-),(0.827273,#1c1c1eff,-),(0.827273,#1c1c1e00,-),(0.827273,#00000000,-),(0.831818,#00000000,-),(0.831818,#1c1c1e00,-),(0.831818,#1c1c1eff,-),(0.836364,#1c1c1eff,-),(0.836364,#1c1c1e00,-),(0.836364,#00000000,-),(0.85,#00000000,-),(0.85,#1c1c1eff,-),(0.854546,#1c1c1eff,-),(0.854546,#1c1c1e00,-),(0.854546,#00000000,-),(0.863636,#00000000,-),(0.863636,#1c1c1e00,-),(0.863636,#1c1c1eff,-),(0.877273,#1c1c1eff,-),(0.877273,#1c1c1e00,-),(0.877273,#00000000,-),(0.881818,#00000000,-),(0.881818,#1c1c1e00,-),(0.881818,#1c1c1eff,-),(0.886364,#1c1c1eff,-),(0.886364,#1c1c1e00,-),(0.886364,#00000000,-),(0.9,#00000000,-),(0.9,#1c1c1eff,-),(0.904546,#1c1c1eff,-),(0.904546,#1c1c1e00,-),(0.904546,#00000000,-),(0.913637,#00000000,-),(0.913637,#1c1c1e00,-),(0.913637,#1c1c1eff,-),(0.927273,#1c1c1eff,-),(0.927273,#1c1c1e00,-),(0.927273,#00000000,-),(0.931818,#00000000,-),(0.931818,#1c1c1e00,-),(0.931818,#1c1c1eff,-),(0.936364,#1c1c1eff,-),(0.936364,#1c1c1e00,-),(0.936364,#00000000,-),(0.95,#00000000,-),(0.95,#1c1c1eff,-),(0.954546,#1c1c1eff,-),(0.954546,#1c1c1e00,-),(0.954546,#00000000,-),(0.963637,#00000000,-),(0.963637,#1c1c1e00,-),(0.963637,#1c1c1eff,-),(0.977273,#1c1c1eff,-),(0.977273,#1c1c1e00,-),(0.977273,#00000000,-),(0.981818,#00000000,-),(0.981818,#1c1c1e00,-),(0.981818,#1c1c1eff,-),(0.986364,#1c1c1eff,-),(0.986364,#1c1c1e00,-),(0.986364,#00000000,-),(1,#00000000,-)) space=0 hue=0 start=(70,783) end=(290,783)
+  text bounds=(84,809,72,32) pos=(92,817,56,16) color=#6e6e73ff text="NW58214" font=f9 glyphs=7 advance=56
+  text bounds=(148,809,48,32) pos=(156,817,32,16) color=#6e6e73ff text="2026" font=f9 glyphs=4 advance=32
+  text bounds=(188,809,48,32) pos=(196,817,32,16) color=#6e6e73ff text="1007" font=f9 glyphs=4 advance=32
+  text bounds=(228,809,48,32) pos=(236,817,32,16) color=#6e6e73ff text="1407" font=f9 glyphs=4 advance=32
+  text bounds=(16,831,56,32) pos=(24,839,40,16) color=#000000ff text="Thank" font=f3 glyphs=5 advance=40
+  text bounds=(64,831,40,32) pos=(72,839,24,16) color=#000000ff text="you" font=f3 glyphs=3 advance=24
+  text bounds=(96,831,40,32) pos=(104,839,24,16) color=#000000ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(128,831,80,32) pos=(136,839,64,16) color=#000000ff text="shopping" font=f3 glyphs=8 advance=64
+  text bounds=(200,831,104,32) pos=(208,839,88,16) color=#000000ff text="sustainably" font=f3 glyphs=11 advance=88
+  text bounds=(296,831,48,32) pos=(304,839,32,16) color=#000000ff text="🌱" font=f3 glyphs=4 advance=32
+  set-clip bounds=(15,138.7,330,41.2) pos=(15,138.7,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,138.7,330,41.2) exact=0
+    text bounds=(13,136,40,32) pos=(21,144,24,16) color=#6e6e73ff text="1×" font=f7 glyphs=3 advance=24
+    text bounds=(39,136,88,32) pos=(47,144,72,16) color=#000000ff text="Trailhead" font=f10 glyphs=9 advance=72
+    text bounds=(119,136,48,32) pos=(127,144,32,16) color=#000000ff text="Rain" font=f10 glyphs=4 advance=32
+    text bounds=(159,136,64,32) pos=(167,144,48,16) color=#000000ff text="Jacket" font=f10 glyphs=6 advance=48
+    text bounds=(39,153,64,32) pos=(47,161,48,16) color=#6e6e73ff text="Forest" font=f2 glyphs=6 advance=48
+    text bounds=(95,153,32,32) pos=(103,161,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(119,153,24,32) pos=(127,161,8,16) color=#6e6e73ff text="M" font=f2 glyphs=1 advance=8
+    text bounds=(267,136,64,32) pos=(275,144,48,16) color=#000000ff text="129.00" font=f4 glyphs=6 advance=48
+    text bounds=(307,136,40,32) pos=(315,144,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,179.9,330,41.2) pos=(15,179.9,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,179.9,330,41.2) exact=0
+    text bounds=(13,177,40,32) pos=(21,185,24,16) color=#6e6e73ff text="1×" font=f7 glyphs=3 advance=24
+    text bounds=(39,177,48,32) pos=(47,185,32,16) color=#000000ff text="Dune" font=f10 glyphs=4 advance=32
+    text bounds=(79,177,72,32) pos=(87,185,56,16) color=#000000ff text="Daypack" font=f10 glyphs=7 advance=56
+    text bounds=(143,177,40,32) pos=(151,185,24,16) color=#000000ff text="22L" font=f10 glyphs=3 advance=24
+    text bounds=(39,194,48,32) pos=(47,202,32,16) color=#6e6e73ff text="Sand" font=f2 glyphs=4 advance=32
+    text bounds=(79,194,32,32) pos=(87,202,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(103,194,40,32) pos=(111,202,24,16) color=#6e6e73ff text="one" font=f2 glyphs=3 advance=24
+    text bounds=(135,194,48,32) pos=(143,202,32,16) color=#6e6e73ff text="size" font=f2 glyphs=4 advance=32
+    text bounds=(175,194,32,32) pos=(183,202,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(199,194,64,32) pos=(207,202,48,16) color=#6e6e73ff text="−30%" font=f2 glyphs=6 advance=48
+    text bounds=(275,177,56,32) pos=(283,185,40,16) color=#000000ff text="62.30" font=f4 glyphs=5 advance=40
+    text bounds=(307,177,40,32) pos=(315,185,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,221.1,330,41.2) pos=(15,221.1,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,221.1,330,41.2) exact=0
+    text bounds=(13,218,40,32) pos=(21,226,24,16) color=#6e6e73ff text="2×" font=f7 glyphs=3 advance=24
+    text bounds=(39,218,48,32) pos=(47,226,32,16) color=#000000ff text="Tide" font=f10 glyphs=4 advance=32
+    text bounds=(79,218,56,32) pos=(87,226,40,16) color=#000000ff text="Water" font=f10 glyphs=5 advance=40
+    text bounds=(127,218,64,32) pos=(135,226,48,16) color=#000000ff text="Bottle" font=f10 glyphs=6 advance=48
+    text bounds=(39,235,56,32) pos=(47,243,40,16) color=#6e6e73ff text="Ocean" font=f2 glyphs=5 advance=40
+    text bounds=(87,235,32,32) pos=(95,243,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(111,235,40,32) pos=(119,243,24,16) color=#6e6e73ff text="750" font=f2 glyphs=3 advance=24
+    text bounds=(143,235,32,32) pos=(151,243,16,16) color=#6e6e73ff text="ml" font=f2 glyphs=2 advance=16
+    text bounds=(275,218,56,32) pos=(283,226,40,16) color=#000000ff text="68.00" font=f4 glyphs=5 advance=40
+    text bounds=(307,218,40,32) pos=(315,226,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,262.3,330,41.2) pos=(15,262.3,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,262.3,330,41.2) exact=0
+    text bounds=(13,259,40,32) pos=(21,267,24,16) color=#6e6e73ff text="3×" font=f7 glyphs=3 advance=24
+    text bounds=(39,259,64,32) pos=(47,267,48,16) color=#000000ff text="Merino" font=f10 glyphs=6 advance=48
+    text bounds=(95,259,64,32) pos=(103,267,48,16) color=#000000ff text="Hiking" font=f10 glyphs=6 advance=48
+    text bounds=(151,259,56,32) pos=(159,267,40,16) color=#000000ff text="Socks" font=f10 glyphs=5 advance=40
+    text bounds=(39,276,80,32) pos=(47,284,64,16) color=#6e6e73ff text="Charcoal" font=f2 glyphs=8 advance=64
+    text bounds=(111,276,32,32) pos=(119,284,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(135,276,72,32) pos=(143,284,56,16) color=#6e6e73ff text="39–42" font=f2 glyphs=7 advance=56
+    text bounds=(275,259,56,32) pos=(283,267,40,16) color=#000000ff text="45.00" font=f4 glyphs=5 advance=40
+    text bounds=(307,259,40,32) pos=(315,267,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,303.5,330,41.2) pos=(15,303.5,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,303.5,330,41.2) exact=0
+    text bounds=(13,301,40,32) pos=(21,309,24,16) color=#6e6e73ff text="1×" font=f7 glyphs=3 advance=24
+    text bounds=(39,301,80,32) pos=(47,309,64,16) color=#000000ff text="Packable" font=f10 glyphs=8 advance=64
+    text bounds=(111,301,40,32) pos=(119,309,24,16) color=#000000ff text="Sun" font=f10 glyphs=3 advance=24
+    text bounds=(143,301,40,32) pos=(151,309,24,16) color=#000000ff text="Hat" font=f10 glyphs=3 advance=24
+    text bounds=(39,317,72,32) pos=(47,325,56,16) color=#6e6e73ff text="Natural" font=f2 glyphs=7 advance=56
+    text bounds=(103,317,32,32) pos=(111,325,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(127,317,24,32) pos=(135,325,8,16) color=#6e6e73ff text="L" font=f2 glyphs=1 advance=8
+    text bounds=(275,301,56,32) pos=(283,309,40,16) color=#000000ff text="29.00" font=f4 glyphs=5 advance=40
+    text bounds=(307,301,40,32) pos=(315,309,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,344.7,330,41.2) pos=(15,344.7,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,344.7,330,41.2) exact=0
+    text bounds=(13,342,40,32) pos=(21,350,24,16) color=#6e6e73ff text="1×" font=f7 glyphs=3 advance=24
+    text bounds=(39,342,56,32) pos=(47,350,40,16) color=#000000ff text="Trail" font=f10 glyphs=5 advance=40
+    text bounds=(87,342,64,32) pos=(95,350,48,16) color=#000000ff text="First-" font=f10 glyphs=6 advance=48
+    text bounds=(135,342,40,32) pos=(143,350,24,16) color=#000000ff text="Aid" font=f10 glyphs=3 advance=24
+    text bounds=(167,342,40,32) pos=(175,350,24,16) color=#000000ff text="Kit" font=f10 glyphs=3 advance=24
+    text bounds=(39,359,32,32) pos=(47,367,16,16) color=#6e6e73ff text="42" font=f2 glyphs=2 advance=16
+    text bounds=(63,359,64,32) pos=(71,367,48,16) color=#6e6e73ff text="pieces" font=f2 glyphs=6 advance=48
+    text bounds=(275,342,56,32) pos=(283,350,40,16) color=#000000ff text="24.90" font=f4 glyphs=5 advance=40
+    text bounds=(307,342,40,32) pos=(315,350,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,385.9,330,41.2) pos=(15,385.9,330,41.2) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,385.9,330,41.2) exact=0
+    text bounds=(13,383,40,32) pos=(21,391,24,16) color=#6e6e73ff text="1×" font=f7 glyphs=3 advance=24
+    text bounds=(39,383,48,32) pos=(47,391,32,16) color=#000000ff text="Gift" font=f10 glyphs=4 advance=32
+    text bounds=(79,383,48,32) pos=(87,391,32,16) color=#000000ff text="wrap" font=f10 glyphs=4 advance=32
+    text bounds=(39,400,80,32) pos=(47,408,64,16) color=#6e6e73ff text="Recycled" font=f2 glyphs=8 advance=64
+    text bounds=(111,400,56,32) pos=(119,408,40,16) color=#6e6e73ff text="kraft" font=f2 glyphs=5 advance=40
+    text bounds=(159,400,56,32) pos=(167,408,40,16) color=#6e6e73ff text="paper" font=f2 glyphs=5 advance=40
+    text bounds=(283,383,48,32) pos=(291,391,32,16) color=#000000ff text="3.50" font=f4 glyphs=4 advance=32
+    text bounds=(307,383,40,32) pos=(315,391,24,16) color=#8e8e93ff text="›" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(299,651,40,24) layer=(border=(299,651,40,24),radius=(12,12,12,12,12,12,12,12),clip=(299,651,40,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#78788052
+  solid-fill bounds=(301,653,20,20) layer=(border=(301,653,20,20),radius=(10,10,10,10,10,10,10,10),clip=(301,653,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="ui-monospace,monospace",size=16,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

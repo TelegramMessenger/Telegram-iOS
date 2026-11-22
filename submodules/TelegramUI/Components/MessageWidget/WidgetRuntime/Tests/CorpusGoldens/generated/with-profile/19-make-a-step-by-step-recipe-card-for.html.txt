@@ -1,0 +1,165 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pancake Recipe</title>
+<style></style>
+</head>
+<body>
+<div class="hero">🥞 Fluffy Pancakes</div>
+<div class="meta">⏱ 25 min · 🍽 Serves 4 · 🔥 Easy</div>
+<h3>Ingredients <small id="have">0 / 7 ready</small></h3>
+<div class="ing" id="ing"><button id="ing-0"><i></i>1½ cups flour</button><button id="ing-1"><i></i>3½ tsp baking powder</button><button id="ing-2"><i></i>1 tbsp sugar</button><button id="ing-3"><i></i>¼ tsp salt</button><button id="ing-4"><i></i>1¼ cups milk</button><button id="ing-5"><i></i>1 egg</button><button id="ing-6"><i></i>3 tbsp melted butter</button></div>
+<h3>Steps <small id="stepOf">Step 1 of 6</small></h3>
+<div id="step"><div class="step"><div class="n">1</div><div class="t">Whisk flour, baking powder, sugar and salt in a large bowl.</div></div></div>
+<div class="nav"><button id="prev" disabled="">← Back</button><div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><button id="next">Next →</button></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 510.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 486.3
+    div 24 24 312 66
+    div 12 110 336 16.2
+    h3 12 140.2 336 16.25
+      small 260 140.2 88 16.25
+    div 12 162.45 336 174
+      button 19 168.45 136 18
+        i 21 170.45 14 14
+      button 19 204.45 192 18
+        i 21 206.45 14 14
+      button 19 240.45 120 18
+        i 21 242.45 14 14
+      button 162 240.45 112 18
+        i 164 242.45 14 14
+      button 19 276.45 128 18
+        i 21 278.45 14 14
+      button 170 276.45 64 18
+        i 172 278.45 14 14
+      button 19 312.45 184 18
+        i 21 314.45 14 14
+    h3 12 350.45 336 16.25
+      small 260 350.45 88 16.25
+    div 12 372.7 336 85
+      div 12 383.7 336 64
+        div 12 383.7 26 26
+        div 50 383.7 298 64
+    div 12 468.7 336 29.6
+      button 26 475.7 64 15.6
+      div 146.5 480 67 7
+        i 146.5 480 7 7
+        i 158.5 480 7 7
+        i 170.5 480 7 7
+        i 182.5 480 7 7
+        i 194.5 480 7 7
+        i 206.5 480 7 7
+      button 270 475.7 64 15.6
+
+== paint
+root 360x510.3 items=88
+  solid-fill bounds=(0,0,360,510) layer=(border=(0,0,360,510),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,510),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  linear-gradient bounds=(12,12,336,90) layer=(border=(12,12,336,90),radius=(14,14,14,14,14,14,14,14),clip=(12,12,336,90),origin=(12,12,336,90),attachment=0,repeat=0,root=0) points=((0,#fdba74ff,-),(1,#f97316ff,-)) space=0 hue=0 start=(73.5,-49.5) end=(286.5,163.5)
+  borders bounds=(12,162,153,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(12,162,153,30) root=0
+  borders bounds=(19,168,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(19,168,18,18) root=0
+  borders bounds=(12,198,209,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(12,198,209,30) root=0
+  borders bounds=(19,204,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(19,204,18,18) root=0
+  borders bounds=(12,234,137,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(12,234,137,30) root=0
+  borders bounds=(19,240,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(19,240,18,18) root=0
+  borders bounds=(155,234,129,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(155,234,129,30) root=0
+  borders bounds=(162,240,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(162,240,18,18) root=0
+  borders bounds=(12,270,145,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(12,270,145,30) root=0
+  borders bounds=(19,276,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(19,276,18,18) root=0
+  borders bounds=(163,270,81,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(163,270,81,30) root=0
+  borders bounds=(170,276,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(170,276,18,18) root=0
+  borders bounds=(12,306,201,30) borders=(left=(1,4,#fed7aaff),top=(1,4,#fed7aaff),right=(1,4,#fed7aaff),bottom=(1,4,#fed7aaff),radius=(8,8,8,8,8,8,8,8)) pos=(12,306,201,30) root=0
+  borders bounds=(19,312,18,18) borders=(left=(2,4,#ea580cff),top=(2,4,#ea580cff),right=(2,4,#ea580cff),bottom=(2,4,#ea580cff),radius=(4,4,4,4,4,4,4,4)) pos=(19,312,18,18) root=0
+  borders bounds=(12,373,336,85) borders=(left=(0,0,#1f2937ff),top=(1,4,#fed7aaff),right=(0,0,#1f2937ff),bottom=(0,0,#1f2937ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,373,336,85) root=0
+  solid-fill bounds=(12,384,26,26) layer=(border=(12,384,26,26),radius=(13,13,13,13,13,13,13,13),clip=(12,384,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ea580cff
+  borders bounds=(12,458,336,40) borders=(left=(0,0,#1f2937ff),top=(1,4,#fed7aaff),right=(0,0,#1f2937ff),bottom=(0,0,#1f2937ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,458,336,40) root=0
+  group opacity=0.5 matrix=(1,0,0,1,0,0) backface=0 bounds=(10,465.7,96,36) exact=1
+    solid-fill bounds=(12,469,92,29) layer=(border=(12,469,92,29),radius=(8,8,8,8,8,8,8,8),clip=(12,469,92,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ea580cff
+    text bounds=(18,468,40,32) pos=(26,476,24,16) color=#ffffffff text="←" font=f1 glyphs=3 advance=24
+    text bounds=(50,468,48,32) pos=(58,476,32,16) color=#ffffffff text="Back" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(147,480,7,7) layer=(border=(147,480,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(147,480,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ea580cff
+  solid-fill bounds=(159,480,7,7) layer=(border=(159,480,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(159,480,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fed7aaff
+  solid-fill bounds=(171,480,7,7) layer=(border=(171,480,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(171,480,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fed7aaff
+  solid-fill bounds=(183,480,7,7) layer=(border=(183,480,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(183,480,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fed7aaff
+  solid-fill bounds=(195,480,7,7) layer=(border=(195,480,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(195,480,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fed7aaff
+  solid-fill bounds=(207,480,7,7) layer=(border=(207,480,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(207,480,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fed7aaff
+  solid-fill bounds=(256,469,92,29) layer=(border=(256,469,92,29),radius=(8,8,8,8,8,8,8,8),clip=(256,469,92,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ea580cff
+  text bounds=(16,58,48,32) pos=(24,66,32,16) color=#ffffffff text="🥞" font=f2 glyphs=4 advance=32
+  text bounds=(56,58,64,32) pos=(64,66,48,16) color=#ffffffff text="Fluffy" font=f2 glyphs=6 advance=48
+  text bounds=(112,58,80,32) pos=(120,66,64,16) color=#ffffffff text="Pancakes" font=f2 glyphs=8 advance=64
+  text bounds=(4,102,40,32) pos=(12,110,24,16) color=#6b7280ff text="⏱" font=f3 glyphs=3 advance=24
+  text bounds=(36,102,32,32) pos=(44,110,16,16) color=#6b7280ff text="25" font=f3 glyphs=2 advance=16
+  text bounds=(60,102,40,32) pos=(68,110,24,16) color=#6b7280ff text="min" font=f3 glyphs=3 advance=24
+  text bounds=(92,102,32,32) pos=(100,110,16,16) color=#6b7280ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(116,102,48,32) pos=(124,110,32,16) color=#6b7280ff text="🍽" font=f3 glyphs=4 advance=32
+  text bounds=(156,102,64,32) pos=(164,110,48,16) color=#6b7280ff text="Serves" font=f3 glyphs=6 advance=48
+  text bounds=(212,102,24,32) pos=(220,110,8,16) color=#6b7280ff text="4" font=f3 glyphs=1 advance=8
+  text bounds=(228,102,32,32) pos=(236,110,16,16) color=#6b7280ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(252,102,48,32) pos=(260,110,32,16) color=#6b7280ff text="🔥" font=f3 glyphs=4 advance=32
+  text bounds=(292,102,48,32) pos=(300,110,32,16) color=#6b7280ff text="Easy" font=f3 glyphs=4 advance=32
+  text bounds=(4,132,104,32) pos=(12,140,88,16) color=#ea580cff text="INGREDIENTS" font=f4 glyphs=11 advance=88
+  text bounds=(252,131,24,32) pos=(260,139,8,16) color=#6b7280ff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(268,131,24,32) pos=(276,139,8,16) color=#6b7280ff text="/" font=f5 glyphs=1 advance=8
+  text bounds=(284,131,24,32) pos=(292,139,8,16) color=#6b7280ff text="7" font=f5 glyphs=1 advance=8
+  text bounds=(300,131,56,32) pos=(308,139,40,16) color=#6b7280ff text="ready" font=f5 glyphs=5 advance=40
+  text bounds=(35,162,40,32) pos=(43,170,24,16) color=#1f2937ff text="1½" font=f1 glyphs=3 advance=24
+  text bounds=(67,162,48,32) pos=(75,170,32,16) color=#1f2937ff text="cups" font=f1 glyphs=4 advance=32
+  text bounds=(107,162,56,32) pos=(115,170,40,16) color=#1f2937ff text="flour" font=f1 glyphs=5 advance=40
+  text bounds=(35,198,40,32) pos=(43,206,24,16) color=#1f2937ff text="3½" font=f1 glyphs=3 advance=24
+  text bounds=(67,198,40,32) pos=(75,206,24,16) color=#1f2937ff text="tsp" font=f1 glyphs=3 advance=24
+  text bounds=(99,198,64,32) pos=(107,206,48,16) color=#1f2937ff text="baking" font=f1 glyphs=6 advance=48
+  text bounds=(155,198,64,32) pos=(163,206,48,16) color=#1f2937ff text="powder" font=f1 glyphs=6 advance=48
+  text bounds=(35,234,24,32) pos=(43,242,8,16) color=#1f2937ff text="1" font=f1 glyphs=1 advance=8
+  text bounds=(51,234,48,32) pos=(59,242,32,16) color=#1f2937ff text="tbsp" font=f1 glyphs=4 advance=32
+  text bounds=(91,234,56,32) pos=(99,242,40,16) color=#1f2937ff text="sugar" font=f1 glyphs=5 advance=40
+  text bounds=(178,234,32,32) pos=(186,242,16,16) color=#1f2937ff text="¼" font=f1 glyphs=2 advance=16
+  text bounds=(202,234,40,32) pos=(210,242,24,16) color=#1f2937ff text="tsp" font=f1 glyphs=3 advance=24
+  text bounds=(234,234,48,32) pos=(242,242,32,16) color=#1f2937ff text="salt" font=f1 glyphs=4 advance=32
+  text bounds=(35,270,40,32) pos=(43,278,24,16) color=#1f2937ff text="1¼" font=f1 glyphs=3 advance=24
+  text bounds=(67,270,48,32) pos=(75,278,32,16) color=#1f2937ff text="cups" font=f1 glyphs=4 advance=32
+  text bounds=(107,270,48,32) pos=(115,278,32,16) color=#1f2937ff text="milk" font=f1 glyphs=4 advance=32
+  text bounds=(186,270,24,32) pos=(194,278,8,16) color=#1f2937ff text="1" font=f1 glyphs=1 advance=8
+  text bounds=(202,270,40,32) pos=(210,278,24,16) color=#1f2937ff text="egg" font=f1 glyphs=3 advance=24
+  text bounds=(35,306,24,32) pos=(43,314,8,16) color=#1f2937ff text="3" font=f1 glyphs=1 advance=8
+  text bounds=(51,306,48,32) pos=(59,314,32,16) color=#1f2937ff text="tbsp" font=f1 glyphs=4 advance=32
+  text bounds=(91,306,64,32) pos=(99,314,48,16) color=#1f2937ff text="melted" font=f1 glyphs=6 advance=48
+  text bounds=(147,306,64,32) pos=(155,314,48,16) color=#1f2937ff text="butter" font=f1 glyphs=6 advance=48
+  text bounds=(4,342,56,32) pos=(12,350,40,16) color=#ea580cff text="STEPS" font=f4 glyphs=5 advance=40
+  text bounds=(252,341,48,32) pos=(260,349,32,16) color=#6b7280ff text="Step" font=f5 glyphs=4 advance=32
+  text bounds=(292,341,24,32) pos=(300,349,8,16) color=#6b7280ff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(308,341,32,32) pos=(316,349,16,16) color=#6b7280ff text="of" font=f5 glyphs=2 advance=16
+  text bounds=(332,341,24,32) pos=(340,349,8,16) color=#6b7280ff text="6" font=f5 glyphs=1 advance=8
+  text bounds=(13,380,24,32) pos=(21,388,8,16) color=#ffffffff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(42,377,56,32) pos=(50,385,40,16) color=#1f2937ff text="Whisk" font=f7 glyphs=5 advance=40
+  text bounds=(90,377,64,32) pos=(98,385,48,16) color=#1f2937ff text="flour," font=f7 glyphs=6 advance=48
+  text bounds=(146,377,64,32) pos=(154,385,48,16) color=#1f2937ff text="baking" font=f7 glyphs=6 advance=48
+  text bounds=(202,377,72,32) pos=(210,385,56,16) color=#1f2937ff text="powder," font=f7 glyphs=7 advance=56
+  text bounds=(266,377,56,32) pos=(274,385,40,16) color=#1f2937ff text="sugar" font=f7 glyphs=5 advance=40
+  text bounds=(314,377,40,32) pos=(322,385,24,16) color=#1f2937ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(42,396,48,32) pos=(50,404,32,16) color=#1f2937ff text="salt" font=f7 glyphs=4 advance=32
+  text bounds=(82,396,32,32) pos=(90,404,16,16) color=#1f2937ff text="in" font=f7 glyphs=2 advance=16
+  text bounds=(106,396,24,32) pos=(114,404,8,16) color=#1f2937ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(122,396,56,32) pos=(130,404,40,16) color=#1f2937ff text="large" font=f7 glyphs=5 advance=40
+  text bounds=(170,396,56,32) pos=(178,404,40,16) color=#1f2937ff text="bowl." font=f7 glyphs=5 advance=40
+  text bounds=(262,468,48,32) pos=(270,476,32,16) color=#ffffffff text="Next" font=f1 glyphs=4 advance=32
+  text bounds=(302,468,40,32) pos=(310,476,24,16) color=#ffffffff text="→" font=f1 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=22,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0.5,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11.05,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

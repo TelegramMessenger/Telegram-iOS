@@ -1,0 +1,187 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Plans</span><span class="seg" id="seg"><span class="on" data-period="m">Monthly</span><span data-period="y">Yearly</span></span></div>
+  <div class="tiny muted" style="margin-top: 4px">Yearly billing <span class="save">saves 20%</span>. Cancel any time.</div>
+  <div class="tiers">
+    <div class="tier">
+      <div class="nm">Starter</div>
+      <div class="pr"><span class="p" data-m="0" data-y="0">€0</span><span class="per muted"> /mo</span></div>
+      <ul><li><span class="tick"></span>1 project</li><li><span class="tick"></span>Community help</li><li class="no"><span class="tick"></span>Custom domain</li><li class="no"><span class="tick"></span>Analytics</li></ul>
+      <span class="btn" role="button">Current</span>
+    </div>
+    <div class="tier hot">
+      <div class="ribbon">Most popular</div>
+      <div class="nm">Pro</div>
+      <div class="pr"><span class="p" data-m="12" data-y="9.60">€12</span><span class="per muted"> /mo</span></div>
+      <ul><li><span class="tick"></span>Unlimited projects</li><li><span class="tick"></span>Priority support</li><li><span class="tick"></span>Custom domain</li><li class="no"><span class="tick"></span>Analytics</li></ul>
+      <span class="btn primary" role="button" data-plan="pro">Upgrade</span>
+    </div>
+    <div class="tier">
+      <div class="nm">Team</div>
+      <div class="pr"><span class="p" data-m="29" data-y="23.20">€29</span><span class="per muted"> /mo</span></div>
+      <ul><li><span class="tick"></span>Everything in Pro</li><li><span class="tick"></span>5 seats</li><li><span class="tick"></span>SSO</li><li><span class="tick"></span>Analytics</li></ul>
+      <span class="btn" role="button" data-plan="team">Upgrade</span>
+    </div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 356.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 356.8
+    div 15 13 330 330.8
+      div 15 13 330 25.6
+        span 15 15.4 40 20.8
+        span 199 15 144 21.6
+          span 209 18 56 15.6
+          span 285 18 48 15.6
+      div 15 42.6 330 28.6
+        span 15 42.6 0 0
+      div 15 83.2 330 260.6
+        div 25 94.2 86 198.3
+          div 25 94.2 86 16.9
+          div 25 115.1 86 22
+            span 25 115.1 0 0
+            span 25 115.1 0 0
+          ul 25 145.1 86 113.8
+            li 39 149.1 72 14.3
+              span 25 151.1 8 8
+            li 39 170.4 72 28.6
+              span 25 172.4 8 8
+            li 39 206 72 28.6
+              span 25 208 8 8
+            li 39 241.6 72 14.3
+              span 25 243.6 8 8
+          span 25 271.9 86 15.6
+        div 139 94.2 86 238.6
+          div 139 94.2 86 26
+          div 139 120.2 86 16.9
+          div 139 141.1 86 22
+            span 139 141.1 0 0
+            span 139 141.1 0 0
+          ul 139 171.1 86 128.1
+            li 153 175.1 72 28.6
+              span 139 177.1 8 8
+            li 153 210.7 72 28.6
+              span 139 212.7 8 8
+            li 153 246.3 72 28.6
+              span 139 248.3 8 8
+            li 153 281.9 72 14.3
+              span 139 283.9 8 8
+          span 139 312.2 86 15.6
+        div 253 94.2 94 184
+          div 253 94.2 94 16.9
+          div 253 115.1 94 22
+            span 253 115.1 0 0
+            span 253 115.1 0 0
+          ul 253 145.1 94 99.5
+            li 267 149.1 80 28.6
+              span 253 151.1 8 8
+            li 267 184.7 80 14.3
+              span 253 186.7 8 8
+            li 267 206 80 14.3
+              span 253 208 8 8
+            li 267 227.3 80 14.3
+              span 253 229.3 8 8
+          span 253 257.6 94 15.6
+
+== paint
+root 360x356.8 items=80
+  solid-fill bounds=(0,0,360,357) layer=(border=(0,0,360,357),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,357),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,357) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,357) root=0
+  solid-fill bounds=(197,13,148,26) layer=(border=(197,13,148,26),radius=(9,9,9,9,9,9,9,9),clip=(197,13,148,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,83,106,221) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(12,12,12,12,12,12,12,12)) pos=(15,83,106,221) root=0
+  solid-fill bounds=(25,267,86,26) layer=(border=(25,267,86,26),radius=(9,9,9,9,9,9,9,9),clip=(25,267,86,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(129,83,106,261) borders=(left=(2,4,#007affff),top=(2,4,#007affff),right=(2,4,#007affff),bottom=(2,4,#007affff),radius=(12,12,12,12,12,12,12,12)) pos=(129,83,106,261) root=0
+  solid-fill bounds=(139,307,86,26) layer=(border=(139,307,86,26),radius=(9,9,9,9,9,9,9,9),clip=(139,307,86,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  borders bounds=(243,83,114,206) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(12,12,12,12,12,12,12,12)) pos=(243,83,114,206) root=0
+  solid-fill bounds=(253,253,94,25) layer=(border=(253,253,94,25),radius=(9,9,9,9,9,9,9,9),clip=(253,253,94,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(7,9,56,32) pos=(15,17,40,16) color=#000000ff text="Plans" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(199,15,76,22) layer=(border=(199,15,76,22),radius=(7,7,7,7,7,7,7,7),clip=(199,15,76,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(201,10,72,32) pos=(209,18,56,16) color=#ffffffff text="Monthly" font=f2 glyphs=7 advance=56
+  text bounds=(277,10,64,32) pos=(285,18,48,16) color=#000000ff text="Yearly" font=f2 glyphs=6 advance=48
+  text bounds=(7,35,64,32) pos=(15,43,48,16) color=#6e6e73ff text="Yearly" font=f3 glyphs=6 advance=48
+  text bounds=(63,35,72,32) pos=(71,43,56,16) color=#6e6e73ff text="billing" font=f3 glyphs=7 advance=56
+  text bounds=(127,35,56,32) pos=(135,43,40,16) color=#34c759ff text="saves" font=f4 glyphs=5 advance=40
+  text bounds=(175,35,40,32) pos=(183,43,24,16) color=#34c759ff text="20%" font=f4 glyphs=3 advance=24
+  text bounds=(199,35,24,32) pos=(207,43,8,16) color=#6e6e73ff text="." font=f3 glyphs=1 advance=8
+  text bounds=(215,35,64,32) pos=(223,43,48,16) color=#6e6e73ff text="Cancel" font=f3 glyphs=6 advance=48
+  text bounds=(271,35,40,32) pos=(279,43,24,16) color=#6e6e73ff text="any" font=f3 glyphs=3 advance=24
+  text bounds=(7,49,56,32) pos=(15,57,40,16) color=#6e6e73ff text="time." font=f3 glyphs=5 advance=40
+  text bounds=(17,86,72,32) pos=(25,94,56,16) color=#000000ff text="Starter" font=f5 glyphs=7 advance=56
+  text bounds=(17,110,48,32) pos=(25,118,32,16) color=#000000ff text="€0" font=f6 glyphs=4 advance=32
+  text bounds=(57,110,40,32) pos=(65,118,24,16) color=#6e6e73ff text="/mo" font=f3 glyphs=3 advance=24
+  text bounds=(32,264,72,32) pos=(40,272,56,16) color=#000000ff text="Current" font=f7 glyphs=7 advance=56
+  text bounds=(131,85,48,32) pos=(139,93,32,16) color=#007affff text="MOST" font=f8 glyphs=4 advance=32
+  text bounds=(131,98,72,32) pos=(139,106,56,16) color=#007affff text="POPULAR" font=f8 glyphs=7 advance=56
+  text bounds=(131,112,40,32) pos=(139,120,24,16) color=#000000ff text="Pro" font=f5 glyphs=3 advance=24
+  text bounds=(131,136,56,32) pos=(139,144,40,16) color=#000000ff text="€12" font=f6 glyphs=5 advance=40
+  text bounds=(179,136,40,32) pos=(187,144,24,16) color=#6e6e73ff text="/mo" font=f3 glyphs=3 advance=24
+  text bounds=(146,304,72,32) pos=(154,312,56,16) color=#ffffffff text="Upgrade" font=f7 glyphs=7 advance=56
+  text bounds=(245,86,48,32) pos=(253,94,32,16) color=#000000ff text="Team" font=f5 glyphs=4 advance=32
+  text bounds=(245,110,56,32) pos=(253,118,40,16) color=#000000ff text="€29" font=f6 glyphs=5 advance=40
+  text bounds=(293,110,40,32) pos=(301,118,24,16) color=#6e6e73ff text="/mo" font=f3 glyphs=3 advance=24
+  text bounds=(264,250,72,32) pos=(272,258,56,16) color=#000000ff text="Upgrade" font=f7 glyphs=7 advance=56
+  borders bounds=(25,145,86,21) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(25,145,86,21) root=0
+  text bounds=(31,141,24,32) pos=(39,149,8,16) color=#000000ff text="1" font=f3 glyphs=1 advance=8
+  text bounds=(47,141,72,32) pos=(55,149,56,16) color=#000000ff text="project" font=f3 glyphs=7 advance=56
+  solid-fill bounds=(25,151,8,8) layer=(border=(25,151,8,8),radius=(4,4,4,4,4,4,4,4),clip=(25,151,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(25,166,86,36) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(25,166,86,36) root=0
+  text bounds=(31,162,88,32) pos=(39,170,72,16) color=#000000ff text="Community" font=f3 glyphs=9 advance=72
+  text bounds=(31,177,48,32) pos=(39,185,32,16) color=#000000ff text="help" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(25,172,8,8) layer=(border=(25,172,8,8),radius=(4,4,4,4,4,4,4,4),clip=(25,172,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(25,202,86,36) borders=(left=(0,0,#6e6e73ff),top=(1,4,#0000001a),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(0,0,0,0,0,0,0,0)) pos=(25,202,86,36) root=0
+  text bounds=(31,198,64,32) pos=(39,206,48,16) color=#6e6e73ff text="Custom" font=f3 glyphs=6 advance=48
+  text bounds=(31,212,64,32) pos=(39,220,48,16) color=#6e6e73ff text="domain" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(25,208,8,8) layer=(border=(25,208,8,8),radius=(4,4,4,4,4,4,4,4),clip=(25,208,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  borders bounds=(25,238,86,21) borders=(left=(0,0,#6e6e73ff),top=(1,4,#0000001a),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(0,0,0,0,0,0,0,0)) pos=(25,238,86,21) root=0
+  text bounds=(31,234,88,32) pos=(39,242,72,16) color=#6e6e73ff text="Analytics" font=f3 glyphs=9 advance=72
+  solid-fill bounds=(25,244,8,8) layer=(border=(25,244,8,8),radius=(4,4,4,4,4,4,4,4),clip=(25,244,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  borders bounds=(139,171,86,36) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(139,171,86,36) root=0
+  text bounds=(145,167,88,32) pos=(153,175,72,16) color=#000000ff text="Unlimited" font=f3 glyphs=9 advance=72
+  text bounds=(145,181,80,32) pos=(153,189,64,16) color=#000000ff text="projects" font=f3 glyphs=8 advance=64
+  solid-fill bounds=(139,177,8,8) layer=(border=(139,177,8,8),radius=(4,4,4,4,4,4,4,4),clip=(139,177,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(139,207,86,35) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(139,207,86,35) root=0
+  text bounds=(145,203,80,32) pos=(153,211,64,16) color=#000000ff text="Priority" font=f3 glyphs=8 advance=64
+  text bounds=(145,217,72,32) pos=(153,225,56,16) color=#000000ff text="support" font=f3 glyphs=7 advance=56
+  solid-fill bounds=(139,213,8,8) layer=(border=(139,213,8,8),radius=(4,4,4,4,4,4,4,4),clip=(139,213,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(139,242,86,36) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(139,242,86,36) root=0
+  text bounds=(145,238,64,32) pos=(153,246,48,16) color=#000000ff text="Custom" font=f3 glyphs=6 advance=48
+  text bounds=(145,253,64,32) pos=(153,261,48,16) color=#000000ff text="domain" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(139,248,8,8) layer=(border=(139,248,8,8),radius=(4,4,4,4,4,4,4,4),clip=(139,248,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(139,278,86,21) borders=(left=(0,0,#6e6e73ff),top=(1,4,#0000001a),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(0,0,0,0,0,0,0,0)) pos=(139,278,86,21) root=0
+  text bounds=(145,274,88,32) pos=(153,282,72,16) color=#6e6e73ff text="Analytics" font=f3 glyphs=9 advance=72
+  solid-fill bounds=(139,284,8,8) layer=(border=(139,284,8,8),radius=(4,4,4,4,4,4,4,4),clip=(139,284,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  borders bounds=(253,145,94,36) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(253,145,94,36) root=0
+  text bounds=(259,141,96,32) pos=(267,149,80,16) color=#000000ff text="Everything" font=f3 glyphs=10 advance=80
+  text bounds=(259,155,32,32) pos=(267,163,16,16) color=#000000ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(283,155,40,32) pos=(291,163,24,16) color=#000000ff text="Pro" font=f3 glyphs=3 advance=24
+  solid-fill bounds=(253,151,8,8) layer=(border=(253,151,8,8),radius=(4,4,4,4,4,4,4,4),clip=(253,151,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(253,181,94,21) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(253,181,94,21) root=0
+  text bounds=(259,177,24,32) pos=(267,185,8,16) color=#000000ff text="5" font=f3 glyphs=1 advance=8
+  text bounds=(275,177,56,32) pos=(283,185,40,16) color=#000000ff text="seats" font=f3 glyphs=5 advance=40
+  solid-fill bounds=(253,187,8,8) layer=(border=(253,187,8,8),radius=(4,4,4,4,4,4,4,4),clip=(253,187,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(253,202,94,21) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(253,202,94,21) root=0
+  text bounds=(259,198,40,32) pos=(267,206,24,16) color=#000000ff text="SSO" font=f3 glyphs=3 advance=24
+  solid-fill bounds=(253,208,8,8) layer=(border=(253,208,8,8),radius=(4,4,4,4,4,4,4,4),clip=(253,208,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(253,223,94,22) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(253,223,94,22) root=0
+  text bounds=(259,219,88,32) pos=(267,227,72,16) color=#000000ff text="Analytics" font=f3 glyphs=9 advance=72
+  solid-fill bounds=(253,229,8,8) layer=(border=(253,229,8,8),radius=(4,4,4,4,4,4,4,4),clip=(253,229,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=22,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=10,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

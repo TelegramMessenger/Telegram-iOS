@@ -1,0 +1,49 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<form id="f" novalidate="">
+  <label>Name <input id="name" name="name" placeholder="Jane Doe"><span class="error" id="e-name"></span></label>
+  <label>Email <input id="email" name="email" type="email" placeholder="jane@example.com"><span class="error" id="e-email"></span></label>
+  <label>Age <input id="age" name="age" type="number" min="1" max="120"><span class="error" id="e-age"></span></label>
+  <label>Plan <select id="plan" name="plan"><option value="">Choose…</option><option value="free">Free</option><option value="pro">Pro</option></select><span class="error" id="e-plan"></span></label>
+  <button type="submit" id="submit">Sign up</button>
+  <div id="ok"></div>
+</form>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 64.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 36.8
+    div 14 14 332 36.8
+      span 14 14 0 0
+        span 14 14 0 0
+      span 14 14 0 0
+        span 14 14 0 0
+      span 14 14 0 0
+        span 14 14 0 0
+      span 14 14 0 0
+        span 14 14 0 0
+      button 184 24 56 16.8
+      div 0 0 0 0
+
+== paint
+root 360x64.8 items=8
+  solid-fill bounds=(0,0,360,65) layer=(border=(0,0,360,65),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,65),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(6,16,48,32) pos=(14,24,32,16) color=#222222ff text="Name" font=f1 glyphs=4 advance=32
+  text bounds=(46,16,56,32) pos=(54,24,40,16) color=#222222ff text="Email" font=f1 glyphs=5 advance=40
+  text bounds=(94,16,40,32) pos=(102,24,24,16) color=#222222ff text="Age" font=f1 glyphs=3 advance=24
+  text bounds=(126,16,48,32) pos=(134,24,32,16) color=#222222ff text="Plan" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(174,14,76,37) layer=(border=(174,14,76,37),radius=(8,8,8,8,8,8,8,8),clip=(174,14,76,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(176,16,48,32) pos=(184,24,32,16) color=#ffffffff text="Sign" font=f2 glyphs=4 advance=32
+  text bounds=(216,16,32,32) pos=(224,24,16,16) color=#ffffffff text="up" font=f2 glyphs=2 advance=16
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,128 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body>These cards are <b>scripted messages</b>. Each one carries a <code>&lt;script&gt;</code> that runs in its own JavaScriptCore sandbox. It defines <code>render()</code> (state → HTML) and <code>onAction(name, value)</code>, which is called when you click anything with a <code>data-action</code>. Every click updates the same bubble in place: <code>tween()</code> and <code>animate()</code> move numbers, sizes and colours at up to 60 fps, and <code>transition('pop')</code> or <code>'slide-left'</code> lets the bubble animate natively when its content swaps. Right-click a card and pick <i>Script Log…</i> to see its console.
+</body></html>
+
+== layout
+html 0 0 360 218.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 218.4
+    b 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+    i 0 0 0 0
+
+== paint
+root 360x218.4 items=95
+  text bounds=(-8,-7,56,32) pos=(0,1,40,16) color=#000000ff text="These" font=f1 glyphs=5 advance=40
+  text bounds=(40,-7,56,32) pos=(48,1,40,16) color=#000000ff text="cards" font=f1 glyphs=5 advance=40
+  text bounds=(88,-7,40,32) pos=(96,1,24,16) color=#000000ff text="are" font=f1 glyphs=3 advance=24
+  text bounds=(120,-7,80,32) pos=(128,1,64,16) color=#000000ff text="scripted" font=f2 glyphs=8 advance=64
+  text bounds=(192,-7,80,32) pos=(200,1,64,16) color=#000000ff text="messages" font=f2 glyphs=8 advance=64
+  text bounds=(256,-7,24,32) pos=(264,1,8,16) color=#000000ff text="." font=f1 glyphs=1 advance=8
+  text bounds=(272,-7,48,32) pos=(280,1,32,16) color=#000000ff text="Each" font=f1 glyphs=4 advance=32
+  text bounds=(312,-7,40,32) pos=(320,1,24,16) color=#000000ff text="one" font=f1 glyphs=3 advance=24
+  text bounds=(-8,11,72,32) pos=(0,19,56,16) color=#000000ff text="carries" font=f1 glyphs=7 advance=56
+  text bounds=(56,11,24,32) pos=(64,19,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  solid-fill bounds=(80,18,72,18) layer=(border=(80,18,72,18),radius=(4,4,4,4,4,4,4,4),clip=(80,18,72,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(76,11,80,32) pos=(84,19,64,16) color=#000000ff text="<script>" font=f3 glyphs=8 advance=64
+  text bounds=(152,11,48,32) pos=(160,19,32,16) color=#000000ff text="that" font=f1 glyphs=4 advance=32
+  text bounds=(192,11,48,32) pos=(200,19,32,16) color=#000000ff text="runs" font=f1 glyphs=4 advance=32
+  text bounds=(232,11,32,32) pos=(240,19,16,16) color=#000000ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(256,11,40,32) pos=(264,19,24,16) color=#000000ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(288,11,40,32) pos=(296,19,24,16) color=#000000ff text="own" font=f1 glyphs=3 advance=24
+  text bounds=(-8,29,128,32) pos=(0,37,112,16) color=#000000ff text="JavaScriptCore" font=f1 glyphs=14 advance=112
+  text bounds=(112,29,80,32) pos=(120,37,64,16) color=#000000ff text="sandbox." font=f1 glyphs=8 advance=64
+  text bounds=(184,29,32,32) pos=(192,37,16,16) color=#000000ff text="It" font=f1 glyphs=2 advance=16
+  text bounds=(208,29,72,32) pos=(216,37,56,16) color=#000000ff text="defines" font=f1 glyphs=7 advance=56
+  solid-fill bounds=(280,36,72,18) layer=(border=(280,36,72,18),radius=(4,4,4,4,4,4,4,4),clip=(280,36,72,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(276,29,80,32) pos=(284,37,64,16) color=#000000ff text="render()" font=f3 glyphs=8 advance=64
+  text bounds=(-8,48,64,32) pos=(0,56,48,16) color=#000000ff text="(state" font=f1 glyphs=6 advance=48
+  text bounds=(48,48,40,32) pos=(56,56,24,16) color=#000000ff text="→" font=f1 glyphs=3 advance=24
+  text bounds=(80,48,56,32) pos=(88,56,40,16) color=#000000ff text="HTML)" font=f1 glyphs=5 advance=40
+  text bounds=(128,48,40,32) pos=(136,56,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  solid-fill bounds=(168,55,176,18) layer=(border=(168,55,176,18),radius=(4,4,4,4,4,4,4,4),clip=(168,55,176,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(164,48,128,32) pos=(172,56,112,16) color=#000000ff text="onAction(name," font=f3 glyphs=14 advance=112
+  text bounds=(284,48,64,32) pos=(292,56,48,16) color=#000000ff text="value)" font=f3 glyphs=6 advance=48
+  text bounds=(336,48,24,32) pos=(344,56,8,16) color=#000000ff text="," font=f1 glyphs=1 advance=8
+  text bounds=(-8,66,56,32) pos=(0,74,40,16) color=#000000ff text="which" font=f1 glyphs=5 advance=40
+  text bounds=(40,66,32,32) pos=(48,74,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(64,66,64,32) pos=(72,74,48,16) color=#000000ff text="called" font=f1 glyphs=6 advance=48
+  text bounds=(120,66,48,32) pos=(128,74,32,16) color=#000000ff text="when" font=f1 glyphs=4 advance=32
+  text bounds=(160,66,40,32) pos=(168,74,24,16) color=#000000ff text="you" font=f1 glyphs=3 advance=24
+  text bounds=(192,66,56,32) pos=(200,74,40,16) color=#000000ff text="click" font=f1 glyphs=5 advance=40
+  text bounds=(240,66,80,32) pos=(248,74,64,16) color=#000000ff text="anything" font=f1 glyphs=8 advance=64
+  text bounds=(312,66,48,32) pos=(320,74,32,16) color=#000000ff text="with" font=f1 glyphs=4 advance=32
+  text bounds=(-8,84,24,32) pos=(0,92,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  solid-fill bounds=(16,91,96,18) layer=(border=(16,91,96,18),radius=(4,4,4,4,4,4,4,4),clip=(16,91,96,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(12,84,56,32) pos=(20,92,40,16) color=#000000ff text="data-" font=f3 glyphs=5 advance=40
+  text bounds=(52,84,64,32) pos=(60,92,48,16) color=#000000ff text="action" font=f3 glyphs=6 advance=48
+  text bounds=(104,84,24,32) pos=(112,92,8,16) color=#000000ff text="." font=f1 glyphs=1 advance=8
+  text bounds=(120,84,56,32) pos=(128,92,40,16) color=#000000ff text="Every" font=f1 glyphs=5 advance=40
+  text bounds=(168,84,56,32) pos=(176,92,40,16) color=#000000ff text="click" font=f1 glyphs=5 advance=40
+  text bounds=(216,84,72,32) pos=(224,92,56,16) color=#000000ff text="updates" font=f1 glyphs=7 advance=56
+  text bounds=(280,84,40,32) pos=(288,92,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(312,84,48,32) pos=(320,92,32,16) color=#000000ff text="same" font=f1 glyphs=4 advance=32
+  text bounds=(-8,102,64,32) pos=(0,110,48,16) color=#000000ff text="bubble" font=f1 glyphs=6 advance=48
+  text bounds=(48,102,32,32) pos=(56,110,16,16) color=#000000ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(72,102,64,32) pos=(80,110,48,16) color=#000000ff text="place:" font=f1 glyphs=6 advance=48
+  solid-fill bounds=(136,109,64,18) layer=(border=(136,109,64,18),radius=(4,4,4,4,4,4,4,4),clip=(136,109,64,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(132,102,72,32) pos=(140,110,56,16) color=#000000ff text="tween()" font=f3 glyphs=7 advance=56
+  text bounds=(200,102,40,32) pos=(208,110,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  solid-fill bounds=(240,109,80,18) layer=(border=(240,109,80,18),radius=(4,4,4,4,4,4,4,4),clip=(240,109,80,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(236,102,88,32) pos=(244,110,72,16) color=#000000ff text="animate()" font=f3 glyphs=9 advance=72
+  text bounds=(320,102,48,32) pos=(328,110,32,16) color=#000000ff text="move" font=f1 glyphs=4 advance=32
+  text bounds=(-8,120,80,32) pos=(0,128,64,16) color=#000000ff text="numbers," font=f1 glyphs=8 advance=64
+  text bounds=(64,120,56,32) pos=(72,128,40,16) color=#000000ff text="sizes" font=f1 glyphs=5 advance=40
+  text bounds=(112,120,40,32) pos=(120,128,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(144,120,72,32) pos=(152,128,56,16) color=#000000ff text="colours" font=f1 glyphs=7 advance=56
+  text bounds=(208,120,32,32) pos=(216,128,16,16) color=#000000ff text="at" font=f1 glyphs=2 advance=16
+  text bounds=(232,120,32,32) pos=(240,128,16,16) color=#000000ff text="up" font=f1 glyphs=2 advance=16
+  text bounds=(256,120,32,32) pos=(264,128,16,16) color=#000000ff text="to" font=f1 glyphs=2 advance=16
+  text bounds=(280,120,32,32) pos=(288,128,16,16) color=#000000ff text="60" font=f1 glyphs=2 advance=16
+  text bounds=(304,120,48,32) pos=(312,128,32,16) color=#000000ff text="fps," font=f1 glyphs=4 advance=32
+  text bounds=(-8,139,40,32) pos=(0,147,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  solid-fill bounds=(32,146,144,18) layer=(border=(32,146,144,18),radius=(4,4,4,4,4,4,4,4),clip=(32,146,144,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(28,139,152,32) pos=(36,147,136,16) color=#000000ff text="transition('pop')" font=f3 glyphs=17 advance=136
+  text bounds=(176,139,32,32) pos=(184,147,16,16) color=#000000ff text="or" font=f1 glyphs=2 advance=16
+  solid-fill bounds=(208,146,104,18) layer=(border=(208,146,104,18),radius=(4,4,4,4,4,4,4,4),clip=(208,146,104,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(204,139,72,32) pos=(212,147,56,16) color=#000000ff text="'slide-" font=f3 glyphs=7 advance=56
+  text bounds=(260,139,56,32) pos=(268,147,40,16) color=#000000ff text="left'" font=f3 glyphs=5 advance=40
+  text bounds=(312,139,48,32) pos=(320,147,32,16) color=#000000ff text="lets" font=f1 glyphs=4 advance=32
+  text bounds=(-8,157,40,32) pos=(0,165,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(24,157,64,32) pos=(32,165,48,16) color=#000000ff text="bubble" font=f1 glyphs=6 advance=48
+  text bounds=(80,157,72,32) pos=(88,165,56,16) color=#000000ff text="animate" font=f1 glyphs=7 advance=56
+  text bounds=(144,157,80,32) pos=(152,165,64,16) color=#000000ff text="natively" font=f1 glyphs=8 advance=64
+  text bounds=(216,157,48,32) pos=(224,165,32,16) color=#000000ff text="when" font=f1 glyphs=4 advance=32
+  text bounds=(256,157,40,32) pos=(264,165,24,16) color=#000000ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(288,157,72,32) pos=(296,165,56,16) color=#000000ff text="content" font=f1 glyphs=7 advance=56
+  text bounds=(-8,175,64,32) pos=(0,183,48,16) color=#000000ff text="swaps." font=f1 glyphs=6 advance=48
+  text bounds=(48,175,64,32) pos=(56,183,48,16) color=#000000ff text="Right-" font=f1 glyphs=6 advance=48
+  text bounds=(96,175,56,32) pos=(104,183,40,16) color=#000000ff text="click" font=f1 glyphs=5 advance=40
+  text bounds=(144,175,24,32) pos=(152,183,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(160,175,48,32) pos=(168,183,32,16) color=#000000ff text="card" font=f1 glyphs=4 advance=32
+  text bounds=(200,175,40,32) pos=(208,183,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(232,175,48,32) pos=(240,183,32,16) color=#000000ff text="pick" font=f1 glyphs=4 advance=32
+  text bounds=(272,175,64,32) pos=(280,183,48,16) color=#000000ff text="Script" font=f4 glyphs=6 advance=48
+  text bounds=(-8,193,64,32) pos=(0,201,48,16) color=#000000ff text="Log…" font=f4 glyphs=6 advance=48
+  text bounds=(48,193,32,32) pos=(56,201,16,16) color=#000000ff text="to" font=f1 glyphs=2 advance=16
+  text bounds=(72,193,40,32) pos=(80,201,24,16) color=#000000ff text="see" font=f1 glyphs=3 advance=24
+  text bounds=(104,193,40,32) pos=(112,201,24,16) color=#000000ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(136,193,80,32) pos=(144,201,64,16) color=#000000ff text="console." font=f1 glyphs=8 advance=64
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

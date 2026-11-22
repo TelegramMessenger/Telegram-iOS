@@ -1,0 +1,8 @@
+**/.build/
+**/DerivedData/
+.DS_Store
+**/xcuserdata/
+# The repo root .gitignore ignores *.xcodeproj, but this committed snapshot needs its
+# generated project (the Bazel embed build uses it directly). Re-include the project
+# directory; xcuserdata inside stays excluded via the rule above.
+!tgwatch.xcodeproj

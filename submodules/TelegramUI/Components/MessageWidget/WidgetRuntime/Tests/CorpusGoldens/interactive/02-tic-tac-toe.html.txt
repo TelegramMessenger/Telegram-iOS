@@ -1,0 +1,57 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><meta name="tw-bot" content="tictactoe">
+<style></style></head>
+<body>
+<p id="status">Your move: ✕</p>
+<div id="grid"><button class=""></button><button class=""></button><button class=""></button><button class=""></button><button class=""></button><button class=""></button><button class=""></button><button class=""></button><button class=""></button></div>
+<div><button id="new">New game</button></div>
+<div id="note"></div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 303.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 287.3
+    p 12 8 336 20.25
+    div 78 36.25 204 204
+      button 78 36.25 64 64
+      button 148 36.25 64 64
+      button 218 36.25 64 64
+      button 78 106.25 64 64
+      button 148 106.25 64 64
+      button 218 106.25 64 64
+      button 78 176.25 64 64
+      button 148 176.25 64 64
+      button 218 176.25 64 64
+    div 12 246.5 336 42.8
+      button 148 264.5 64 16.8
+    div 12 295.3 336 0
+
+== paint
+root 360x303.3 items=15
+  text bounds=(116,2,48,32) pos=(124,10,32,16) color=#000000ff text="Your" font=f1 glyphs=4 advance=32
+  text bounds=(156,2,56,32) pos=(164,10,40,16) color=#000000ff text="move:" font=f1 glyphs=5 advance=40
+  text bounds=(204,2,40,32) pos=(212,10,24,16) color=#000000ff text="✕" font=f1 glyphs=3 advance=24
+  solid-fill bounds=(78,36,64,64) layer=(border=(78,36,64,64),radius=(8,8,8,8,8,8,8,8),clip=(78,36,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(148,36,64,64) layer=(border=(148,36,64,64),radius=(8,8,8,8,8,8,8,8),clip=(148,36,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(218,36,64,64) layer=(border=(218,36,64,64),radius=(8,8,8,8,8,8,8,8),clip=(218,36,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(78,106,64,64) layer=(border=(78,106,64,64),radius=(8,8,8,8,8,8,8,8),clip=(78,106,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(148,106,64,64) layer=(border=(148,106,64,64),radius=(8,8,8,8,8,8,8,8),clip=(148,106,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(218,106,64,64) layer=(border=(218,106,64,64),radius=(8,8,8,8,8,8,8,8),clip=(218,106,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(78,176,64,64) layer=(border=(78,176,64,64),radius=(8,8,8,8,8,8,8,8),clip=(78,176,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(148,176,64,64) layer=(border=(148,176,64,64),radius=(8,8,8,8,8,8,8,8),clip=(148,176,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(218,176,64,64) layer=(border=(218,176,64,64),radius=(8,8,8,8,8,8,8,8),clip=(218,176,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(134,257,92,32) layer=(border=(134,257,92,32),radius=(8,8,8,8,8,8,8,8),clip=(134,257,92,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(140,257,40,32) pos=(148,265,24,16) color=#000000ff text="New" font=f2 glyphs=3 advance=24
+  text bounds=(172,257,48,32) pos=(180,265,32,16) color=#000000ff text="game" font=f2 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

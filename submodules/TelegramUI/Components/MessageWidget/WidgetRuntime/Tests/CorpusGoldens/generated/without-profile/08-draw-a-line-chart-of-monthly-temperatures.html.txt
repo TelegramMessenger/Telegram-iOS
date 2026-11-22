@@ -1,0 +1,67 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Berlin vs Madrid Temperatures</title>
+<style></style>
+</head>
+<body>
+<h2>🌡️ Monthly Average Temperatures</h2>
+<p>Berlin vs Madrid (°C) · tap the chart for a month's values</p>
+<div class="chart"><canvas id="c" width="736" height="520"></canvas></div>
+<div class="legend"><span><i style="border-color:#2563eb;background:rgba(37,99,235,.15)"></i>Berlin</span><span><i style="border-color:#dc2626;background:rgba(220,38,38,.12)"></i>Madrid</span></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 359.539
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 327.539
+    h2 16 16 328 22.5
+    p 16 42.5 328 35.1
+    div 16 89.6 328 231.739
+      canvas 16 89.6 328 231.739
+    div 16 327.339 328 16.2
+      span 88 327.339 84 16.2
+        i 90 331.339 26 6
+      span 188 327.339 84 16.2
+        i 190 331.339 26 6
+
+== paint
+root 360x359.539 items=24
+  solid-fill bounds=(0,0,360,360) layer=(border=(0,0,360,360),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,360),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(8,11,72,32) pos=(16,19,56,16) color=#000000ff text="🌡️" font=f1 glyphs=7 advance=56
+  text bounds=(72,11,72,32) pos=(80,19,56,16) color=#000000ff text="Monthly" font=f1 glyphs=7 advance=56
+  text bounds=(136,11,72,32) pos=(144,19,56,16) color=#000000ff text="Average" font=f1 glyphs=7 advance=56
+  text bounds=(200,11,112,32) pos=(208,19,96,16) color=#000000ff text="Temperatures" font=f1 glyphs=12 advance=96
+  text bounds=(8,35,64,32) pos=(16,43,48,16) color=#666666ff text="Berlin" font=f2 glyphs=6 advance=48
+  text bounds=(64,35,32,32) pos=(72,43,16,16) color=#666666ff text="vs" font=f2 glyphs=2 advance=16
+  text bounds=(88,35,64,32) pos=(96,43,48,16) color=#666666ff text="Madrid" font=f2 glyphs=6 advance=48
+  text bounds=(144,35,56,32) pos=(152,43,40,16) color=#666666ff text="(°C)" font=f2 glyphs=5 advance=40
+  text bounds=(192,35,32,32) pos=(200,43,16,16) color=#666666ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(216,35,40,32) pos=(224,43,24,16) color=#666666ff text="tap" font=f2 glyphs=3 advance=24
+  text bounds=(248,35,40,32) pos=(256,43,24,16) color=#666666ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(280,35,56,32) pos=(288,43,40,16) color=#666666ff text="chart" font=f2 glyphs=5 advance=40
+  text bounds=(8,52,40,32) pos=(16,60,24,16) color=#666666ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(40,52,24,32) pos=(48,60,8,16) color=#666666ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(56,52,72,32) pos=(64,60,56,16) color=#666666ff text="month's" font=f2 glyphs=7 advance=56
+  text bounds=(120,52,64,32) pos=(128,60,48,16) color=#666666ff text="values" font=f2 glyphs=6 advance=48
+  solid-fill bounds=(88,329,30,10) layer=(border=(88,329,30,10),radius=(0,0,0,0,0,0,0,0),clip=(88,329,30,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563eb26
+  borders bounds=(88,329,30,10) borders=(left=(2,4,#2563ebff),top=(2,4,#2563ebff),right=(2,4,#2563ebff),bottom=(2,4,#2563ebff),radius=(0,0,0,0,0,0,0,0)) pos=(88,329,30,10) root=0
+  text bounds=(116,319,64,32) pos=(124,327,48,16) color=#666666ff text="Berlin" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(188,329,30,10) layer=(border=(188,329,30,10),radius=(0,0,0,0,0,0,0,0),clip=(188,329,30,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dc26261f
+  borders bounds=(188,329,30,10) borders=(left=(2,4,#dc2626ff),top=(2,4,#dc2626ff),right=(2,4,#dc2626ff),bottom=(2,4,#dc2626ff),radius=(0,0,0,0,0,0,0,0)) pos=(188,329,30,10) root=0
+  text bounds=(216,319,64,32) pos=(224,327,48,16) color=#666666ff text="Madrid" font=f3 glyphs=6 advance=48
+  image bounds=(16,90,328,231) layer=(border=(16,90,328,231),radius=(0,0,0,0,0,0,0,0),clip=(16,90,328,231),origin=(16,90,328,231),attachment=0,repeat=3,root=0) size=(736,520)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

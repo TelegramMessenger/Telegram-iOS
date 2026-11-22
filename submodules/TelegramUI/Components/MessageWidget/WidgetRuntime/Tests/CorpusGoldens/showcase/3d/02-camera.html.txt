@@ -1,0 +1,97 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body><div class="card"><header><div><div class="eyebrow">OBJECT STUDIO / 3D</div><h2>Inside the lens</h2></div><span class="number">02</span></header><p>An exploded view of a pocket camera.</p><canvas id="view" role="img" aria-label="Inside the lens. Drag sideways to orbit; use the buttons to adjust the view." width="320" height="240"></canvas><div class="tools"><button id="left" aria-label="Turn left">↶ Left</button><button id="right" aria-label="Turn right">Right ↷</button><button id="up">Raise</button><button id="down">Lower</button><button id="near" aria-label="Zoom in">＋</button><button id="far" aria-label="Zoom out">−</button><button id="reset">Reset</button><button id="special">Explode / assemble</button></div><div class="status" id="status" aria-live="polite">Assembled · 100%</div><p class="hint">Drag sideways to orbit · Scroll vertically to move the chat</p></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 533
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 533
+    div 20 18 320 501
+      header 20 18 320 51.2
+        div 20 18 144 46.2
+          div 20 18 144 16
+          h2 20 39 144 25.2
+        span 324 35.6 16 16
+      p 20 74.2 320 16.8
+      canvas 20 96 320 240
+      div 20 347 320 106
+        button 30 353 64 20
+        button 119 353 72 20
+        button 216 353 40 20
+        button 281 353 40 20
+        button 30 390 24 20
+        button 79 390 24 20
+        button 128 390 40 20
+        button 30 427 144 20
+      div 20 461 320 16
+      p 20 486 320 28
+
+== paint
+root 360x533 items=53
+  solid-fill bounds=(0,0,360,533) layer=(border=(0,0,360,533),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,533),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#f3f5f1ff
+  image bounds=(20,96,320,240) layer=(border=(20,96,320,240),radius=(0,0,0,0,0,0,0,0),clip=(20,96,320,240),origin=(20,96,320,240),attachment=0,repeat=3,root=0) size=(320,240)
+  borders bounds=(20,336,320,117) borders=(left=(0,0,#233b43ff),top=(1,4,#d4dfd9ff),right=(0,0,#233b43ff),bottom=(0,0,#233b43ff),radius=(0,0,0,0,0,0,0,0)) pos=(20,336,320,117) root=0
+  borders bounds=(20,347,84,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,347,84,32) root=0
+  borders bounds=(109,347,92,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(109,347,92,32) root=0
+  borders bounds=(206,347,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(206,347,60,32) root=0
+  borders bounds=(271,347,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(271,347,60,32) root=0
+  borders bounds=(20,384,44,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,384,44,32) root=0
+  borders bounds=(69,384,44,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(69,384,44,32) root=0
+  borders bounds=(118,384,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(118,384,60,32) root=0
+  solid-fill bounds=(20,421,164,32) layer=(border=(20,421,164,32),radius=(8,8,8,8,8,8,8,8),clip=(20,421,164,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#246e61ff
+  borders bounds=(20,421,164,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,421,164,32) root=0
+  text bounds=(12,10,64,32) pos=(20,18,48,16) color=#246e61ff text="OBJECT" font=f1 glyphs=6 advance=48
+  text bounds=(68,10,64,32) pos=(76,18,48,16) color=#246e61ff text="STUDIO" font=f1 glyphs=6 advance=48
+  text bounds=(124,10,24,32) pos=(132,18,8,16) color=#246e61ff text="/" font=f1 glyphs=1 advance=8
+  text bounds=(140,10,32,32) pos=(148,18,16,16) color=#246e61ff text="3D" font=f1 glyphs=2 advance=16
+  text bounds=(12,35,64,32) pos=(20,43,48,16) color=#233b43ff text="Inside" font=f2 glyphs=6 advance=48
+  text bounds=(68,35,40,32) pos=(76,43,24,16) color=#233b43ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(100,35,48,32) pos=(108,43,32,16) color=#233b43ff text="lens" font=f2 glyphs=4 advance=32
+  text bounds=(316,28,32,32) pos=(324,36,16,16) color=#536d70ff text="02" font=f3 glyphs=2 advance=16
+  text bounds=(12,66,32,32) pos=(20,74,16,16) color=#536d70ff text="An" font=f4 glyphs=2 advance=16
+  text bounds=(36,66,80,32) pos=(44,74,64,16) color=#536d70ff text="exploded" font=f4 glyphs=8 advance=64
+  text bounds=(108,66,48,32) pos=(116,74,32,16) color=#536d70ff text="view" font=f4 glyphs=4 advance=32
+  text bounds=(148,66,32,32) pos=(156,74,16,16) color=#536d70ff text="of" font=f4 glyphs=2 advance=16
+  text bounds=(172,66,24,32) pos=(180,74,8,16) color=#536d70ff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(188,66,64,32) pos=(196,74,48,16) color=#536d70ff text="pocket" font=f4 glyphs=6 advance=48
+  text bounds=(244,66,72,32) pos=(252,74,56,16) color=#536d70ff text="camera." font=f4 glyphs=7 advance=56
+  text bounds=(22,347,40,32) pos=(30,355,24,16) color=#233b43ff text="↶" font=f4 glyphs=3 advance=24
+  text bounds=(54,347,48,32) pos=(62,355,32,16) color=#233b43ff text="Left" font=f4 glyphs=4 advance=32
+  text bounds=(111,347,56,32) pos=(119,355,40,16) color=#233b43ff text="Right" font=f4 glyphs=5 advance=40
+  text bounds=(159,347,40,32) pos=(167,355,24,16) color=#233b43ff text="↷" font=f4 glyphs=3 advance=24
+  text bounds=(208,347,56,32) pos=(216,355,40,16) color=#233b43ff text="Raise" font=f4 glyphs=5 advance=40
+  text bounds=(273,347,56,32) pos=(281,355,40,16) color=#233b43ff text="Lower" font=f4 glyphs=5 advance=40
+  text bounds=(22,384,40,32) pos=(30,392,24,16) color=#233b43ff text="＋" font=f4 glyphs=3 advance=24
+  text bounds=(71,384,40,32) pos=(79,392,24,16) color=#233b43ff text="−" font=f4 glyphs=3 advance=24
+  text bounds=(120,384,56,32) pos=(128,392,40,16) color=#233b43ff text="Reset" font=f4 glyphs=5 advance=40
+  text bounds=(22,421,72,32) pos=(30,429,56,16) color=#f3f5f1ff text="Explode" font=f4 glyphs=7 advance=56
+  text bounds=(86,421,24,32) pos=(94,429,8,16) color=#f3f5f1ff text="/" font=f4 glyphs=1 advance=8
+  text bounds=(102,421,80,32) pos=(110,429,64,16) color=#f3f5f1ff text="assemble" font=f4 glyphs=8 advance=64
+  text bounds=(12,453,88,32) pos=(20,461,72,16) color=#246e61ff text="Assembled" font=f5 glyphs=9 advance=72
+  text bounds=(92,453,32,32) pos=(100,461,16,16) color=#246e61ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(116,453,48,32) pos=(124,461,32,16) color=#246e61ff text="100%" font=f5 glyphs=4 advance=32
+  text bounds=(12,477,48,32) pos=(20,485,32,16) color=#536d70ff text="Drag" font=f6 glyphs=4 advance=32
+  text bounds=(52,477,80,32) pos=(60,485,64,16) color=#536d70ff text="sideways" font=f6 glyphs=8 advance=64
+  text bounds=(124,477,32,32) pos=(132,485,16,16) color=#536d70ff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(148,477,56,32) pos=(156,485,40,16) color=#536d70ff text="orbit" font=f6 glyphs=5 advance=40
+  text bounds=(196,477,32,32) pos=(204,485,16,16) color=#536d70ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(220,477,64,32) pos=(228,485,48,16) color=#536d70ff text="Scroll" font=f6 glyphs=6 advance=48
+  text bounds=(12,491,96,32) pos=(20,499,80,16) color=#536d70ff text="vertically" font=f6 glyphs=10 advance=80
+  text bounds=(100,491,32,32) pos=(108,499,16,16) color=#536d70ff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(124,491,48,32) pos=(132,499,32,16) color=#536d70ff text="move" font=f6 glyphs=4 advance=32
+  text bounds=(164,491,40,32) pos=(172,499,24,16) color=#536d70ff text="the" font=f6 glyphs=3 advance=24
+  text bounds=(196,491,48,32) pos=(204,499,32,16) color=#536d70ff text="chat" font=f6 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=2,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=21,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=24,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

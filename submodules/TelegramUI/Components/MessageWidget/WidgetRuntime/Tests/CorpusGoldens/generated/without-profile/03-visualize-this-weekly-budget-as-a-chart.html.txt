@@ -1,0 +1,73 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Budget</title>
+<style></style>
+</head>
+<body>
+<h2>💰 Weekly Budget</h2>
+<div class="wrap"><canvas id="budget" width="440" height="440"></canvas><div class="legend" id="legend"><span data-i="0"><i style="background:#6366f1"></i>Rent</span><span data-i="1"><i style="background:#22c55e"></i>Groceries</span><span data-i="2"><i style="background:#f59e0b"></i>Transport</span><span data-i="3"><i style="background:#ec4899"></i>Entertainment</span><span data-i="4"><i style="background:#06b6d4"></i>Savings</span></div></div>
+<div class="total" id="total">Total: <b>$2,450</b> / week</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 373.45
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 341.45
+    h2 16 16 328 22.5
+    div 16 50.5 328 272.65
+      canvas 70 50.5 220 220
+      div 16 284.75 328 38.4
+        span 28.5 284.75 65 16.2
+          i 30.5 288.75 24 6
+        span 107.5 284.75 105 16.2
+          i 109.5 288.75 24 6
+        span 226.5 284.75 105 16.2
+          i 228.5 288.75 24 6
+        span 60 306.95 137 16.2
+          i 62 310.95 24 6
+        span 211 306.95 89 16.2
+          i 213 310.95 24 6
+    div 16 333.15 328 24.3
+      b 16 333.15 0 0
+
+== paint
+root 360x373.45 items=24
+  solid-fill bounds=(0,0,360,373) layer=(border=(0,0,360,373),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,373),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(8,11,48,32) pos=(16,19,32,16) color=#111111ff text="💰" font=f1 glyphs=4 advance=32
+  text bounds=(48,11,64,32) pos=(56,19,48,16) color=#111111ff text="Weekly" font=f1 glyphs=6 advance=48
+  text bounds=(104,11,64,32) pos=(112,19,48,16) color=#111111ff text="Budget" font=f1 glyphs=6 advance=48
+  text bounds=(92,329,64,32) pos=(100,337,48,16) color=#555555ff text="Total:" font=f2 glyphs=6 advance=48
+  text bounds=(148,329,64,32) pos=(156,337,48,16) color=#111111ff text="$2,450" font=f1 glyphs=6 advance=48
+  text bounds=(204,329,24,32) pos=(212,337,8,16) color=#555555ff text="/" font=f2 glyphs=1 advance=8
+  text bounds=(220,329,48,32) pos=(228,337,32,16) color=#555555ff text="week" font=f2 glyphs=4 advance=32
+  image bounds=(70,51,220,220) layer=(border=(70,51,220,220),radius=(0,0,0,0,0,0,0,0),clip=(70,51,220,220),origin=(70,51,220,220),attachment=0,repeat=3,root=0) size=(440,440)
+  solid-fill bounds=(29,287,28,10) layer=(border=(29,287,28,10),radius=(0,0,0,0,0,0,0,0),clip=(29,287,28,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6366f1ff
+  borders bounds=(29,287,28,10) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(29,287,28,10) root=0
+  text bounds=(53.5,277,48,32) pos=(61.5,285,32,16) color=#444444ff text="Rent" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(108,287,28,10) layer=(border=(108,287,28,10),radius=(0,0,0,0,0,0,0,0),clip=(108,287,28,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#22c55eff
+  borders bounds=(108,287,28,10) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(108,287,28,10) root=0
+  text bounds=(132.5,277,88,32) pos=(140.5,285,72,16) color=#444444ff text="Groceries" font=f3 glyphs=9 advance=72
+  solid-fill bounds=(227,287,28,10) layer=(border=(227,287,28,10),radius=(0,0,0,0,0,0,0,0),clip=(227,287,28,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  borders bounds=(227,287,28,10) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(227,287,28,10) root=0
+  text bounds=(251.5,277,88,32) pos=(259.5,285,72,16) color=#444444ff text="Transport" font=f3 glyphs=9 advance=72
+  solid-fill bounds=(60,309,28,10) layer=(border=(60,309,28,10),radius=(0,0,0,0,0,0,0,0),clip=(60,309,28,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ec4899ff
+  borders bounds=(60,309,28,10) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(60,309,28,10) root=0
+  text bounds=(85,299,120,32) pos=(93,307,104,16) color=#444444ff text="Entertainment" font=f3 glyphs=13 advance=104
+  solid-fill bounds=(211,309,28,10) layer=(border=(211,309,28,10),radius=(0,0,0,0,0,0,0,0),clip=(211,309,28,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#06b6d4ff
+  borders bounds=(211,309,28,10) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(211,309,28,10) root=0
+  text bounds=(236,299,72,32) pos=(244,307,56,16) color=#444444ff text="Savings" font=f3 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

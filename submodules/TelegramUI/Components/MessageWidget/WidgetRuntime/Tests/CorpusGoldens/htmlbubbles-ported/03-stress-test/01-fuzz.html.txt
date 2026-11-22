@@ -1,0 +1,254 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="ty" id="ty">
+  <div class="row between"><b>Aa Type specimen</b><span class="small muted" id="famName">System</span></div>
+  <div class="tabs" id="tabs"><span class="tab on" data-action="tab" data-value="0">Specimen</span><span class="tab" data-action="tab" data-value="1">Scale</span><span class="tab" data-action="tab" data-value="2">Weights</span></div>
+  <div id="specimen">
+    <div class="stage"><div id="sample" style="font-family: system-ui, sans-serif; font-size: 28.5px; font-weight: 700; line-height: 1.12;">The quick brown fox</div></div>
+    <div class="meta muted" id="meta">System · 29px · 700 Bold</div>
+    <div class="opts"><span class="lbl">Size</span><div class="sl" id="sizeSl"><div class="trk" style="margin-left: 20.6px; width: 246.9px"><div style="width: 208.8px;"></div></div><div class="th" style="left: 222.9px;"></div><div class="cells"><span style="width: 41.14px" data-action="size" data-value="9" class="">9</span><span style="width: 41.14px" data-action="size" data-value="12" class="">12</span><span style="width: 41.14px" data-action="size" data-value="15" class="">15</span><span style="width: 41.14px" data-action="size" data-value="17" class="">17</span><span style="width: 41.14px" data-action="size" data-value="20" class="">20</span><span style="width: 41.14px" data-action="size" data-value="28" class="on">28</span><span style="width: 41.14px" data-action="size" data-value="36">36</span></div></div></div>
+    <div class="opts"><span class="lbl">Weight</span><div class="sl" id="weightSl"><div class="trk" style="margin-left: 16.0px; width: 256.0px"><div style="width: 180.6px;"></div></div><div class="th" style="left: 190.1px;"></div><div class="cells"><span style="width: 32.00px" data-action="weight" data-value="100" class="">100</span><span style="width: 32.00px" data-action="weight" data-value="200" class="">200</span><span style="width: 32.00px" data-action="weight" data-value="300" class="">300</span><span style="width: 32.00px" data-action="weight" data-value="400" class="">400</span><span style="width: 32.00px" data-action="weight" data-value="500" class="">500</span><span style="width: 32.00px" data-action="weight" data-value="600" class="">600</span><span style="width: 32.00px" data-action="weight" data-value="700" class="on">700</span><span style="width: 32.00px" data-action="weight" data-value="800">800</span><span style="width: 32.00px" data-action="weight" data-value="900">900</span></div></div></div>
+    <div class="opts"><span class="lbl">Style</span><span class="chip2" id="tItalic" data-action="italic"><i>Italic</i></span><span class="chip2" id="tUpper" data-action="upper">UPPER</span><span class="chip2" id="tUnder" data-action="under"><u>Underline</u></span><span class="chip2" data-action="sample">↻ Sample</span></div>
+    <div class="opts" style="align-items: flex-start"><span class="lbl" style="padding-top: 3px">Family</span><div class="fams" id="fams"><span class="chip2 on" style="font-family: system-ui, sans-serif" data-action="fam" data-value="0">System</span><span class="chip2" style="font-family: ui-rounded, sans-serif" data-action="fam" data-value="1">Rounded</span><span class="chip2" style="font-family: ui-serif, serif" data-action="fam" data-value="2">New York</span><span class="chip2" style="font-family: serif" data-action="fam" data-value="3">Serif</span><span class="chip2" style="font-family: ui-sans-serif, sans-serif" data-action="fam" data-value="4">Sans</span><span class="chip2" style="font-family: sans-serif" data-action="fam" data-value="5">Sans-serif</span><span class="chip2" style="font-family: monospace" data-action="fam" data-value="6">Monospace</span><span class="chip2" style="font-family: ui-monospace, monospace" data-action="fam" data-value="7">SF Mono</span></div></div>
+  </div>
+  <div id="scale" hidden=""><div class="row2" data-action="pick" data-value="0"><span class="tag">h1 · 22</span>
+  <div class="clip" style="font-weight: 700; line-height: 29px"></div></div><div class="row2" data-action="pick" data-value="1"><span class="tag">h2 · 19</span>
+  <div class="clip" style="font-weight: 700; line-height: 25px"></div></div><div class="row2" data-action="pick" data-value="2"><span class="tag">h3 · 17</span>
+  <div class="clip" style="font-weight: 700; line-height: 22px"></div></div><div class="row2" data-action="pick" data-value="3"><span class="tag">h4 · 15</span>
+  <div class="clip" style="font-weight: 700; line-height: 20px"></div></div><div class="row2" data-action="pick" data-value="4"><span class="tag">body · 13</span>
+  <div class="clip" style="font-weight: 400; line-height: 17px"></div></div><div class="row2" data-action="pick" data-value="5"><span class="tag">small · 12</span>
+  <div class="clip" style="font-weight: 400; line-height: 16px"></div></div><div class="row2" data-action="pick" data-value="6"><span class="tag">caption · 9</span>
+  <div class="clip" style="font-weight: 600; line-height: 12px"></div></div></div>
+  <div id="weights" hidden=""><div class="row2" data-action="pickw" data-value="100"><span class="tag">100 Thin</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="200"><span class="tag">200 Ultralight</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="300"><span class="tag">300 Light</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="400"><span class="tag">400 Regular</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="500"><span class="tag">500 Medium</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="600"><span class="tag">600 Semibold</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="700"><span class="tag">700 Bold</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="800"><span class="tag">800 Heavy</span>
+  <div class="clip" style="font-size: 15px"></div></div><div class="row2" data-action="pickw" data-value="900"><span class="tag">900 Black</span>
+  <div class="clip" style="font-size: 15px"></div></div></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 395.1
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 390.1
+    div 0 0 360 390.1
+      div 0 0 360 18.2
+        b 0 0 128 18.2
+        span 312 1.3 48 15.6
+      div 2 28.2 356 21.6
+        span 2 31.2 129.333 15.6
+        span 131.333 31.2 105.333 15.6
+        span 236.667 31.2 121.333 15.6
+      div 0 59.8 360 330.3
+        div 12 59.8 336 120
+          div 12 103.84 152 31.92
+        div 2 184.8 356 14.3
+        div 0 205.1 360 30
+          span 0 213.6 56 13
+          div 56 205.1 288 30
+            div 76.6 211.1 246.9 3
+              div 76.6 211.1 208.8 3
+            div 280.9 208.1 9 9
+            div 56 220.1 288 13
+              span 56 220.1 41.14 13
+              span 97.14 220.1 41.14 13
+              span 138.28 220.1 41.14 13
+              span 179.42 220.1 41.14 13
+              span 220.56 220.1 41.14 13
+              span 261.7 220.1 41.14 13
+              span 302.84 220.1 41.14 13
+        div 0 240.1 360 30
+          span 0 248.6 56 13
+          div 56 240.1 288 30
+            div 72 246.1 256 3
+              div 72 246.1 180.6 3
+            div 248.1 243.1 9 9
+            div 56 255.1 288 13
+              span 56 255.1 32 13
+              span 88 255.1 32 13
+              span 120 255.1 32 13
+              span 152 255.1 32 13
+              span 184 255.1 32 13
+              span 216 255.1 32 13
+              span 248 255.1 32 13
+              span 280 255.1 32 13
+              span 312 255.1 32 13
+        div 0 275.1 360 39.2
+          span 0 288.2 49.4118 13
+          span 57.4118 284.9 48 15.6
+            i 57.4118 284.9 0 0
+          span 125.412 284.9 40 15.6
+          span 185.412 284.9 72 15.6
+            u 185.412 284.9 0 0
+          span 277.412 277.1 70.5882 31.2
+        div 0 319.3 360 70.8
+          span 0 322.3 56 13
+          div 56 319.3 300 70.8
+            span 64 321.3 48 15.6
+            span 132 321.3 56 15.6
+            span 208 321.3 64 15.6
+            span 292 321.3 40 15.6
+            span 64 344.9 32 15.6
+            span 116 344.9 80 15.6
+            span 216 344.9 72 15.6
+            span 64 368.5 56 15.6
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+
+== paint
+root 360x395.1 items=78
+  solid-fill bounds=(0,26,360,26) layer=(border=(0,26,360,26),radius=(9,9,9,9,9,9,9,9),clip=(0,26,360,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(2,28,129,22) layer=(border=(2,28,129,22),radius=(7,7,7,7,7,7,7,7),clip=(2,28,129,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(0,60,360,120) layer=(border=(0,60,360,120),radius=(12,12,12,12,12,12,12,12),clip=(0,60,360,120),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  solid-fill bounds=(49,283,64,20) layer=(border=(49,283,64,20),radius=(8,8,8,8,8,8,8,8),clip=(49,283,64,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(117,283,56,20) layer=(border=(117,283,56,20),radius=(8,8,8,8,8,8,8,8),clip=(117,283,56,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(177,283,88,20) layer=(border=(177,283,88,20),radius=(8,8,8,8,8,8,8,8),clip=(177,283,88,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(269,275,87,35) layer=(border=(269,275,87,35),radius=(8,8,8,8,8,8,8,8),clip=(269,275,87,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(56,319,64,20) layer=(border=(56,319,64,20),radius=(8,8,8,8,8,8,8,8),clip=(56,319,64,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  solid-fill bounds=(124,319,72,20) layer=(border=(124,319,72,20),radius=(8,8,8,8,8,8,8,8),clip=(124,319,72,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(200,319,80,20) layer=(border=(200,319,80,20),radius=(8,8,8,8,8,8,8,8),clip=(200,319,80,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(284,319,56,20) layer=(border=(284,319,56,20),radius=(8,8,8,8,8,8,8,8),clip=(284,319,56,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(56,343,48,20) layer=(border=(56,343,48,20),radius=(8,8,8,8,8,8,8,8),clip=(56,343,48,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(108,343,96,20) layer=(border=(108,343,96,20),radius=(8,8,8,8,8,8,8,8),clip=(108,343,96,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(208,343,88,20) layer=(border=(208,343,88,20),radius=(8,8,8,8,8,8,8,8),clip=(208,343,88,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(56,367,72,19) layer=(border=(56,367,72,19),radius=(8,8,8,8,8,8,8,8),clip=(56,367,72,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(-8,-7,32,32) pos=(0,1,16,16) color=#000000ff text="Aa" font=f1 glyphs=2 advance=16
+  text bounds=(16,-7,48,32) pos=(24,1,32,16) color=#000000ff text="Type" font=f1 glyphs=4 advance=32
+  text bounds=(56,-7,80,32) pos=(64,1,64,16) color=#000000ff text="specimen" font=f1 glyphs=8 advance=64
+  text bounds=(304,-7,64,32) pos=(312,1,48,16) color=#6e6e73ff text="System" font=f2 glyphs=6 advance=48
+  text bounds=(26.6667,23,80,32) pos=(34.6667,31,64,16) color=#ffffffff text="Specimen" font=f3 glyphs=8 advance=64
+  text bounds=(156,23,56,32) pos=(164,31,40,16) color=#8e8e93ff text="Scale" font=f3 glyphs=5 advance=40
+  text bounds=(261.333,23,72,32) pos=(269.333,31,56,16) color=#8e8e93ff text="Weights" font=f3 glyphs=7 advance=56
+  set-clip bounds=(0,59.8,360,120) pos=(0,59.8,360,120) radius=(12,12,12,12,12,12,12,12)
+  text bounds=(4,103,40,32) pos=(12,111,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(36,103,56,32) pos=(44,111,40,16) color=#000000ff text="quick" font=f4 glyphs=5 advance=40
+  text bounds=(84,103,56,32) pos=(92,111,40,16) color=#000000ff text="brown" font=f4 glyphs=5 advance=40
+  text bounds=(132,103,40,32) pos=(140,111,24,16) color=#000000ff text="fox" font=f4 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  text bounds=(-6,177,64,32) pos=(2,185,48,16) color=#6e6e73ff text="System" font=f5 glyphs=6 advance=48
+  text bounds=(50,177,32,32) pos=(58,185,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(74,177,48,32) pos=(82,185,32,16) color=#6e6e73ff text="29px" font=f5 glyphs=4 advance=32
+  text bounds=(114,177,32,32) pos=(122,185,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(138,177,40,32) pos=(146,185,24,16) color=#6e6e73ff text="700" font=f5 glyphs=3 advance=24
+  text bounds=(170,177,48,32) pos=(178,185,32,16) color=#6e6e73ff text="Bold" font=f5 glyphs=4 advance=32
+  text bounds=(-8,205,48,32) pos=(0,213,32,16) color=#8e8e93ff text="SIZE" font=f6 glyphs=4 advance=32
+  text bounds=(-8,240,64,32) pos=(0,248,48,16) color=#8e8e93ff text="WEIGHT" font=f6 glyphs=6 advance=48
+  text bounds=(-8,279,56,32) pos=(0,287,40,16) color=#8e8e93ff text="STYLE" font=f6 glyphs=5 advance=40
+  text bounds=(49.4118,277,64,32) pos=(57.4118,285,48,16) color=#000000ff text="Italic" font=f7 glyphs=6 advance=48
+  text bounds=(117.412,277,56,32) pos=(125.412,285,40,16) color=#000000ff text="UPPER" font=f2 glyphs=5 advance=40
+  text bounds=(177.412,277,88,32) pos=(185.412,285,72,16) color=#000000ff text="Underline" font=f8 glyphs=9 advance=72
+  text bounds=(269.412,269,40,32) pos=(277.412,277,24,16) color=#000000ff text="↻" font=f2 glyphs=3 advance=24
+  text bounds=(269.412,285,64,32) pos=(277.412,293,48,16) color=#000000ff text="Sample" font=f2 glyphs=6 advance=48
+  text bounds=(-8,313,64,32) pos=(0,321,48,16) color=#8e8e93ff text="FAMILY" font=f6 glyphs=6 advance=48
+  text bounds=(56,313,64,32) pos=(64,321,48,16) color=#007affff text="System" font=f2 glyphs=6 advance=48
+  text bounds=(124,313,72,32) pos=(132,321,56,16) color=#000000ff text="Rounded" font=f9 glyphs=7 advance=56
+  text bounds=(200,313,40,32) pos=(208,321,24,16) color=#000000ff text="New" font=f10 glyphs=3 advance=24
+  text bounds=(232,313,48,32) pos=(240,321,32,16) color=#000000ff text="York" font=f10 glyphs=4 advance=32
+  text bounds=(284,313,56,32) pos=(292,321,40,16) color=#000000ff text="Serif" font=f11 glyphs=5 advance=40
+  text bounds=(56,337,48,32) pos=(64,345,32,16) color=#000000ff text="Sans" font=f12 glyphs=4 advance=32
+  text bounds=(108,337,56,32) pos=(116,345,40,16) color=#000000ff text="Sans-" font=f13 glyphs=5 advance=40
+  text bounds=(148,337,56,32) pos=(156,345,40,16) color=#000000ff text="serif" font=f13 glyphs=5 advance=40
+  text bounds=(208,337,88,32) pos=(216,345,72,16) color=#000000ff text="Monospace" font=f14 glyphs=9 advance=72
+  text bounds=(56,361,32,32) pos=(64,369,16,16) color=#000000ff text="SF" font=f15 glyphs=2 advance=16
+  text bounds=(80,361,48,32) pos=(88,369,32,16) color=#000000ff text="Mono" font=f15 glyphs=4 advance=32
+  solid-fill bounds=(77,211,247,3) layer=(border=(77,211,247,3),radius=(1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5),clip=(77,211,247,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  solid-fill bounds=(77,211,208,3) layer=(border=(77,211,208,3),radius=(1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5),clip=(77,211,208,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(64.57,211,24,32) pos=(72.57,219,8,16) color=#8e8e93ff text="9" font=f16 glyphs=1 advance=8
+  text bounds=(101.71,211,32,32) pos=(109.71,219,16,16) color=#8e8e93ff text="12" font=f16 glyphs=2 advance=16
+  text bounds=(142.85,211,32,32) pos=(150.85,219,16,16) color=#8e8e93ff text="15" font=f16 glyphs=2 advance=16
+  text bounds=(183.99,211,32,32) pos=(191.99,219,16,16) color=#8e8e93ff text="17" font=f16 glyphs=2 advance=16
+  text bounds=(225.13,211,32,32) pos=(233.13,219,16,16) color=#8e8e93ff text="20" font=f16 glyphs=2 advance=16
+  text bounds=(266.27,211,32,32) pos=(274.27,219,16,16) color=#007affff text="28" font=f6 glyphs=2 advance=16
+  text bounds=(307.41,211,32,32) pos=(315.41,219,16,16) color=#8e8e93ff text="36" font=f16 glyphs=2 advance=16
+  solid-fill bounds=(279,206,13,13) layer=(border=(279,206,13,13),radius=(6.5,6.5,6.5,6.5,6.5,6.5,6.5,6.5),clip=(279,206,13,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  borders bounds=(279,206,13,13) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(6.5,6.5,6.5,6.5,6.5,6.5,6.5,6.5)) pos=(279,206,13,13) root=0
+  solid-fill bounds=(72,246,256,3) layer=(border=(72,246,256,3),radius=(1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5),clip=(72,246,256,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  solid-fill bounds=(72,246,181,3) layer=(border=(72,246,181,3),radius=(1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5),clip=(72,246,181,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(52,246,40,32) pos=(60,254,24,16) color=#8e8e93ff text="100" font=f16 glyphs=3 advance=24
+  text bounds=(84,246,40,32) pos=(92,254,24,16) color=#8e8e93ff text="200" font=f16 glyphs=3 advance=24
+  text bounds=(116,246,40,32) pos=(124,254,24,16) color=#8e8e93ff text="300" font=f16 glyphs=3 advance=24
+  text bounds=(148,246,40,32) pos=(156,254,24,16) color=#8e8e93ff text="400" font=f16 glyphs=3 advance=24
+  text bounds=(180,246,40,32) pos=(188,254,24,16) color=#8e8e93ff text="500" font=f16 glyphs=3 advance=24
+  text bounds=(212,246,40,32) pos=(220,254,24,16) color=#8e8e93ff text="600" font=f16 glyphs=3 advance=24
+  text bounds=(244,246,40,32) pos=(252,254,24,16) color=#007affff text="700" font=f6 glyphs=3 advance=24
+  text bounds=(276,246,40,32) pos=(284,254,24,16) color=#8e8e93ff text="800" font=f16 glyphs=3 advance=24
+  text bounds=(308,246,40,32) pos=(316,254,24,16) color=#8e8e93ff text="900" font=f16 glyphs=3 advance=24
+  solid-fill bounds=(246,241,13,13) layer=(border=(246,241,13,13),radius=(6.5,6.5,6.5,6.5,6.5,6.5,6.5,6.5),clip=(246,241,13,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  borders bounds=(246,241,13,13) borders=(left=(2,4,#ffffffff),top=(2,4,#ffffffff),right=(2,4,#ffffffff),bottom=(2,4,#ffffffff),radius=(6.5,6.5,6.5,6.5,6.5,6.5,6.5,6.5)) pos=(246,241,13,13) root=0
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=28.5,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(1,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="ui-rounded,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="ui-serif,serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="ui-sans-serif,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f13 (family="sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f14 (family="monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f15 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f16 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

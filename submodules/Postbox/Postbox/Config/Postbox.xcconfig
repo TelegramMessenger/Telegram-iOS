@@ -1,2 +1,0 @@
-SWIFT_INCLUDE_PATHS = $(SRCROOT)/Postbox
-MODULEMAP_PRIVATE_FILE = $(SRCROOT)/Postbox/module.private.modulemap

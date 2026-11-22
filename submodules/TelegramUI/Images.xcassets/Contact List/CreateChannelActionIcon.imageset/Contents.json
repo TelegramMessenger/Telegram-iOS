@@ -2,17 +2,7 @@
   "images" : [
     {
       "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "filename" : "ModernContactListBroadcastIcon@2x.png",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "universal",
-      "filename" : "ModernContactListBroadcastIcon@3x.png",
-      "scale" : "3x"
+      "filename" : "ic_channel.pdf"
     }
   ],
   "info" : {

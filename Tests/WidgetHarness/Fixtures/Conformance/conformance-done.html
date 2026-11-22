@@ -1,0 +1,16 @@
+<!doctype html>
+<html data-test="fixture/done">
+<head><style>body { margin: 0 }</style></head>
+<body>
+<p>A conformance fixture: publishes a result like widget-sandbox's harness, 20 ms after load.</p>
+<script>
+setTimeout(() => {
+  document.documentElement.setAttribute('data-conformance', JSON.stringify({
+    v: 1, id: 'fixture/done', status: 'done',
+    n: { pass: 1, fail: 1, xfail: 0, xpass: 0, skip: 0, pending: 0 },
+    checks: [['css.display.block', 'a block is a block', 'pass', ''], ['css.display.flex', 'flex', 'fail', 'why']]
+  }));
+}, 20);
+</script>
+</body>
+</html>

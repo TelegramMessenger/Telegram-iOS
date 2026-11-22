@@ -1,0 +1,12 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 29
+
+    sourceSets.main {
+        manifest.srcFile "AndroidManifest.xml"
+        res.srcDir "res"
+        java.srcDir "src"
+        jniLibs.srcDir "libs"
+    }
+}

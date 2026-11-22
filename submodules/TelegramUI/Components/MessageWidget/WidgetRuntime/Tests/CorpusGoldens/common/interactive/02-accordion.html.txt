@@ -1,0 +1,136 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="bold" style="font-size: 16px; margin-bottom: 4px">Rich messages: FAQ</div>
+  <div id="faq">
+    <div class="q open"><div class="qh" role="button"><span class="grow">What can a widget use?</span><span class="ch">−</span></div><div class="qb">One HTML file with inline CSS and JS. Flexbox, tables, gradients, custom properties. No network, no external fonts, no images except <code>data:</code>.</div></div>
+    <div class="q"><div class="qh" role="button"><span class="grow">How wide is a bubble?</span><span class="ch">+</span></div><div class="qb" hidden="">About 360–420 px. Design for 400 px and let the height follow the content; what is taller than the client's cap is clipped, nothing scrolls inside the bubble.</div></div>
+    <div class="q"><div class="qh" role="button"><span class="grow">Can the widget talk to the bot?</span><span class="ch">+</span></div><div class="qb" hidden="">Not directly: a widget never sends a message for the user. It keeps its state in <code>localStorage</code> for this message, and <code>TelegramWidget.openLink(url)</code> opens a page after a confirmation dialog.</div></div>
+    <div class="q"><div class="qh" role="button"><span class="grow">What happens if my script hangs?</span><span class="ch">+</span></div><div class="qb" hidden="">The sandbox has a CPU budget of about 300 ms per second. Over budget, timers are deferred; a tight loop is killed and the last render stays on screen.</div></div>
+    <div class="q"><div class="qh" role="button"><span class="grow">Does dark mode work?</span><span class="ch">+</span></div><div class="qb" hidden="">Use <code>@media (prefers-color-scheme: dark)</code>. It reflects the chat theme, not the OS setting, and switches live.</div></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 344.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 344.4
+    div 15 13 330 318.4
+      div 15 13 330 20.8
+      div 15 37.8 330 293.6
+        div 15 37.8 330 121.6
+          div 15 47.8 330 22
+            span 15 49.7 300 18.2
+            span 323 47.8 22 22
+          div 15 79.8 330 67.6
+            code 15 79.8 0 0
+        div 15 160.4 330 42
+          div 15 170.4 330 22
+            span 15 172.3 300 18.2
+            span 323 170.4 22 22
+          div 0 0 0 0
+        div 15 203.4 330 42
+          div 15 213.4 330 22
+            span 15 215.3 300 18.2
+            span 323 213.4 22 22
+          div 0 0 0 0
+            code 0 0 0 0
+            code 0 0 0 0
+        div 15 246.4 330 42
+          div 15 256.4 330 22
+            span 15 258.3 300 18.2
+            span 323 256.4 22 22
+          div 0 0 0 0
+        div 15 289.4 330 42
+          div 15 299.4 330 22
+            span 15 301.3 300 18.2
+            span 323 299.4 22 22
+          div 0 0 0 0
+            code 0 0 0 0
+
+== paint
+root 360x344.4 items=70
+  solid-fill bounds=(0,0,360,344) layer=(border=(0,0,360,344),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,344),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,344) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,344) root=0
+  solid-fill bounds=(323,48,22,22) layer=(border=(323,48,22,22),radius=(11,11,11,11,11,11,11,11),clip=(323,48,22,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  borders bounds=(15,159,330,43) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,159,330,43) root=0
+  solid-fill bounds=(323,170,22,22) layer=(border=(323,170,22,22),radius=(11,11,11,11,11,11,11,11),clip=(323,170,22,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,202,330,43) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,202,330,43) root=0
+  solid-fill bounds=(323,213,22,22) layer=(border=(323,213,22,22),radius=(11,11,11,11,11,11,11,11),clip=(323,213,22,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,245,330,43) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,245,330,43) root=0
+  solid-fill bounds=(323,256,22,22) layer=(border=(323,256,22,22),radius=(11,11,11,11,11,11,11,11),clip=(323,256,22,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,288,330,43) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,288,330,43) root=0
+  solid-fill bounds=(323,299,22,22) layer=(border=(323,299,22,22),radius=(11,11,11,11,11,11,11,11),clip=(323,299,22,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(7,7,48,32) pos=(15,15,32,16) color=#000000ff text="Rich" font=f1 glyphs=4 advance=32
+  text bounds=(47,7,88,32) pos=(55,15,72,16) color=#000000ff text="messages:" font=f1 glyphs=9 advance=72
+  text bounds=(127,7,40,32) pos=(135,15,24,16) color=#000000ff text="FAQ" font=f1 glyphs=3 advance=24
+  text bounds=(7,43,48,32) pos=(15,51,32,16) color=#000000ff text="What" font=f2 glyphs=4 advance=32
+  text bounds=(47,43,40,32) pos=(55,51,24,16) color=#000000ff text="can" font=f2 glyphs=3 advance=24
+  text bounds=(79,43,24,32) pos=(87,51,8,16) color=#000000ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(95,43,64,32) pos=(103,51,48,16) color=#000000ff text="widget" font=f2 glyphs=6 advance=48
+  text bounds=(151,43,48,32) pos=(159,51,32,16) color=#000000ff text="use?" font=f2 glyphs=4 advance=32
+  text bounds=(315,43,40,32) pos=(323,51,24,16) color=#ffffffff text="−" font=f3 glyphs=3 advance=24
+  text bounds=(7,72,40,32) pos=(15,80,24,16) color=#6e6e73ff text="One" font=f4 glyphs=3 advance=24
+  text bounds=(39,72,48,32) pos=(47,80,32,16) color=#6e6e73ff text="HTML" font=f4 glyphs=4 advance=32
+  text bounds=(79,72,48,32) pos=(87,80,32,16) color=#6e6e73ff text="file" font=f4 glyphs=4 advance=32
+  text bounds=(119,72,48,32) pos=(127,80,32,16) color=#6e6e73ff text="with" font=f4 glyphs=4 advance=32
+  text bounds=(159,72,64,32) pos=(167,80,48,16) color=#6e6e73ff text="inline" font=f4 glyphs=6 advance=48
+  text bounds=(215,72,40,32) pos=(223,80,24,16) color=#6e6e73ff text="CSS" font=f4 glyphs=3 advance=24
+  text bounds=(247,72,40,32) pos=(255,80,24,16) color=#6e6e73ff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(279,72,40,32) pos=(287,80,24,16) color=#6e6e73ff text="JS." font=f4 glyphs=3 advance=24
+  text bounds=(7,89,80,32) pos=(15,97,64,16) color=#6e6e73ff text="Flexbox," font=f4 glyphs=8 advance=64
+  text bounds=(79,89,72,32) pos=(87,97,56,16) color=#6e6e73ff text="tables," font=f4 glyphs=7 advance=56
+  text bounds=(143,89,96,32) pos=(151,97,80,16) color=#6e6e73ff text="gradients," font=f4 glyphs=10 advance=80
+  text bounds=(231,89,64,32) pos=(239,97,48,16) color=#6e6e73ff text="custom" font=f4 glyphs=6 advance=48
+  text bounds=(7,106,104,32) pos=(15,114,88,16) color=#6e6e73ff text="properties." font=f4 glyphs=11 advance=88
+  text bounds=(103,106,32,32) pos=(111,114,16,16) color=#6e6e73ff text="No" font=f4 glyphs=2 advance=16
+  text bounds=(127,106,80,32) pos=(135,114,64,16) color=#6e6e73ff text="network," font=f4 glyphs=8 advance=64
+  text bounds=(199,106,32,32) pos=(207,114,16,16) color=#6e6e73ff text="no" font=f4 glyphs=2 advance=16
+  text bounds=(223,106,80,32) pos=(231,114,64,16) color=#6e6e73ff text="external" font=f4 glyphs=8 advance=64
+  text bounds=(7,123,64,32) pos=(15,131,48,16) color=#6e6e73ff text="fonts," font=f4 glyphs=6 advance=48
+  text bounds=(63,123,32,32) pos=(71,131,16,16) color=#6e6e73ff text="no" font=f4 glyphs=2 advance=16
+  text bounds=(87,123,64,32) pos=(95,131,48,16) color=#6e6e73ff text="images" font=f4 glyphs=6 advance=48
+  text bounds=(143,123,64,32) pos=(151,131,48,16) color=#6e6e73ff text="except" font=f4 glyphs=6 advance=48
+  solid-fill bounds=(207,130,48,18) layer=(border=(207,130,48,18),radius=(4,4,4,4,4,4,4,4),clip=(207,130,48,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(203,123,56,32) pos=(211,131,40,16) color=#6e6e73ff text="data:" font=f5 glyphs=5 advance=40
+  text bounds=(247,123,24,32) pos=(255,131,8,16) color=#6e6e73ff text="." font=f4 glyphs=1 advance=8
+  text bounds=(7,165,40,32) pos=(15,173,24,16) color=#000000ff text="How" font=f2 glyphs=3 advance=24
+  text bounds=(39,165,48,32) pos=(47,173,32,16) color=#000000ff text="wide" font=f2 glyphs=4 advance=32
+  text bounds=(79,165,32,32) pos=(87,173,16,16) color=#000000ff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(103,165,24,32) pos=(111,173,8,16) color=#000000ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(119,165,72,32) pos=(127,173,56,16) color=#000000ff text="bubble?" font=f2 glyphs=7 advance=56
+  text bounds=(322,165,24,32) pos=(330,173,8,16) color=#000000ff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(7,208,40,32) pos=(15,216,24,16) color=#000000ff text="Can" font=f2 glyphs=3 advance=24
+  text bounds=(39,208,40,32) pos=(47,216,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(71,208,64,32) pos=(79,216,48,16) color=#000000ff text="widget" font=f2 glyphs=6 advance=48
+  text bounds=(127,208,48,32) pos=(135,216,32,16) color=#000000ff text="talk" font=f2 glyphs=4 advance=32
+  text bounds=(167,208,32,32) pos=(175,216,16,16) color=#000000ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(191,208,40,32) pos=(199,216,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(223,208,48,32) pos=(231,216,32,16) color=#000000ff text="bot?" font=f2 glyphs=4 advance=32
+  text bounds=(322,208,24,32) pos=(330,216,8,16) color=#000000ff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(7,251,48,32) pos=(15,259,32,16) color=#000000ff text="What" font=f2 glyphs=4 advance=32
+  text bounds=(47,251,72,32) pos=(55,259,56,16) color=#000000ff text="happens" font=f2 glyphs=7 advance=56
+  text bounds=(111,251,32,32) pos=(119,259,16,16) color=#000000ff text="if" font=f2 glyphs=2 advance=16
+  text bounds=(135,251,32,32) pos=(143,259,16,16) color=#000000ff text="my" font=f2 glyphs=2 advance=16
+  text bounds=(159,251,64,32) pos=(167,259,48,16) color=#000000ff text="script" font=f2 glyphs=6 advance=48
+  text bounds=(215,251,64,32) pos=(223,259,48,16) color=#000000ff text="hangs?" font=f2 glyphs=6 advance=48
+  text bounds=(322,251,24,32) pos=(330,259,8,16) color=#000000ff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(7,294,48,32) pos=(15,302,32,16) color=#000000ff text="Does" font=f2 glyphs=4 advance=32
+  text bounds=(47,294,48,32) pos=(55,302,32,16) color=#000000ff text="dark" font=f2 glyphs=4 advance=32
+  text bounds=(87,294,48,32) pos=(95,302,32,16) color=#000000ff text="mode" font=f2 glyphs=4 advance=32
+  text bounds=(127,294,56,32) pos=(135,302,40,16) color=#000000ff text="work?" font=f2 glyphs=5 advance=40
+  text bounds=(322,294,24,32) pos=(330,302,8,16) color=#000000ff text="+" font=f3 glyphs=1 advance=8
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

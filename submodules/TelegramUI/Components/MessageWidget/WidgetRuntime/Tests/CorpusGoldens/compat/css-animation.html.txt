@@ -1,0 +1,52 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div class="row"><div class="spinner" id="spinner"></div><span class="pulse"></span> <span>CSS keyframes, no JS involved</span></div>
+<div class="card slide" id="card">Transition on class toggle → <button id="toggle">toggle</button> <span id="events">0 transitionend</span></div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 165.05
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 137.05
+    div 14 14 332 44
+      div 18 18 36 36
+      span 74 30 12 12
+      span 102 25.875 232 20.25
+    div 26 84 308 55.05
+      button 39 113.25 48 16.8
+      span 26 84 0 0
+
+== paint
+root 360x165.05 items=19
+  solid-fill bounds=(0,0,360,165) layer=(border=(0,0,360,165),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,165),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  group opacity=1 matrix=(0.978148,-0.207911,0.207911,0.978148,-6.69812,8.27149) backface=0 bounds=(14,14,44,44) exact=0
+    borders bounds=(14,14,44,44) borders=(left=(4,4,#e5e7ebff),top=(4,4,#2481ccff),right=(4,4,#e5e7ebff),bottom=(4,4,#e5e7ebff),radius=(22,22,22,22,22,22,22,22)) pos=(14,14,44,44) root=0
+  group opacity=0.8114 matrix=(0.9057,0,0,0.9057,7.544,3.3948) backface=0 bounds=(72,28,16,16) exact=1
+    solid-fill bounds=(74,30,12,12) layer=(border=(74,30,12,12),radius=(6,6,6,6,6,6,6,6),clip=(74,30,12,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#16a34aff
+  solid-fill bounds=(14,72,332,79) layer=(border=(14,72,332,79),radius=(10,10,10,10,10,10,10,10),clip=(14,72,332,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f3f4f6ff
+  text bounds=(94,20,40,32) pos=(102,28,24,16) color=#222222ff text="CSS" font=f1 glyphs=3 advance=24
+  text bounds=(126,20,96,32) pos=(134,28,80,16) color=#222222ff text="keyframes," font=f1 glyphs=10 advance=80
+  text bounds=(214,20,32,32) pos=(222,28,16,16) color=#222222ff text="no" font=f1 glyphs=2 advance=16
+  text bounds=(238,20,32,32) pos=(246,28,16,16) color=#222222ff text="JS" font=f1 glyphs=2 advance=16
+  text bounds=(262,20,80,32) pos=(270,28,64,16) color=#222222ff text="involved" font=f1 glyphs=8 advance=64
+  text bounds=(18,78,96,32) pos=(26,86,80,16) color=#222222ff text="Transition" font=f1 glyphs=10 advance=80
+  text bounds=(106,78,32,32) pos=(114,86,16,16) color=#222222ff text="on" font=f1 glyphs=2 advance=16
+  text bounds=(130,78,56,32) pos=(138,86,40,16) color=#222222ff text="class" font=f1 glyphs=5 advance=40
+  text bounds=(178,78,64,32) pos=(186,86,48,16) color=#222222ff text="toggle" font=f1 glyphs=6 advance=48
+  text bounds=(234,78,40,32) pos=(242,86,24,16) color=#222222ff text="→" font=f1 glyphs=3 advance=24
+  solid-fill bounds=(26,104,74,35) layer=(border=(26,104,74,35),radius=(8,8,8,8,8,8,8,8),clip=(26,104,74,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(26,104,74,35) borders=(left=(1,4,#ccccccff),top=(1,4,#ccccccff),right=(1,4,#ccccccff),bottom=(1,4,#ccccccff),radius=(8,8,8,8,8,8,8,8)) pos=(26,104,74,35) root=0
+  text bounds=(31,105,64,32) pos=(39,113,48,16) color=#222222ff text="toggle" font=f2 glyphs=6 advance=48
+  text bounds=(100,105,24,32) pos=(108,113,8,16) color=#222222ff text="0" font=f1 glyphs=1 advance=8
+  text bounds=(116,105,120,32) pos=(124,113,104,16) color=#222222ff text="transitionend" font=f1 glyphs=13 advance=104
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

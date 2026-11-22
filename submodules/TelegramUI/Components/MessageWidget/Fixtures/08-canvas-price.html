@@ -1,0 +1,93 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--bg2:light-dark(#f1f2f4,#2c2c2e)}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+.top{display:flex;justify-content:space-between;align-items:flex-start}
+.sym{font-size:13px;color:var(--mut)}
+.px{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.chg{font-size:14px;font-weight:500}
+.up{color:#31b545}.down{color:#e5484d}
+canvas{display:block;width:100%;height:150px;margin:8px 0}
+.seg{display:flex;background:var(--bg2);border-radius:9px;padding:2px}
+.seg button{flex:1;border:0;border-radius:7px;padding:6px 0;background:none;color:var(--fg);font:inherit;font-size:13px;font-weight:500}
+.seg button.on{background:light-dark(#fff,#48484a);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+</style>
+<div class="top">
+  <div><div class="sym">TGRM · tap the chart</div><div class="px" id="px"></div></div>
+  <div class="chg" id="chg"></div>
+</div>
+<canvas id="cv"></canvas>
+<div class="seg" id="seg"><button data-n="7">1W</button><button data-n="30" class="on">1M</button><button data-n="90">3M</button><button data-n="365">1Y</button></div>
+<script>
+function series(n, seed) {
+  let s = seed, v = 100;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    s = (s * 16807) % 2147483647;
+    v *= 1 + ((s / 2147483647) - 0.47) * 0.04;
+    out.push(v);
+  }
+  return out;
+}
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let data = [], pick = -1;
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const lo = Math.min(...data), hi = Math.max(...data);
+  const x = (i) => i / (data.length - 1) * w;
+  const y = (v) => 6 + (hi - v) / (hi - lo || 1) * (h - 12);
+  const up = data[data.length - 1] >= data[0];
+  const color = up ? '#31b545' : '#e5484d';
+  ctx.beginPath();
+  data.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, up ? 'rgba(49,181,69,.28)' : 'rgba(229,72,77,.28)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  const i = pick >= 0 ? pick : data.length - 1;
+  if (pick >= 0) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x(i) - 0.5, 0, 1, h);
+  }
+  ctx.beginPath();
+  ctx.arc(x(i), y(data[i]), 4, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  const pct = (data[i] / data[0] - 1) * 100;
+  document.getElementById('px').textContent = '$' + data[i].toFixed(2);
+  const chg = document.getElementById('chg');
+  chg.textContent = (pct >= 0 ? '▲ ' : '▼ ') + Math.abs(pct).toFixed(2) + '%';
+  chg.className = 'chg ' + (pct >= 0 ? 'up' : 'down');
+}
+function load(n) {
+  data = series(n, n * 7919);
+  pick = -1;
+  draw();
+}
+cv.addEventListener('click', (e) => {
+  pick = Math.round(e.offsetX / cv.clientWidth * (data.length - 1));
+  pick = Math.max(0, Math.min(data.length - 1, pick));
+  draw();
+});
+document.getElementById('seg').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  for (const c of b.parentElement.children) c.classList.toggle('on', c === b);
+  load(Number(b.dataset.n));
+});
+load(30);
+</script>

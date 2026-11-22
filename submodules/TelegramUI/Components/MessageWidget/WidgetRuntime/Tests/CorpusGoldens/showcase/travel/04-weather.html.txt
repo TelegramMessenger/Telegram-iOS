@@ -1,0 +1,268 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="sky " id="sky">
+    <svg viewBox="0 0 392 170">
+      <g class="sun" id="sun" style="opacity: 1;"><circle cx="300" cy="60" r="28" fill="#ffe27a"></circle><g stroke="#ffe27a" stroke-width="3" stroke-linecap="round" opacity=".9"><line x1="300" y1="18" x2="300" y2="8"></line><line x1="300" y1="102" x2="300" y2="112"></line><line x1="258" y1="60" x2="248" y2="60"></line><line x1="342" y1="60" x2="352" y2="60"></line><line x1="270" y1="30" x2="263" y2="23"></line><line x1="330" y1="90" x2="337" y2="97"></line><line x1="330" y1="30" x2="337" y2="23"></line><line x1="270" y1="90" x2="263" y2="97"></line></g></g>
+      <g class="cloud" id="cloud1" fill="rgba(255,255,255,.92)" style="opacity: .9;"><ellipse cx="250" cy="110" rx="46" ry="20"></ellipse><circle cx="235" cy="96" r="22"></circle><circle cx="265" cy="92" r="26"></circle><circle cx="290" cy="106" r="18"></circle></g>
+      <g class="cloud c2" id="cloud2" fill="rgba(255,255,255,.6)" style="opacity: .6;"><ellipse cx="120" cy="135" rx="38" ry="14"></ellipse><circle cx="110" cy="125" r="16"></circle><circle cx="135" cy="120" r="19"></circle></g>
+      <g class="drops" id="drops" opacity="0" style="opacity: 0;"><line x1="230" y1="125" x2="226" y2="140"></line><line x1="250" y1="128" x2="246" y2="143" style="animation-delay:-.3s"></line><line x1="270" y1="124" x2="266" y2="139" style="animation-delay:-.6s"></line><line x1="290" y1="130" x2="286" y2="145" style="animation-delay:-.15s"></line><line x1="110" y1="150" x2="106" y2="165" style="animation-delay:-.5s"></line><line x1="135" y1="152" x2="131" y2="167" style="animation-delay:-.8s"></line></g>
+    </svg>
+    <div class="now"><div class="t"><span id="temp">21</span><sup>°</sup></div><div class="d" id="desc">Sunny intervals</div><div class="c" id="hilo">H 24° · L 14° · Wind 12 km/h</div></div>
+    <div class="place">Lisbon<small id="when">Today, 14:30</small></div>
+  </div>
+  <div class="chart"><svg viewBox="0 0 372 110" id="chart"><path class="area" id="area" d="M14 74.0 C22.2 74.7 46.8 78.7 63.1 78.0 C79.5 77.3 95.9 73.3 112.3 70.0 C128.7 66.7 145.0 62.0 161.4 58.0 C177.8 54.0 194.2 49.3 210.6 46.0 C227.0 42.7 243.3 38.7 259.7 38.0 C276.1 37.3 292.5 38.7 308.9 42.0 C325.2 45.3 349.8 55.3 358.0 58.0 V90 H14 Z"></path><path class="curve" id="curve" d="M14 74.0 C22.2 74.7 46.8 78.7 63.1 78.0 C79.5 77.3 95.9 73.3 112.3 70.0 C128.7 66.7 145.0 62.0 161.4 58.0 C177.8 54.0 194.2 49.3 210.6 46.0 C227.0 42.7 243.3 38.7 259.7 38.0 C276.1 37.3 292.5 38.7 308.9 42.0 C325.2 45.3 349.8 55.3 358.0 58.0"></path><circle class="pt" cx="14" cy="74.0" r="3.5" id="p0"></circle><text class="lab" x="14" y="65.0" id="l0">15°</text><text class="hr" x="14" y="106">0</text><circle class="pt" cx="63.142857142857146" cy="78.0" r="3.5" id="p1"></circle><text class="lab" x="63.142857142857146" y="69.0" id="l1">14°</text><text class="hr" x="63.142857142857146" y="106">3</text><circle class="pt" cx="112.28571428571429" cy="70.0" r="3.5" id="p2"></circle><text class="lab" x="112.28571428571429" y="61.0" id="l2">16°</text><text class="hr" x="112.28571428571429" y="106">6</text><circle class="pt" cx="161.42857142857142" cy="58.0" r="3.5" id="p3"></circle><text class="lab" x="161.42857142857142" y="49.0" id="l3">19°</text><text class="hr" x="161.42857142857142" y="106">9</text><circle class="pt" cx="210.57142857142858" cy="46.0" r="3.5" id="p4"></circle><text class="lab" x="210.57142857142858" y="37.0" id="l4">22°</text><text class="hr" x="210.57142857142858" y="106">12</text><circle class="pt" cx="259.7142857142857" cy="38.0" r="3.5" id="p5"></circle><text class="lab" x="259.7142857142857" y="29.0" id="l5">24°</text><text class="hr" x="259.7142857142857" y="106">15</text><circle class="pt" cx="308.85714285714283" cy="42.0" r="3.5" id="p6"></circle><text class="lab" x="308.85714285714283" y="33.0" id="l6">23°</text><text class="hr" x="308.85714285714283" y="106">18</text><circle class="pt" cx="358" cy="58.0" r="3.5" id="p7"></circle><text class="lab" x="358" y="49.0" id="l7">19°</text><text class="hr" x="358" y="106">21</text></svg></div>
+  <div class="week" id="week"><div class="day on" data-i="0" role="button"><div class="n">Today</div><span class="i">⛅</span><div class="hi">24°</div><div class="lo">14°</div><div class="bar" style="margin-left:24%;margin-right:36%"></div></div><div class="day" data-i="1" role="button"><div class="n">Fri</div><span class="i">☀️</span><div class="hi">27°</div><div class="lo">15°</div><div class="bar" style="margin-left:30%;margin-right:18%"></div></div><div class="day" data-i="2" role="button"><div class="n">Sat</div><span class="i">🌧</span><div class="hi">18°</div><div class="lo">12°</div><div class="bar" style="margin-left:12%;margin-right:72%"></div></div><div class="day" data-i="3" role="button"><div class="n">Sun</div><span class="i">☁️</span><div class="hi">20°</div><div class="lo">13°</div><div class="bar" style="margin-left:18%;margin-right:60%"></div></div><div class="day" data-i="4" role="button"><div class="n">Mon</div><span class="i">☀️</span><div class="hi">25°</div><div class="lo">14°</div><div class="bar" style="margin-left:24%;margin-right:30%"></div></div></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 417.25
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 417.25
+    div 0 0 360 417.25
+      div 0 0 360 170
+        svg 0 0 360 170
+          g 0 0 0 0
+            circle 0 0 0 0
+            g 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+          g 0 0 0 0
+            ellipse 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+          g 0 0 0 0
+            ellipse 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+            line 0 0 0 0
+        div 18 16 256 98.45
+          div 18 16 256 56
+            span 18 16 0 0
+            sup 34 10 16 0
+          div 18 76 256 18.9
+          div 18 96.9 256 17.55
+        div 248 14 96 35.1
+          small 248 34.25 96 14.85
+      div 10 184 340 110
+        svg 10 184 340 110
+          path 0 0 0 0
+          path 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+          circle 0 0 0 0
+          text 0 0 0 0
+          text 0 0 0 0
+      div 10 302 340 101.25
+        div 14 310 55.2 85.25
+          div 14 310 55.2 14.85
+          span 14 328.85 55.2 20
+          div 14 352.85 55.2 17.55
+          div 14 370.4 55.2 14.85
+          div 27.248 391.25 22.08 4
+        div 83.2 310 55.2 85.25
+          div 83.2 310 55.2 14.85
+          span 83.2 328.85 55.2 20
+          div 83.2 352.85 55.2 17.55
+          div 83.2 370.4 55.2 14.85
+          div 99.76 391.25 28.704 4
+        div 152.4 310 55.2 85.25
+          div 152.4 310 55.2 14.85
+          span 152.4 328.85 55.2 20
+          div 152.4 352.85 55.2 17.55
+          div 152.4 370.4 55.2 14.85
+          div 159.024 391.25 8.832 4
+        div 221.6 310 55.2 85.25
+          div 221.6 310 55.2 14.85
+          span 221.6 328.85 55.2 20
+          div 221.6 352.85 55.2 17.55
+          div 221.6 370.4 55.2 14.85
+          div 231.536 391.25 12.144 4
+        div 290.8 310 55.2 85.25
+          div 290.8 310 55.2 14.85
+          span 290.8 328.85 55.2 20
+          div 290.8 352.85 55.2 17.55
+          div 290.8 370.4 55.2 14.85
+          div 304.048 391.25 25.392 4
+
+== paint
+root 360x417.25 items=103
+  solid-fill bounds=(0,0,360,417) layer=(border=(0,0,360,417),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,417),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,417.25) pos=(0,0,360,417.25) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(10,184,340,110) pos=(10,184,340,110) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(10,184,340,110)
+    group opacity=1 matrix=(0.913979,0,0,0.913979,10,188.731) backface=0 bounds=(0,0,372,110) exact=0
+      path bounds=(8,31.8241,356,52.2578) ops=(0,3,3,3,3,3,3,3) points=(14,74,22.2,74.7,46.8,78.7,63.1,78,79.5,77.3,95.9,73.3,112.3,70,128.7,66.7,145,62,161.4,58,177.8,54,194.2,49.3,210.6,46,227,42.7,243.3,38.7,259.7,38,276.1,37.3,292.5,38.7,308.9,42,325.2,45.3,349.8,55.3,358,58) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(5.5,65.5,17,17) ops=(0,3,3,3,3,4) points=(17.5,74,17.5,75.933,15.933,77.5,14,77.5,12.067,77.5,10.5,75.933,10.5,74,10.5,72.067,12.067,70.5,14,70.5,15.933,70.5,17.5,72.067,17.5,74) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(-10,45,48,32) pos=(-2,53,32,16) color=#0a0a0aff text="15°" font=f1 glyphs=4 advance=32
+      text bounds=(2,86,24,32) pos=(10,94,8,16) color=#6e6e73ff text="0" font=f2 glyphs=1 advance=8
+      path bounds=(54.6429,69.5,17,17) ops=(0,3,3,3,3,4) points=(66.6429,78,66.6429,79.933,65.0759,81.5,63.1429,81.5,61.2099,81.5,59.6429,79.933,59.6429,78,59.6429,76.067,61.2099,74.5,63.1429,74.5,65.0759,74.5,66.6429,76.067,66.6429,78) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(39.1429,49,48,32) pos=(47.1429,57,32,16) color=#0a0a0aff text="14°" font=f1 glyphs=4 advance=32
+      text bounds=(51.1429,86,24,32) pos=(59.1429,94,8,16) color=#6e6e73ff text="3" font=f2 glyphs=1 advance=8
+      path bounds=(103.786,61.5,17,17) ops=(0,3,3,3,3,4) points=(115.786,70,115.786,71.933,114.219,73.5,112.286,73.5,110.353,73.5,108.786,71.933,108.786,70,108.786,68.067,110.353,66.5,112.286,66.5,114.219,66.5,115.786,68.067,115.786,70) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(88.2857,41,48,32) pos=(96.2857,49,32,16) color=#0a0a0aff text="16°" font=f1 glyphs=4 advance=32
+      text bounds=(100.286,86,24,32) pos=(108.286,94,8,16) color=#6e6e73ff text="6" font=f2 glyphs=1 advance=8
+      path bounds=(152.929,49.5,17,17) ops=(0,3,3,3,3,4) points=(164.929,58,164.929,59.933,163.362,61.5,161.429,61.5,159.496,61.5,157.929,59.933,157.929,58,157.929,56.067,159.496,54.5,161.429,54.5,163.362,54.5,164.929,56.067,164.929,58) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(137.429,29,48,32) pos=(145.429,37,32,16) color=#0a0a0aff text="19°" font=f1 glyphs=4 advance=32
+      text bounds=(149.429,86,24,32) pos=(157.429,94,8,16) color=#6e6e73ff text="9" font=f2 glyphs=1 advance=8
+      path bounds=(202.071,37.5,17,17) ops=(0,3,3,3,3,4) points=(214.071,46,214.071,47.933,212.504,49.5,210.571,49.5,208.638,49.5,207.071,47.933,207.071,46,207.071,44.067,208.638,42.5,210.571,42.5,212.504,42.5,214.071,44.067,214.071,46) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(186.571,17,48,32) pos=(194.571,25,32,16) color=#0a0a0aff text="22°" font=f1 glyphs=4 advance=32
+      text bounds=(194.571,86,32,32) pos=(202.571,94,16,16) color=#6e6e73ff text="12" font=f2 glyphs=2 advance=16
+      path bounds=(251.214,29.5,17,17) ops=(0,3,3,3,3,4) points=(263.214,38,263.214,39.933,261.647,41.5,259.714,41.5,257.781,41.5,256.214,39.933,256.214,38,256.214,36.067,257.781,34.5,259.714,34.5,261.647,34.5,263.214,36.067,263.214,38) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(235.714,9,48,32) pos=(243.714,17,32,16) color=#0a0a0aff text="24°" font=f1 glyphs=4 advance=32
+      text bounds=(243.714,86,32,32) pos=(251.714,94,16,16) color=#6e6e73ff text="15" font=f2 glyphs=2 advance=16
+      path bounds=(300.357,33.5,17,17) ops=(0,3,3,3,3,4) points=(312.357,42,312.357,43.933,310.79,45.5,308.857,45.5,306.924,45.5,305.357,43.933,305.357,42,305.357,40.067,306.924,38.5,308.857,38.5,310.79,38.5,312.357,40.067,312.357,42) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(284.857,13,48,32) pos=(292.857,21,32,16) color=#0a0a0aff text="23°" font=f1 glyphs=4 advance=32
+      text bounds=(292.857,86,32,32) pos=(300.857,94,16,16) color=#6e6e73ff text="18" font=f2 glyphs=2 advance=16
+      path bounds=(349.5,49.5,17,17) ops=(0,3,3,3,3,4) points=(361.5,58,361.5,59.933,359.933,61.5,358,61.5,356.067,61.5,354.5,59.933,354.5,58,354.5,56.067,356.067,54.5,358,54.5,359.933,54.5,361.5,56.067,361.5,58) fill=1 fill-color=#ffffffff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(334,29,48,32) pos=(342,37,32,16) color=#0a0a0aff text="19°" font=f1 glyphs=4 advance=32
+      text bounds=(342,86,32,32) pos=(350,94,16,16) color=#6e6e73ff text="21" font=f2 glyphs=2 advance=16
+  del-clip bounds=(0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,-2) backface=0 bounds=(10,302,63.2,101.25) exact=0
+    solid-fill bounds=(10,302,63,101) layer=(border=(10,302,63,101),radius=(12,12,12,12,12,12,12,12),clip=(10,302,63,101),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+    text bounds=(13.6,302,56,32) pos=(21.6,310,40,16) color=#0a0a0aff text="Today" font=f3 glyphs=5 advance=40
+    text bounds=(21.6,323,40,32) pos=(29.6,331,24,16) color=#0a0a0aff text="⛅" font=f4 glyphs=3 advance=24
+    text bounds=(17.6,345,48,32) pos=(25.6,353,32,16) color=#0a0a0aff text="24°" font=f5 glyphs=4 advance=32
+    text bounds=(17.6,362,48,32) pos=(25.6,370,32,16) color=#6e6e73ff text="14°" font=f6 glyphs=4 advance=32
+    group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(25.248,389.25,26.08,8) exact=1
+      linear-gradient bounds=(27,391,22,4) layer=(border=(27,391,22,4),radius=(2,2,2,2,2,2,2,2),clip=(27,391,22,4),origin=(27,391,22,4),attachment=0,repeat=0,root=0) points=((0,#4fc3f7ff,-),(1,#ffb74dff,-)) space=0 hue=0 start=(27,391) end=(49,391)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,417.25) pos=(0,0,360,417.25) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(90.8,302,40,32) pos=(98.8,310,24,16) color=#6e6e73ff text="Fri" font=f3 glyphs=3 advance=24
+  text bounds=(78.8,323,64,32) pos=(86.8,331,48,16) color=#0a0a0aff text="☀️" font=f4 glyphs=6 advance=48
+  text bounds=(86.8,345,48,32) pos=(94.8,353,32,16) color=#0a0a0aff text="27°" font=f5 glyphs=4 advance=32
+  text bounds=(86.8,362,48,32) pos=(94.8,370,32,16) color=#6e6e73ff text="15°" font=f6 glyphs=4 advance=32
+  text bounds=(160,302,40,32) pos=(168,310,24,16) color=#6e6e73ff text="Sat" font=f3 glyphs=3 advance=24
+  text bounds=(156,323,48,32) pos=(164,331,32,16) color=#0a0a0aff text="🌧" font=f4 glyphs=4 advance=32
+  text bounds=(156,345,48,32) pos=(164,353,32,16) color=#0a0a0aff text="18°" font=f5 glyphs=4 advance=32
+  text bounds=(156,362,48,32) pos=(164,370,32,16) color=#6e6e73ff text="12°" font=f6 glyphs=4 advance=32
+  text bounds=(229.2,302,40,32) pos=(237.2,310,24,16) color=#6e6e73ff text="Sun" font=f3 glyphs=3 advance=24
+  text bounds=(217.2,323,64,32) pos=(225.2,331,48,16) color=#0a0a0aff text="☁️" font=f4 glyphs=6 advance=48
+  text bounds=(225.2,345,48,32) pos=(233.2,353,32,16) color=#0a0a0aff text="20°" font=f5 glyphs=4 advance=32
+  text bounds=(225.2,362,48,32) pos=(233.2,370,32,16) color=#6e6e73ff text="13°" font=f6 glyphs=4 advance=32
+  text bounds=(298.4,302,40,32) pos=(306.4,310,24,16) color=#6e6e73ff text="Mon" font=f3 glyphs=3 advance=24
+  text bounds=(286.4,323,64,32) pos=(294.4,331,48,16) color=#0a0a0aff text="☀️" font=f4 glyphs=6 advance=48
+  text bounds=(294.4,345,48,32) pos=(302.4,353,32,16) color=#0a0a0aff text="25°" font=f5 glyphs=4 advance=32
+  text bounds=(294.4,362,48,32) pos=(302.4,370,32,16) color=#6e6e73ff text="14°" font=f6 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,417.25) pos=(0,0,360,417.25) radius=(0,0,0,0,0,0,0,0)
+  linear-gradient bounds=(0,0,360,170) layer=(border=(0,0,360,170),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,170),origin=(0,0,360,170),attachment=0,repeat=0,root=0) points=((0,#2a7de1ff,-),(1,#7fc1ffff,-)) space=0 hue=0 start=(0,0) end=(0,170)
+  set-clip bounds=(0,0,360,170) pos=(0,0,360,170) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(0,0,360,170) pos=(0,0,360,170) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(0,0,360,170)
+    group opacity=1 matrix=(0.918367,0,0,0.918367,4.05312e-06,6.93878) backface=0 bounds=(0,0,392,170) exact=0
+      group opacity=1 matrix=(0.988494,0.151261,-0.151261,0.988494,12.5275,-44.6879) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(271,31,58,58) ops=(0,3,3,3,3,4) points=(328,60,328,75.464,315.464,88,300,88,284.536,88,272,75.464,272,60,272,44.536,284.536,32,300,32,315.464,32,328,44.536,328,60) fill=1 fill-color=#ffe27aff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(293,1,14,24) ops=(0,1) points=(300,18,300,8) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(293,95,14,24) ops=(0,1) points=(300,102,300,112) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(241,53,24,14) ops=(0,1) points=(258,60,248,60) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(335,53,24,14) ops=(0,1) points=(342,60,352,60) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(256,16,21,21) ops=(0,1) points=(270,30,263,23) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(323,83,21,21) ops=(0,1) points=(330,90,337,97) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(323,16,21,21) ops=(0,1) points=(330,30,337,23) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(256,83,21,21) ops=(0,1) points=(270,90,263,97) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffe27aff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=0.9 matrix=(1,0,0,1,2.3476,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(203,89,94,42) ops=(0,3,3,3,3,4) points=(296,110,296,121.046,275.405,130,250,130,224.595,130,204,121.046,204,110,204,98.9543,224.595,90,250,90,275.405,90,296,98.9543,296,110) fill=1 fill-color=#ffffffeb evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(212,73,46,46) ops=(0,3,3,3,3,4) points=(257,96,257,108.15,247.15,118,235,118,222.85,118,213,108.15,213,96,213,83.8497,222.85,74,235,74,247.15,74,257,83.8497,257,96) fill=1 fill-color=#ffffffeb evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(238,65,54,54) ops=(0,3,3,3,3,4) points=(291,92,291,106.359,279.359,118,265,118,250.641,118,239,106.359,239,92,239,77.6406,250.641,66,265,66,279.359,66,291,77.6406,291,92) fill=1 fill-color=#ffffffeb evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(271,87,38,38) ops=(0,3,3,3,3,4) points=(308,106,308,115.941,299.941,124,290,124,280.059,124,272,115.941,272,106,272,96.0589,280.059,88,290,88,299.941,88,308,96.0589,308,106) fill=1 fill-color=#ffffffeb evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=0.6 matrix=(1,0,0,1,12.4667,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(81,120,78,30) ops=(0,3,3,3,3,4) points=(158,135,158,142.732,140.987,149,120,149,99.0132,149,82,142.732,82,135,82,127.268,99.0132,121,120,121,140.987,121,158,127.268,158,135) fill=1 fill-color=#ffffff99 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(93,108,34,34) ops=(0,3,3,3,3,4) points=(126,125,126,133.837,118.837,141,110,141,101.163,141,94,133.837,94,125,94,116.163,101.163,109,110,109,118.837,109,126,116.163,126,125) fill=1 fill-color=#ffffff99 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(115,100,40,40) ops=(0,3,3,3,3,4) points=(154,120,154,130.493,145.493,139,135,139,124.507,139,116,130.493,116,120,116,109.507,124.507,101,135,101,145.493,101,154,109.507,154,120) fill=1 fill-color=#ffffff99 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        group opacity=0.0417 matrix=(1,0,0,1,0,57) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(221,120,14,25) ops=(0,1) points=(230,125,226,140) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffbf stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=0.9167 matrix=(1,0,0,1,0,-6) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(241,123,14,25) ops=(0,1) points=(250,128,246,143) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffbf stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=0.5417 matrix=(1,0,0,1,0,21) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(261,119,14,25) ops=(0,1) points=(270,124,266,139) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffbf stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=0.5833 matrix=(1,0,0,1,0,-19.5) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(281,125,14,25) ops=(0,1) points=(290,130,286,145) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffbf stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=0.6667 matrix=(1,0,0,1,0,12) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(101,145,14,25) ops=(0,1) points=(110,150,106,165) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffbf stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=0.2917 matrix=(1,0,0,1,0,39) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(126,147,14,25) ops=(0,1) points=(135,152,131,167) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffbf stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(8,67,268,36) exact=1
+    text bounds=(10,69,56,32) pos=(18,77,40,16) color=#ffffffff text="Sunny" font=f7 glyphs=5 advance=40
+    text bounds=(58,69,88,32) pos=(66,77,72,16) color=#ffffffff text="intervals" font=f7 glyphs=9 advance=72
+  group opacity=0.8 matrix=(1,0,0,1,0,0) backface=0 bounds=(8,86.9,276,36) exact=1
+    text bounds=(10,89,24,32) pos=(18,97,8,16) color=#ffffffff text="H" font=f8 glyphs=1 advance=8
+    text bounds=(26,89,48,32) pos=(34,97,32,16) color=#ffffffff text="24°" font=f8 glyphs=4 advance=32
+    text bounds=(66,89,32,32) pos=(74,97,16,16) color=#ffffffff text="·" font=f8 glyphs=2 advance=16
+    text bounds=(90,89,24,32) pos=(98,97,8,16) color=#ffffffff text="L" font=f8 glyphs=1 advance=8
+    text bounds=(106,89,48,32) pos=(114,97,32,16) color=#ffffffff text="14°" font=f8 glyphs=4 advance=32
+    text bounds=(146,89,32,32) pos=(154,97,16,16) color=#ffffffff text="·" font=f8 glyphs=2 advance=16
+    text bounds=(170,89,48,32) pos=(178,97,32,16) color=#ffffffff text="Wind" font=f8 glyphs=4 advance=32
+    text bounds=(210,89,32,32) pos=(218,97,16,16) color=#ffffffff text="12" font=f8 glyphs=2 advance=16
+    text bounds=(234,89,48,32) pos=(242,97,32,16) color=#ffffffff text="km/h" font=f8 glyphs=4 advance=32
+  text bounds=(10,28,32,32) pos=(18,36,16,16) color=#ffffffff text="21" font=f9 glyphs=2 advance=16
+  text bounds=(26,-6,32,32) pos=(34,2,16,16) color=#ffffffff text="°" font=f10 glyphs=2 advance=16
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(238,24.25,116,36) exact=1
+    text bounds=(240,26,64,32) pos=(248,34,48,16) color=#ffffffff text="Today," font=f6 glyphs=6 advance=48
+    text bounds=(296,26,56,32) pos=(304,34,40,16) color=#ffffffff text="14:30" font=f6 glyphs=5 advance=40
+  text bounds=(288,8,64,32) pos=(296,16,48,16) color=#ffffffff text="Lisbon" font=f11 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(97.76,389.25,32.704,8) exact=1
+    linear-gradient bounds=(100,391,28,4) layer=(border=(100,391,28,4),radius=(2,2,2,2,2,2,2,2),clip=(100,391,28,4),origin=(100,391,28,4),attachment=0,repeat=0,root=0) points=((0,#4fc3f7ff,-),(1,#ffb74dff,-)) space=0 hue=0 start=(100,391) end=(128,391)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(157.024,389.25,12.832,8) exact=1
+    linear-gradient bounds=(159,391,9,4) layer=(border=(159,391,9,4),radius=(2,2,2,2,2,2,2,2),clip=(159,391,9,4),origin=(159,391,9,4),attachment=0,repeat=0,root=0) points=((0,#4fc3f7ff,-),(1,#ffb74dff,-)) space=0 hue=0 start=(159,391) end=(168,391)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(229.536,389.25,16.144,8) exact=1
+    linear-gradient bounds=(232,391,12,4) layer=(border=(232,391,12,4),radius=(2,2,2,2,2,2,2,2),clip=(232,391,12,4),origin=(232,391,12,4),attachment=0,repeat=0,root=0) points=((0,#4fc3f7ff,-),(1,#ffb74dff,-)) space=0 hue=0 start=(232,391) end=(244,391)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(302.048,389.25,29.392,8) exact=1
+    linear-gradient bounds=(304,391,25,4) layer=(border=(304,391,25,4),radius=(2,2,2,2,2,2,2,2),clip=(304,391,25,4),origin=(304,391,25,4),attachment=0,repeat=0,root=0) points=((0,#4fc3f7ff,-),(1,#ffb74dff,-)) space=0 hue=0 start=(304,391) end=(329,391)
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=20,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=56,style=0,weight=300,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-1.68,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=24,style=0,weight=300,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-1.68,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=15,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

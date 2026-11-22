@@ -1,0 +1,67 @@
+{
+  "afterBoundaryOffset": 19,
+  "beforeBoundaryOffset": 18,
+  "cancelAction": {
+    "accessibilityIdentity": "delete",
+    "kind": "software-keyboard-key-sequence",
+    "value": "delete,delete,delete,delete,delete"
+  },
+  "cancelResult": "Alpha middle omega\nSecond block remains unchanged.",
+  "candidateAccessibilityIdentity": "你好, 你们的你，好友的好",
+  "candidateAction": {
+    "accessibilityIdentity": "你好, 你们的你，好友的好",
+    "kind": "candidate-cell-tap",
+    "value": "你好"
+  },
+  "candidateLabel": "你好",
+  "canonicalDocument": "Alpha middle omega\nSecond block remains unchanged.",
+  "committedText": "你好",
+  "firstComposition": "n",
+  "geometryTolerance": 1,
+  "inputModeIdentifier": "zh_Hans-Pinyin@sw=Pinyin-Simplified;hw=Automatic",
+  "interiorOffset": 6,
+  "language": "simplified-chinese-pinyin",
+  "markedSelections": [
+    {
+      "length": 0,
+      "location": 1
+    },
+    {
+      "length": 0,
+      "location": 2
+    }
+  ],
+  "ordinaryCommitAction": {
+    "accessibilityIdentity": "Return",
+    "kind": "software-keyboard-button",
+    "value": "Return"
+  },
+  "ordinaryCommitResult": "Alpha nihaomiddle omega\nSecond block remains unchanged.",
+  "physicalKeySequence": [
+    "n",
+    "i",
+    "h",
+    "a",
+    "o"
+  ],
+  "primaryLanguage": "zh-Hans",
+  "responderLossResult": "Alpha middle omeganihao\nSecond block remains unchanged.",
+  "returnAction": {
+    "accessibilityIdentity": "Return",
+    "kind": "software-keyboard-button",
+    "value": "Return"
+  },
+  "returnCommitResult": "Alpha middle omeganihao\nSecond block remains unchanged.",
+  "runtime": {
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "schema": 1,
+  "undoAction": {
+    "accessibilityIdentity": "ime-undo",
+    "kind": "uikit-undo-manager",
+    "value": "undo"
+  },
+  "undoResult": "Alpha middle omega\nSecond block remains unchanged.",
+  "updatedComposition": "ni"
+}

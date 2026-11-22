@@ -1,0 +1,110 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div id="quiz">
+  <section class="q" id="q1"><h4>1. Capital of Australia?</h4><div class="opts">
+    <button class="opt" data-q="q1" data-v="sydney" aria-pressed="false">Sydney</button>
+    <button class="opt" data-q="q1" data-v="canberra" id="q1-right" aria-pressed="false">Canberra</button>
+    <button class="opt" data-q="q1" data-v="melbourne" aria-pressed="false">Melbourne</button></div></section>
+  <section class="q" id="q2"><h4>2. 7 × 8 = ?</h4><div class="opts">
+    <button class="opt" data-q="q2" data-v="54" aria-pressed="false">54</button>
+    <button class="opt" data-q="q2" data-v="56" id="q2-right" aria-pressed="false">56</button>
+    <button class="opt" data-q="q2" data-v="58" id="q2-wrong" aria-pressed="false">58</button></div></section>
+  <section class="q multi" id="q3"><h4>3. Which are primes? (two answers)</h4><div class="opts">
+    <button class="opt" data-q="q3" data-v="2" id="q3-a" aria-pressed="false">2</button>
+    <button class="opt" data-q="q3" data-v="9" aria-pressed="false">9</button>
+    <button class="opt" data-q="q3" data-v="11" id="q3-b" aria-pressed="false">11</button></div></section>
+  <button id="submit">Check answers</button>
+  <div id="score"></div>
+</div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 353.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 325.3
+    div 14 14 332 325.3
+      section 27 25 306 53.5
+        h4 27 25 306 17.5
+        div 27 48.5 306 30
+          button 40 55.5 48 16
+          button 120 55.5 64 16
+          button 216 55.5 72 16
+      section 27 110.5 306 53.5
+        h4 27 110.5 306 17.5
+        div 27 134 306 30
+          button 40 141 16 16
+          button 88 141 16 16
+          button 136 141 16 16
+      section 27 196 306 53.5
+        h4 27 196 306 17.5
+        div 27 219.5 306 30
+          button 40 226.5 8 16
+          button 80 226.5 8 16
+          button 120 226.5 16 16
+      button 30 280.5 104 16.8
+      div 14 317.3 332 22
+
+== paint
+root 360x353.3 items=50
+  solid-fill bounds=(0,0,360,353) layer=(border=(0,0,360,353),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,353),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  borders bounds=(14,14,332,76) borders=(left=(1,4,#ddddddff),top=(1,4,#ddddddff),right=(1,4,#ddddddff),bottom=(1,4,#ddddddff),radius=(8,8,8,8,8,8,8,8)) pos=(14,14,332,76) root=0
+  solid-fill bounds=(27,49,74,30) layer=(border=(27,49,74,30),radius=(8,8,8,8,8,8,8,8),clip=(27,49,74,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(27,49,74,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(27,49,74,30) root=0
+  solid-fill bounds=(107,49,90,30) layer=(border=(107,49,90,30),radius=(8,8,8,8,8,8,8,8),clip=(107,49,90,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(107,49,90,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(107,49,90,30) root=0
+  solid-fill bounds=(203,49,98,30) layer=(border=(203,49,98,30),radius=(8,8,8,8,8,8,8,8),clip=(203,49,98,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(203,49,98,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(203,49,98,30) root=0
+  borders bounds=(14,100,332,75) borders=(left=(1,4,#ddddddff),top=(1,4,#ddddddff),right=(1,4,#ddddddff),bottom=(1,4,#ddddddff),radius=(8,8,8,8,8,8,8,8)) pos=(14,100,332,75) root=0
+  solid-fill bounds=(27,134,42,30) layer=(border=(27,134,42,30),radius=(8,8,8,8,8,8,8,8),clip=(27,134,42,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(27,134,42,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(27,134,42,30) root=0
+  solid-fill bounds=(75,134,42,30) layer=(border=(75,134,42,30),radius=(8,8,8,8,8,8,8,8),clip=(75,134,42,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(75,134,42,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(75,134,42,30) root=0
+  solid-fill bounds=(123,134,42,30) layer=(border=(123,134,42,30),radius=(8,8,8,8,8,8,8,8),clip=(123,134,42,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(123,134,42,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(123,134,42,30) root=0
+  borders bounds=(14,185,332,76) borders=(left=(1,4,#ddddddff),top=(1,4,#ddddddff),right=(1,4,#ddddddff),bottom=(1,4,#ddddddff),radius=(8,8,8,8,8,8,8,8)) pos=(14,185,332,76) root=0
+  solid-fill bounds=(27,220,34,30) layer=(border=(27,220,34,30),radius=(8,8,8,8,8,8,8,8),clip=(27,220,34,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(27,220,34,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(27,220,34,30) root=0
+  solid-fill bounds=(67,220,34,30) layer=(border=(67,220,34,30),radius=(8,8,8,8,8,8,8,8),clip=(67,220,34,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(67,220,34,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(67,220,34,30) root=0
+  solid-fill bounds=(107,220,42,30) layer=(border=(107,220,42,30),radius=(8,8,8,8,8,8,8,8),clip=(107,220,42,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(107,220,42,30) borders=(left=(1,4,#cbd5e1ff),top=(1,4,#cbd5e1ff),right=(1,4,#cbd5e1ff),bottom=(1,4,#cbd5e1ff),radius=(8,8,8,8,8,8,8,8)) pos=(107,220,42,30) root=0
+  text bounds=(19,17,32,32) pos=(27,25,16,16) color=#222222ff text="1." font=f1 glyphs=2 advance=16
+  text bounds=(43,17,72,32) pos=(51,25,56,16) color=#222222ff text="Capital" font=f1 glyphs=7 advance=56
+  text bounds=(107,17,32,32) pos=(115,25,16,16) color=#222222ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(131,17,96,32) pos=(139,25,80,16) color=#222222ff text="Australia?" font=f1 glyphs=10 advance=80
+  text bounds=(32,48,64,32) pos=(40,56,48,16) color=#222222ff text="Sydney" font=f2 glyphs=6 advance=48
+  text bounds=(112,48,80,32) pos=(120,56,64,16) color=#222222ff text="Canberra" font=f2 glyphs=8 advance=64
+  text bounds=(208,48,88,32) pos=(216,56,72,16) color=#222222ff text="Melbourne" font=f2 glyphs=9 advance=72
+  text bounds=(19,103,32,32) pos=(27,111,16,16) color=#222222ff text="2." font=f1 glyphs=2 advance=16
+  text bounds=(43,103,24,32) pos=(51,111,8,16) color=#222222ff text="7" font=f1 glyphs=1 advance=8
+  text bounds=(59,103,32,32) pos=(67,111,16,16) color=#222222ff text="×" font=f1 glyphs=2 advance=16
+  text bounds=(83,103,24,32) pos=(91,111,8,16) color=#222222ff text="8" font=f1 glyphs=1 advance=8
+  text bounds=(99,103,24,32) pos=(107,111,8,16) color=#222222ff text="=" font=f1 glyphs=1 advance=8
+  text bounds=(115,103,24,32) pos=(123,111,8,16) color=#222222ff text="?" font=f1 glyphs=1 advance=8
+  text bounds=(32,133,32,32) pos=(40,141,16,16) color=#222222ff text="54" font=f2 glyphs=2 advance=16
+  text bounds=(80,133,32,32) pos=(88,141,16,16) color=#222222ff text="56" font=f2 glyphs=2 advance=16
+  text bounds=(128,133,32,32) pos=(136,141,16,16) color=#222222ff text="58" font=f2 glyphs=2 advance=16
+  text bounds=(19,188,32,32) pos=(27,196,16,16) color=#222222ff text="3." font=f1 glyphs=2 advance=16
+  text bounds=(43,188,56,32) pos=(51,196,40,16) color=#222222ff text="Which" font=f1 glyphs=5 advance=40
+  text bounds=(91,188,40,32) pos=(99,196,24,16) color=#222222ff text="are" font=f1 glyphs=3 advance=24
+  text bounds=(123,188,72,32) pos=(131,196,56,16) color=#222222ff text="primes?" font=f1 glyphs=7 advance=56
+  text bounds=(187,188,48,32) pos=(195,196,32,16) color=#222222ff text="(two" font=f1 glyphs=4 advance=32
+  text bounds=(227,188,80,32) pos=(235,196,64,16) color=#222222ff text="answers)" font=f1 glyphs=8 advance=64
+  text bounds=(32,219,24,32) pos=(40,227,8,16) color=#222222ff text="2" font=f2 glyphs=1 advance=8
+  text bounds=(72,219,24,32) pos=(80,227,8,16) color=#222222ff text="9" font=f2 glyphs=1 advance=8
+  text bounds=(112,219,32,32) pos=(120,227,16,16) color=#222222ff text="11" font=f2 glyphs=2 advance=16
+  solid-fill bounds=(14,271,136,36) layer=(border=(14,271,136,36),radius=(8,8,8,8,8,8,8,8),clip=(14,271,136,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(22,273,56,32) pos=(30,281,40,16) color=#ffffffff text="Check" font=f3 glyphs=5 advance=40
+  text bounds=(70,273,72,32) pos=(78,281,56,16) color=#ffffffff text="answers" font=f3 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

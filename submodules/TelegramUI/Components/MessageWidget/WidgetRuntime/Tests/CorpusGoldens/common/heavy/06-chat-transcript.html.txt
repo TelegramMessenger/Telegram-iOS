@@ -1,0 +1,886 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="top"><span class="btn" role="button" id="older" style="padding: 4px 12px; font-size: 12px">Load older</span></div>
+  <div id="log"><div class="day"><span>Yesterday</span></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>Morning! Kit v2 review at 11, same room.<div class="t">09:02</div></div></div><div class="m me"><div class="b">On it. Did the chips land?<div class="t">09:03</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>They did. 9px radius, 12px text, tinted backgrounds.<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:05</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div><div class="q">They did. 9px radius, 12px text, tinted backgrounds.</div>The pricing card looks great on litehtml now.<div class="t">09:11</div></div></div><div class="m"><div class="av" style="background-color: #34c759">PR</div><div class="b"><div class="who" style="color: #34c759">Priya</div>Timetable rows were double height on Blitz, fixed by dropping the cell height.<div class="t">09:14</div></div></div><div class="m me"><div class="b">Nice catch. Tables are the tricky ones.<div class="t">09:15</div></div></div><div class="m"><div class="av" style="background-color: #ff2d55">TO</div><div class="b"><div class="who" style="color: #ff2d55">Tom</div>Can someone check the receipt? Columns collided for me.<div class="t">09:20</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>Already fixed: explicit widths and nowrap on the numbers.<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:21</div></div></div><div class="m me"><div class="b">I will rerun the gallery after lunch.<div class="t">09:24</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div>Ticker at 2 Hz is fine on all three, log lines too.<div class="t">09:30</div></div></div><div class="m"><div class="av" style="background-color: #34c759">PR</div><div class="b"><div class="who" style="color: #34c759">Priya</div><div class="q">Ticker at 2 Hz is fine on all three, log lines too.</div>The typewriter is 30 updates per second of text; litehtml rebuilds every time, which is the point.<div class="t">09:33</div></div></div><div class="m"><div class="av" style="background-color: #ff2d55">TO</div><div class="b"><div class="who" style="color: #ff2d55">Tom</div>Agreed, keep it.<div class="t">09:34</div></div></div><div class="m me"><div class="b">What about the skeleton swap?<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:40</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>One innerHTML after 1.4 s. Cheap for everyone.<div class="t">09:41</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div>Slideshow caption lives in position: absolute, worked everywhere.<div class="t">09:45</div></div></div><div class="m"><div class="av" style="background-color: #34c759">PR</div><div class="b"><div class="who" style="color: #34c759">Priya</div>Should we add a 300-chip cloud?<div class="t">09:52</div></div></div><div class="m me"><div class="b">Added. Also a 60-row table and a tree.<div class="t">09:53</div></div></div><div class="m"><div class="av" style="background-color: #ff2d55">TO</div><div class="b"><div class="who" style="color: #ff2d55">Tom</div><div class="q">Added. Also a 60-row table and a tree.</div>The article is 900 words, pure text layout.<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:58</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>That is the one litehtml will feel.<div class="t">10:04</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div>Good. Numbers at 11.<div class="t">10:05</div></div></div><div class="day"><span>Today</span></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>Morning! Kit v2 review at 11, same room.<div class="t">09:02</div></div></div><div class="m me"><div class="b">On it. Did the chips land?<div class="t">09:03</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>They did. 9px radius, 12px text, tinted backgrounds.<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:05</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div><div class="q">They did. 9px radius, 12px text, tinted backgrounds.</div>The pricing card looks great on litehtml now.<div class="t">09:11</div></div></div><div class="m"><div class="av" style="background-color: #34c759">PR</div><div class="b"><div class="who" style="color: #34c759">Priya</div>Timetable rows were double height on Blitz, fixed by dropping the cell height.<div class="t">09:14</div></div></div><div class="m me"><div class="b">Nice catch. Tables are the tricky ones.<div class="t">09:15</div></div></div><div class="m"><div class="av" style="background-color: #ff2d55">TO</div><div class="b"><div class="who" style="color: #ff2d55">Tom</div>Can someone check the receipt? Columns collided for me.<div class="t">09:20</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>Already fixed: explicit widths and nowrap on the numbers.<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:21</div></div></div><div class="m me"><div class="b">I will rerun the gallery after lunch.<div class="t">09:24</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div>Ticker at 2 Hz is fine on all three, log lines too.<div class="t">09:30</div></div></div><div class="m"><div class="av" style="background-color: #34c759">PR</div><div class="b"><div class="who" style="color: #34c759">Priya</div><div class="q">Ticker at 2 Hz is fine on all three, log lines too.</div>The typewriter is 30 updates per second of text; litehtml rebuilds every time, which is the point.<div class="t">09:33</div></div></div><div class="m"><div class="av" style="background-color: #ff2d55">TO</div><div class="b"><div class="who" style="color: #ff2d55">Tom</div>Agreed, keep it.<div class="t">09:34</div></div></div><div class="m me"><div class="b">What about the skeleton swap?<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:40</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>One innerHTML after 1.4 s. Cheap for everyone.<div class="t">09:41</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div>Slideshow caption lives in position: absolute, worked everywhere.<div class="t">09:45</div></div></div><div class="m"><div class="av" style="background-color: #34c759">PR</div><div class="b"><div class="who" style="color: #34c759">Priya</div>Should we add a 300-chip cloud?<div class="t">09:52</div></div></div><div class="m me"><div class="b">Added. Also a 60-row table and a tree.<div class="t">09:53</div></div></div><div class="m"><div class="av" style="background-color: #ff2d55">TO</div><div class="b"><div class="who" style="color: #ff2d55">Tom</div><div class="q">Added. Also a 60-row table and a tree.</div>The article is 900 words, pure text layout.<div class="rx"><span>+1 · 3</span><span>ok · 1</span></div><div class="t">09:58</div></div></div><div class="m"><div class="av" style="background-color: #5856d6">MA</div><div class="b"><div class="who" style="color: #5856d6">Maya</div>That is the one litehtml will feel.<div class="t">10:04</div></div></div><div class="m"><div class="av" style="background-color: #ff9500">LE</div><div class="b"><div class="who" style="color: #ff9500">Leo</div>Good. Numbers at 11.<div class="t">10:05</div></div></div></div>
+  <div class="tiny muted" style="text-align: center; margin-top: 10px" id="note">40 messages</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 3645.1
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 3645.1
+    div 15 13 330 3619.1
+      div 15 13 330 23.6
+        span 140 17 80 15.6
+      div 15 46.6 330 3561.2
+        div 15 46.6 330 14.3
+          span 15 46.6 0 0
+        div 15 66.9 330 78.1
+          div 15 119 26 26
+          div 57 73.9 270 64.1
+            div 57 73.9 270 14.3
+            div 57 125 270 13
+        div 15 151 330 45.9
+          div 127 158 208 31.9
+            div 127 176.9 208 13
+        div 15 202.9 330 96.1
+          div 15 273 26 26
+          div 57 209.9 270 82.1
+            div 57 209.9 270 14.3
+            div 57 262 270 15
+              span 63 263 56 13
+              span 135 263 56 13
+            div 57 279 270 13
+        div 15 305 330 117.3
+          div 15 396.3 26 26
+          div 57 312 270 103.3
+            div 57 312 270 14.3
+            div 68 329.3 251 31.2
+            div 57 402.3 270 13
+        div 15 428.3 330 95
+          div 15 497.3 26 26
+          div 57 435.3 270 81
+            div 57 435.3 270 14.3
+            div 57 503.3 270 13
+        div 15 529.3 330 62.8
+          div 65 536.3 270 48.8
+            div 65 572.1 270 13
+        div 15 598.1 330 78.1
+          div 15 650.2 26 26
+          div 57 605.1 270 64.1
+            div 57 605.1 270 14.3
+            div 57 656.2 270 13
+        div 15 682.2 330 96.1
+          div 15 752.3 26 26
+          div 57 689.2 270 82.1
+            div 57 689.2 270 14.3
+            div 57 741.3 270 15
+              span 63 742.3 56 13
+              span 135 742.3 56 13
+            div 57 758.3 270 13
+        div 15 784.3 330 62.8
+          div 65 791.3 270 48.8
+            div 65 827.1 270 13
+        div 15 853.1 330 78.1
+          div 15 905.2 26 26
+          div 57 860.1 270 64.1
+            div 57 860.1 270 14.3
+            div 57 911.2 270 13
+        div 15 937.2 330 134.2
+          div 15 1045.4 26 26
+          div 57 944.2 270 120.2
+            div 57 944.2 270 14.3
+            div 68 961.5 251 31.2
+            div 57 1051.4 270 13
+        div 15 1077.4 330 61.2
+          div 15 1112.6 26 26
+          div 57 1084.4 128 47.2
+            div 57 1084.4 128 14.3
+            div 57 1118.6 128 13
+        div 15 1144.6 330 63.9
+          div 103 1151.6 232 49.9
+            div 103 1171.5 232 15
+              span 109 1172.5 56 13
+              span 181 1172.5 56 13
+            div 103 1188.5 232 13
+        div 15 1214.5 330 78.1
+          div 15 1266.6 26 26
+          div 57 1221.5 270 64.1
+            div 57 1221.5 270 14.3
+            div 57 1272.6 270 13
+        div 15 1298.6 330 95
+          div 15 1367.6 26 26
+          div 57 1305.6 270 81
+            div 57 1305.6 270 14.3
+            div 57 1373.6 270 13
+        div 15 1399.6 330 61.2
+          div 15 1434.8 26 26
+          div 57 1406.6 248 47.2
+            div 57 1406.6 248 14.3
+            div 57 1440.8 248 13
+        div 15 1466.8 330 62.8
+          div 65 1473.8 270 48.8
+            div 65 1509.6 270 13
+        div 15 1535.6 330 135.3
+          div 15 1644.9 26 26
+          div 57 1542.6 270 121.3
+            div 57 1542.6 270 14.3
+            div 68 1559.9 251 31.2
+            div 57 1633.9 270 15
+              span 63 1634.9 56 13
+              span 135 1634.9 56 13
+            div 57 1650.9 270 13
+        div 15 1676.9 330 78.1
+          div 15 1729 26 26
+          div 57 1683.9 270 64.1
+            div 57 1683.9 270 14.3
+            div 57 1735 270 13
+        div 15 1761 330 61.2
+          div 15 1796.2 26 26
+          div 57 1768 160 47.2
+            div 57 1768 160 14.3
+            div 57 1802.2 160 13
+        div 15 1832.2 330 14.3
+          span 15 1832.2 0 0
+        div 15 1852.5 330 78.1
+          div 15 1904.6 26 26
+          div 57 1859.5 270 64.1
+            div 57 1859.5 270 14.3
+            div 57 1910.6 270 13
+        div 15 1936.6 330 45.9
+          div 127 1943.6 208 31.9
+            div 127 1962.5 208 13
+        div 15 1988.5 330 96.1
+          div 15 2058.6 26 26
+          div 57 1995.5 270 82.1
+            div 57 1995.5 270 14.3
+            div 57 2047.6 270 15
+              span 63 2048.6 56 13
+              span 135 2048.6 56 13
+            div 57 2064.6 270 13
+        div 15 2090.6 330 117.3
+          div 15 2181.9 26 26
+          div 57 2097.6 270 103.3
+            div 57 2097.6 270 14.3
+            div 68 2114.9 251 31.2
+            div 57 2187.9 270 13
+        div 15 2213.9 330 95
+          div 15 2282.9 26 26
+          div 57 2220.9 270 81
+            div 57 2220.9 270 14.3
+            div 57 2288.9 270 13
+        div 15 2314.9 330 62.8
+          div 65 2321.9 270 48.8
+            div 65 2357.7 270 13
+        div 15 2383.7 330 78.1
+          div 15 2435.8 26 26
+          div 57 2390.7 270 64.1
+            div 57 2390.7 270 14.3
+            div 57 2441.8 270 13
+        div 15 2467.8 330 96.1
+          div 15 2537.9 26 26
+          div 57 2474.8 270 82.1
+            div 57 2474.8 270 14.3
+            div 57 2526.9 270 15
+              span 63 2527.9 56 13
+              span 135 2527.9 56 13
+            div 57 2543.9 270 13
+        div 15 2569.9 330 62.8
+          div 65 2576.9 270 48.8
+            div 65 2612.7 270 13
+        div 15 2638.7 330 78.1
+          div 15 2690.8 26 26
+          div 57 2645.7 270 64.1
+            div 57 2645.7 270 14.3
+            div 57 2696.8 270 13
+        div 15 2722.8 330 134.2
+          div 15 2831 26 26
+          div 57 2729.8 270 120.2
+            div 57 2729.8 270 14.3
+            div 68 2747.1 251 31.2
+            div 57 2837 270 13
+        div 15 2863 330 61.2
+          div 15 2898.2 26 26
+          div 57 2870 128 47.2
+            div 57 2870 128 14.3
+            div 57 2904.2 128 13
+        div 15 2930.2 330 63.9
+          div 103 2937.2 232 49.9
+            div 103 2957.1 232 15
+              span 109 2958.1 56 13
+              span 181 2958.1 56 13
+            div 103 2974.1 232 13
+        div 15 3000.1 330 78.1
+          div 15 3052.2 26 26
+          div 57 3007.1 270 64.1
+            div 57 3007.1 270 14.3
+            div 57 3058.2 270 13
+        div 15 3084.2 330 95
+          div 15 3153.2 26 26
+          div 57 3091.2 270 81
+            div 57 3091.2 270 14.3
+            div 57 3159.2 270 13
+        div 15 3185.2 330 61.2
+          div 15 3220.4 26 26
+          div 57 3192.2 248 47.2
+            div 57 3192.2 248 14.3
+            div 57 3226.4 248 13
+        div 15 3252.4 330 62.8
+          div 65 3259.4 270 48.8
+            div 65 3295.2 270 13
+        div 15 3321.2 330 135.3
+          div 15 3430.5 26 26
+          div 57 3328.2 270 121.3
+            div 57 3328.2 270 14.3
+            div 68 3345.5 251 31.2
+            div 57 3419.5 270 15
+              span 63 3420.5 56 13
+              span 135 3420.5 56 13
+            div 57 3436.5 270 13
+        div 15 3462.5 330 78.1
+          div 15 3514.6 26 26
+          div 57 3469.5 270 64.1
+            div 57 3469.5 270 14.3
+            div 57 3520.6 270 13
+        div 15 3546.6 330 61.2
+          div 15 3581.8 26 26
+          div 57 3553.6 160 47.2
+            div 57 3553.6 160 14.3
+            div 57 3587.8 160 13
+      div 15 3617.8 330 14.3
+
+== paint
+root 360x3645.1 items=635
+  solid-fill bounds=(0,0,360,3645) layer=(border=(0,0,360,3645),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,3645),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,3645) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,3645) root=0
+  solid-fill bounds=(15,119,26,26) layer=(border=(15,119,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,119,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,67,290,78) layer=(border=(47,67,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,67,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(117,151,228,46) layer=(border=(117,151,228,46),radius=(14,14,14,14,14,14,14,14),clip=(117,151,228,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,273,26,26) layer=(border=(15,273,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,273,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,203,290,96) layer=(border=(47,203,290,96),radius=(14,14,14,14,14,14,14,14),clip=(47,203,290,96),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,262,68,15) layer=(border=(57,262,68,15),radius=(7,7,7,7,7,7,7,7),clip=(57,262,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(129,262,68,15) layer=(border=(129,262,68,15),radius=(7,7,7,7,7,7,7,7),clip=(129,262,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(15,396,26,26) layer=(border=(15,396,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,396,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,305,290,117) layer=(border=(47,305,290,117),radius=(14,14,14,14,14,14,14,14),clip=(47,305,290,117),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,327,270,35) layer=(border=(57,327,270,35),radius=(4,4,4,4,4,4,4,4),clip=(57,327,270,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  borders bounds=(57,327,270,35) borders=(left=(3,4,#007affff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(4,4,4,4,4,4,4,4)) pos=(57,327,270,35) root=0
+  solid-fill bounds=(15,497,26,26) layer=(border=(15,497,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,497,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(47,428,290,95) layer=(border=(47,428,290,95),radius=(14,14,14,14,14,14,14,14),clip=(47,428,290,95),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(55,529,290,63) layer=(border=(55,529,290,63),radius=(14,14,14,14,14,14,14,14),clip=(55,529,290,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,650,26,26) layer=(border=(15,650,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,650,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(47,598,290,78) layer=(border=(47,598,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,598,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,752,26,26) layer=(border=(15,752,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,752,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,682,290,96) layer=(border=(47,682,290,96),radius=(14,14,14,14,14,14,14,14),clip=(47,682,290,96),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,741,68,15) layer=(border=(57,741,68,15),radius=(7,7,7,7,7,7,7,7),clip=(57,741,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(129,741,68,15) layer=(border=(129,741,68,15),radius=(7,7,7,7,7,7,7,7),clip=(129,741,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(55,784,290,63) layer=(border=(55,784,290,63),radius=(14,14,14,14,14,14,14,14),clip=(55,784,290,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,905,26,26) layer=(border=(15,905,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,905,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,853,290,78) layer=(border=(47,853,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,853,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,1045,26,26) layer=(border=(15,1045,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1045,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(47,937,290,134) layer=(border=(47,937,290,134),radius=(14,14,14,14,14,14,14,14),clip=(47,937,290,134),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,959,270,36) layer=(border=(57,959,270,36),radius=(4,4,4,4,4,4,4,4),clip=(57,959,270,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  borders bounds=(57,959,270,36) borders=(left=(3,4,#007affff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(4,4,4,4,4,4,4,4)) pos=(57,959,270,36) root=0
+  solid-fill bounds=(15,1113,26,26) layer=(border=(15,1113,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1113,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(47,1077,148,62) layer=(border=(47,1077,148,62),radius=(14,14,14,14,14,14,14,14),clip=(47,1077,148,62),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(93,1145,252,63) layer=(border=(93,1145,252,63),radius=(14,14,14,14,14,14,14,14),clip=(93,1145,252,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(103,1171,68,15) layer=(border=(103,1171,68,15),radius=(7,7,7,7,7,7,7,7),clip=(103,1171,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(175,1171,68,15) layer=(border=(175,1171,68,15),radius=(7,7,7,7,7,7,7,7),clip=(175,1171,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(15,1267,26,26) layer=(border=(15,1267,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1267,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,1214,290,79) layer=(border=(47,1214,290,79),radius=(14,14,14,14,14,14,14,14),clip=(47,1214,290,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,1368,26,26) layer=(border=(15,1368,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1368,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,1299,290,95) layer=(border=(47,1299,290,95),radius=(14,14,14,14,14,14,14,14),clip=(47,1299,290,95),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,1435,26,26) layer=(border=(15,1435,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1435,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(47,1400,268,61) layer=(border=(47,1400,268,61),radius=(14,14,14,14,14,14,14,14),clip=(47,1400,268,61),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(55,1467,290,63) layer=(border=(55,1467,290,63),radius=(14,14,14,14,14,14,14,14),clip=(55,1467,290,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,1645,26,26) layer=(border=(15,1645,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1645,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(47,1536,290,135) layer=(border=(47,1536,290,135),radius=(14,14,14,14,14,14,14,14),clip=(47,1536,290,135),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,1558,270,35) layer=(border=(57,1558,270,35),radius=(4,4,4,4,4,4,4,4),clip=(57,1558,270,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  borders bounds=(57,1558,270,35) borders=(left=(3,4,#007affff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(4,4,4,4,4,4,4,4)) pos=(57,1558,270,35) root=0
+  solid-fill bounds=(57,1634,68,15) layer=(border=(57,1634,68,15),radius=(7,7,7,7,7,7,7,7),clip=(57,1634,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(129,1634,68,15) layer=(border=(129,1634,68,15),radius=(7,7,7,7,7,7,7,7),clip=(129,1634,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(15,1729,26,26) layer=(border=(15,1729,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1729,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,1677,290,78) layer=(border=(47,1677,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,1677,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,1796,26,26) layer=(border=(15,1796,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1796,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,1761,180,61) layer=(border=(47,1761,180,61),radius=(14,14,14,14,14,14,14,14),clip=(47,1761,180,61),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,1905,26,26) layer=(border=(15,1905,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,1905,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,1852,290,79) layer=(border=(47,1852,290,79),radius=(14,14,14,14,14,14,14,14),clip=(47,1852,290,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(117,1937,228,45) layer=(border=(117,1937,228,45),radius=(14,14,14,14,14,14,14,14),clip=(117,1937,228,45),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,2059,26,26) layer=(border=(15,2059,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2059,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,1988,290,97) layer=(border=(47,1988,290,97),radius=(14,14,14,14,14,14,14,14),clip=(47,1988,290,97),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,2048,68,15) layer=(border=(57,2048,68,15),radius=(7,7,7,7,7,7,7,7),clip=(57,2048,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(129,2048,68,15) layer=(border=(129,2048,68,15),radius=(7,7,7,7,7,7,7,7),clip=(129,2048,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(15,2182,26,26) layer=(border=(15,2182,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2182,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,2091,290,117) layer=(border=(47,2091,290,117),radius=(14,14,14,14,14,14,14,14),clip=(47,2091,290,117),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,2113,270,35) layer=(border=(57,2113,270,35),radius=(4,4,4,4,4,4,4,4),clip=(57,2113,270,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  borders bounds=(57,2113,270,35) borders=(left=(3,4,#007affff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(4,4,4,4,4,4,4,4)) pos=(57,2113,270,35) root=0
+  solid-fill bounds=(15,2283,26,26) layer=(border=(15,2283,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2283,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(47,2214,290,95) layer=(border=(47,2214,290,95),radius=(14,14,14,14,14,14,14,14),clip=(47,2214,290,95),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(55,2315,290,63) layer=(border=(55,2315,290,63),radius=(14,14,14,14,14,14,14,14),clip=(55,2315,290,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,2436,26,26) layer=(border=(15,2436,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2436,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(47,2384,290,78) layer=(border=(47,2384,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,2384,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,2538,26,26) layer=(border=(15,2538,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2538,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,2468,290,96) layer=(border=(47,2468,290,96),radius=(14,14,14,14,14,14,14,14),clip=(47,2468,290,96),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,2527,68,15) layer=(border=(57,2527,68,15),radius=(7,7,7,7,7,7,7,7),clip=(57,2527,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(129,2527,68,15) layer=(border=(129,2527,68,15),radius=(7,7,7,7,7,7,7,7),clip=(129,2527,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(55,2570,290,63) layer=(border=(55,2570,290,63),radius=(14,14,14,14,14,14,14,14),clip=(55,2570,290,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,2691,26,26) layer=(border=(15,2691,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2691,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,2639,290,78) layer=(border=(47,2639,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,2639,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,2831,26,26) layer=(border=(15,2831,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2831,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(47,2723,290,134) layer=(border=(47,2723,290,134),radius=(14,14,14,14,14,14,14,14),clip=(47,2723,290,134),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,2745,270,35) layer=(border=(57,2745,270,35),radius=(4,4,4,4,4,4,4,4),clip=(57,2745,270,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  borders bounds=(57,2745,270,35) borders=(left=(3,4,#007affff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(4,4,4,4,4,4,4,4)) pos=(57,2745,270,35) root=0
+  solid-fill bounds=(15,2898,26,26) layer=(border=(15,2898,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,2898,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(47,2863,148,61) layer=(border=(47,2863,148,61),radius=(14,14,14,14,14,14,14,14),clip=(47,2863,148,61),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(93,2930,252,64) layer=(border=(93,2930,252,64),radius=(14,14,14,14,14,14,14,14),clip=(93,2930,252,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(103,2957,68,15) layer=(border=(103,2957,68,15),radius=(7,7,7,7,7,7,7,7),clip=(103,2957,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(175,2957,68,15) layer=(border=(175,2957,68,15),radius=(7,7,7,7,7,7,7,7),clip=(175,2957,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(15,3052,26,26) layer=(border=(15,3052,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,3052,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,3000,290,78) layer=(border=(47,3000,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,3000,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,3153,26,26) layer=(border=(15,3153,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,3153,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,3084,290,95) layer=(border=(47,3084,290,95),radius=(14,14,14,14,14,14,14,14),clip=(47,3084,290,95),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,3220,26,26) layer=(border=(15,3220,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,3220,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(47,3185,268,61) layer=(border=(47,3185,268,61),radius=(14,14,14,14,14,14,14,14),clip=(47,3185,268,61),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(55,3252,290,63) layer=(border=(55,3252,290,63),radius=(14,14,14,14,14,14,14,14),clip=(55,3252,290,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,3431,26,26) layer=(border=(15,3431,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,3431,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(47,3321,290,136) layer=(border=(47,3321,290,136),radius=(14,14,14,14,14,14,14,14),clip=(47,3321,290,136),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(57,3344,270,35) layer=(border=(57,3344,270,35),radius=(4,4,4,4,4,4,4,4),clip=(57,3344,270,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1a
+  borders bounds=(57,3344,270,35) borders=(left=(3,4,#007affff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(4,4,4,4,4,4,4,4)) pos=(57,3344,270,35) root=0
+  solid-fill bounds=(57,3420,68,15) layer=(border=(57,3420,68,15),radius=(7,7,7,7,7,7,7,7),clip=(57,3420,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(129,3420,68,15) layer=(border=(129,3420,68,15),radius=(7,7,7,7,7,7,7,7),clip=(129,3420,68,15),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(15,3515,26,26) layer=(border=(15,3515,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,3515,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  solid-fill bounds=(47,3463,290,78) layer=(border=(47,3463,290,78),radius=(14,14,14,14,14,14,14,14),clip=(47,3463,290,78),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,3582,26,26) layer=(border=(15,3582,26,26),radius=(13,13,13,13,13,13,13,13),clip=(15,3582,26,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(47,3547,180,61) layer=(border=(47,3547,180,61),radius=(14,14,14,14,14,14,14,14),clip=(47,3547,180,61),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(128,13,104,24) layer=(border=(128,13,104,24),radius=(9,9,9,9,9,9,9,9),clip=(128,13,104,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(132,9,48,32) pos=(140,17,32,16) color=#000000ff text="Load" font=f1 glyphs=4 advance=32
+  text bounds=(172,9,56,32) pos=(180,17,40,16) color=#000000ff text="older" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(135,45,90,20) layer=(border=(135,45,90,20),radius=(8,8,8,8,8,8,8,8),clip=(135,45,90,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(136,39,88,32) pos=(144,47,72,16) color=#6e6e73ff text="Yesterday" font=f2 glyphs=9 advance=72
+  text bounds=(12,116,32,32) pos=(20,124,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,66,48,32) pos=(57,74,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,81,80,32) pos=(57,89,64,16) color=#000000ff text="Morning!" font=f4 glyphs=8 advance=64
+  text bounds=(121,81,40,32) pos=(129,89,24,16) color=#000000ff text="Kit" font=f4 glyphs=3 advance=24
+  text bounds=(153,81,32,32) pos=(161,89,16,16) color=#000000ff text="v2" font=f4 glyphs=2 advance=16
+  text bounds=(177,81,64,32) pos=(185,89,48,16) color=#000000ff text="review" font=f4 glyphs=6 advance=48
+  text bounds=(233,81,32,32) pos=(241,89,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(257,81,40,32) pos=(265,89,24,16) color=#000000ff text="11," font=f4 glyphs=3 advance=24
+  text bounds=(49,98,48,32) pos=(57,106,32,16) color=#000000ff text="same" font=f4 glyphs=4 advance=32
+  text bounds=(89,98,56,32) pos=(97,106,40,16) color=#000000ff text="room." font=f4 glyphs=5 advance=40
+  text bounds=(279,116,56,32) pos=(287,124,40,16) color=#6e6e73ff text="09:02" font=f5 glyphs=5 advance=40
+  text bounds=(119,150,32,32) pos=(127,158,16,16) color=#ffffffff text="On" font=f4 glyphs=2 advance=16
+  text bounds=(143,150,40,32) pos=(151,158,24,16) color=#ffffffff text="it." font=f4 glyphs=3 advance=24
+  text bounds=(175,150,40,32) pos=(183,158,24,16) color=#ffffffff text="Did" font=f4 glyphs=3 advance=24
+  text bounds=(207,150,40,32) pos=(215,158,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(239,150,56,32) pos=(247,158,40,16) color=#ffffffff text="chips" font=f4 glyphs=5 advance=40
+  text bounds=(287,150,56,32) pos=(295,158,40,16) color=#ffffffff text="land?" font=f4 glyphs=5 advance=40
+  text bounds=(287,168,56,32) pos=(295,176,40,16) color=#ffffffbf text="09:03" font=f5 glyphs=5 advance=40
+  text bounds=(12,271,32,32) pos=(20,279,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,202,48,32) pos=(57,210,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,217,48,32) pos=(57,225,32,16) color=#000000ff text="They" font=f4 glyphs=4 advance=32
+  text bounds=(89,217,48,32) pos=(97,225,32,16) color=#000000ff text="did." font=f4 glyphs=4 advance=32
+  text bounds=(129,217,40,32) pos=(137,225,24,16) color=#000000ff text="9px" font=f4 glyphs=3 advance=24
+  text bounds=(161,217,72,32) pos=(169,225,56,16) color=#000000ff text="radius," font=f4 glyphs=7 advance=56
+  text bounds=(225,217,48,32) pos=(233,225,32,16) color=#000000ff text="12px" font=f4 glyphs=4 advance=32
+  text bounds=(265,217,56,32) pos=(273,225,40,16) color=#000000ff text="text," font=f4 glyphs=5 advance=40
+  text bounds=(49,234,64,32) pos=(57,242,48,16) color=#000000ff text="tinted" font=f4 glyphs=6 advance=48
+  text bounds=(105,234,112,32) pos=(113,242,96,16) color=#000000ff text="backgrounds." font=f4 glyphs=12 advance=96
+  text bounds=(55,254,32,32) pos=(63,262,16,16) color=#000000ff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(79,254,32,32) pos=(87,262,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(103,254,24,32) pos=(111,262,8,16) color=#000000ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(127,254,32,32) pos=(135,262,16,16) color=#000000ff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(151,254,32,32) pos=(159,262,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(175,254,24,32) pos=(183,262,8,16) color=#000000ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(279,270,56,32) pos=(287,278,40,16) color=#6e6e73ff text="09:05" font=f5 glyphs=5 advance=40
+  text bounds=(12,394,32,32) pos=(20,402,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,304,40,32) pos=(57,312,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(60,321,48,32) pos=(68,329,32,16) color=#6e6e73ff text="They" font=f7 glyphs=4 advance=32
+  text bounds=(100,321,48,32) pos=(108,329,32,16) color=#6e6e73ff text="did." font=f7 glyphs=4 advance=32
+  text bounds=(140,321,40,32) pos=(148,329,24,16) color=#6e6e73ff text="9px" font=f7 glyphs=3 advance=24
+  text bounds=(172,321,72,32) pos=(180,329,56,16) color=#6e6e73ff text="radius," font=f7 glyphs=7 advance=56
+  text bounds=(236,321,48,32) pos=(244,329,32,16) color=#6e6e73ff text="12px" font=f7 glyphs=4 advance=32
+  text bounds=(60,337,56,32) pos=(68,345,40,16) color=#6e6e73ff text="text," font=f7 glyphs=5 advance=40
+  text bounds=(108,337,64,32) pos=(116,345,48,16) color=#6e6e73ff text="tinted" font=f7 glyphs=6 advance=48
+  text bounds=(164,337,112,32) pos=(172,345,96,16) color=#6e6e73ff text="backgrounds." font=f7 glyphs=12 advance=96
+  text bounds=(49,358,40,32) pos=(57,366,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(81,358,72,32) pos=(89,366,56,16) color=#000000ff text="pricing" font=f4 glyphs=7 advance=56
+  text bounds=(145,358,48,32) pos=(153,366,32,16) color=#000000ff text="card" font=f4 glyphs=4 advance=32
+  text bounds=(185,358,56,32) pos=(193,366,40,16) color=#000000ff text="looks" font=f4 glyphs=5 advance=40
+  text bounds=(233,358,56,32) pos=(241,366,40,16) color=#000000ff text="great" font=f4 glyphs=5 advance=40
+  text bounds=(281,358,32,32) pos=(289,366,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(49,375,80,32) pos=(57,383,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(121,375,48,32) pos=(129,383,32,16) color=#000000ff text="now." font=f4 glyphs=4 advance=32
+  text bounds=(279,393,56,32) pos=(287,401,40,16) color=#6e6e73ff text="09:11" font=f5 glyphs=5 advance=40
+  text bounds=(12,495,32,32) pos=(20,503,16,16) color=#ffffffff text="PR" font=f3 glyphs=2 advance=16
+  text bounds=(49,427,56,32) pos=(57,435,40,16) color=#34c759ff text="Priya" font=f2 glyphs=5 advance=40
+  text bounds=(49,443,88,32) pos=(57,451,72,16) color=#000000ff text="Timetable" font=f4 glyphs=9 advance=72
+  text bounds=(129,443,48,32) pos=(137,451,32,16) color=#000000ff text="rows" font=f4 glyphs=4 advance=32
+  text bounds=(169,443,48,32) pos=(177,451,32,16) color=#000000ff text="were" font=f4 glyphs=4 advance=32
+  text bounds=(209,443,64,32) pos=(217,451,48,16) color=#000000ff text="double" font=f4 glyphs=6 advance=48
+  text bounds=(265,443,64,32) pos=(273,451,48,16) color=#000000ff text="height" font=f4 glyphs=6 advance=48
+  text bounds=(49,459,32,32) pos=(57,467,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(73,459,64,32) pos=(81,467,48,16) color=#000000ff text="Blitz," font=f4 glyphs=6 advance=48
+  text bounds=(129,459,56,32) pos=(137,467,40,16) color=#000000ff text="fixed" font=f4 glyphs=5 advance=40
+  text bounds=(177,459,32,32) pos=(185,467,16,16) color=#000000ff text="by" font=f4 glyphs=2 advance=16
+  text bounds=(201,459,80,32) pos=(209,467,64,16) color=#000000ff text="dropping" font=f4 glyphs=8 advance=64
+  text bounds=(273,459,40,32) pos=(281,467,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(49,476,48,32) pos=(57,484,32,16) color=#000000ff text="cell" font=f4 glyphs=4 advance=32
+  text bounds=(89,476,72,32) pos=(97,484,56,16) color=#000000ff text="height." font=f4 glyphs=7 advance=56
+  text bounds=(279,494,56,32) pos=(287,502,40,16) color=#6e6e73ff text="09:14" font=f5 glyphs=5 advance=40
+  text bounds=(57,528,48,32) pos=(65,536,32,16) color=#ffffffff text="Nice" font=f4 glyphs=4 advance=32
+  text bounds=(97,528,64,32) pos=(105,536,48,16) color=#ffffffff text="catch." font=f4 glyphs=6 advance=48
+  text bounds=(153,528,64,32) pos=(161,536,48,16) color=#ffffffff text="Tables" font=f4 glyphs=6 advance=48
+  text bounds=(209,528,40,32) pos=(217,536,24,16) color=#ffffffff text="are" font=f4 glyphs=3 advance=24
+  text bounds=(241,528,40,32) pos=(249,536,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(273,528,64,32) pos=(281,536,48,16) color=#ffffffff text="tricky" font=f4 glyphs=6 advance=48
+  text bounds=(57,545,56,32) pos=(65,553,40,16) color=#ffffffff text="ones." font=f4 glyphs=5 advance=40
+  text bounds=(287,563,56,32) pos=(295,571,40,16) color=#ffffffbf text="09:15" font=f5 glyphs=5 advance=40
+  text bounds=(12,648,32,32) pos=(20,656,16,16) color=#ffffffff text="TO" font=f3 glyphs=2 advance=16
+  text bounds=(49,597,40,32) pos=(57,605,24,16) color=#ff2d55ff text="Tom" font=f2 glyphs=3 advance=24
+  text bounds=(49,612,40,32) pos=(57,620,24,16) color=#000000ff text="Can" font=f4 glyphs=3 advance=24
+  text bounds=(81,612,72,32) pos=(89,620,56,16) color=#000000ff text="someone" font=f4 glyphs=7 advance=56
+  text bounds=(145,612,56,32) pos=(153,620,40,16) color=#000000ff text="check" font=f4 glyphs=5 advance=40
+  text bounds=(193,612,40,32) pos=(201,620,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(225,612,80,32) pos=(233,620,64,16) color=#000000ff text="receipt?" font=f4 glyphs=8 advance=64
+  text bounds=(49,629,72,32) pos=(57,637,56,16) color=#000000ff text="Columns" font=f4 glyphs=7 advance=56
+  text bounds=(113,629,80,32) pos=(121,637,64,16) color=#000000ff text="collided" font=f4 glyphs=8 advance=64
+  text bounds=(185,629,40,32) pos=(193,637,24,16) color=#000000ff text="for" font=f4 glyphs=3 advance=24
+  text bounds=(217,629,40,32) pos=(225,637,24,16) color=#000000ff text="me." font=f4 glyphs=3 advance=24
+  text bounds=(279,647,56,32) pos=(287,655,40,16) color=#6e6e73ff text="09:20" font=f5 glyphs=5 advance=40
+  text bounds=(12,750,32,32) pos=(20,758,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,681,48,32) pos=(57,689,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,696,72,32) pos=(57,704,56,16) color=#000000ff text="Already" font=f4 glyphs=7 advance=56
+  text bounds=(113,696,64,32) pos=(121,704,48,16) color=#000000ff text="fixed:" font=f4 glyphs=6 advance=48
+  text bounds=(169,696,80,32) pos=(177,704,64,16) color=#000000ff text="explicit" font=f4 glyphs=8 advance=64
+  text bounds=(241,696,64,32) pos=(249,704,48,16) color=#000000ff text="widths" font=f4 glyphs=6 advance=48
+  text bounds=(49,713,40,32) pos=(57,721,24,16) color=#000000ff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(81,713,64,32) pos=(89,721,48,16) color=#000000ff text="nowrap" font=f4 glyphs=6 advance=48
+  text bounds=(137,713,32,32) pos=(145,721,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(161,713,40,32) pos=(169,721,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(193,713,80,32) pos=(201,721,64,16) color=#000000ff text="numbers." font=f4 glyphs=8 advance=64
+  text bounds=(55,733,32,32) pos=(63,741,16,16) color=#000000ff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(79,733,32,32) pos=(87,741,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(103,733,24,32) pos=(111,741,8,16) color=#000000ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(127,733,32,32) pos=(135,741,16,16) color=#000000ff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(151,733,32,32) pos=(159,741,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(175,733,24,32) pos=(183,741,8,16) color=#000000ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(279,749,56,32) pos=(287,757,40,16) color=#6e6e73ff text="09:21" font=f5 glyphs=5 advance=40
+  text bounds=(57,783,24,32) pos=(65,791,8,16) color=#ffffffff text="I" font=f4 glyphs=1 advance=8
+  text bounds=(73,783,48,32) pos=(81,791,32,16) color=#ffffffff text="will" font=f4 glyphs=4 advance=32
+  text bounds=(113,783,56,32) pos=(121,791,40,16) color=#ffffffff text="rerun" font=f4 glyphs=5 advance=40
+  text bounds=(161,783,40,32) pos=(169,791,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(193,783,72,32) pos=(201,791,56,16) color=#ffffffff text="gallery" font=f4 glyphs=7 advance=56
+  text bounds=(257,783,56,32) pos=(265,791,40,16) color=#ffffffff text="after" font=f4 glyphs=5 advance=40
+  text bounds=(57,800,64,32) pos=(65,808,48,16) color=#ffffffff text="lunch." font=f4 glyphs=6 advance=48
+  text bounds=(287,818,56,32) pos=(295,826,40,16) color=#ffffffbf text="09:24" font=f5 glyphs=5 advance=40
+  text bounds=(12,903,32,32) pos=(20,911,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,852,40,32) pos=(57,860,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(49,867,64,32) pos=(57,875,48,16) color=#000000ff text="Ticker" font=f4 glyphs=6 advance=48
+  text bounds=(105,867,32,32) pos=(113,875,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(129,867,24,32) pos=(137,875,8,16) color=#000000ff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(145,867,32,32) pos=(153,875,16,16) color=#000000ff text="Hz" font=f4 glyphs=2 advance=16
+  text bounds=(169,867,32,32) pos=(177,875,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(193,867,48,32) pos=(201,875,32,16) color=#000000ff text="fine" font=f4 glyphs=4 advance=32
+  text bounds=(233,867,32,32) pos=(241,875,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(257,867,40,32) pos=(265,875,24,16) color=#000000ff text="all" font=f4 glyphs=3 advance=24
+  text bounds=(49,884,64,32) pos=(57,892,48,16) color=#000000ff text="three," font=f4 glyphs=6 advance=48
+  text bounds=(105,884,40,32) pos=(113,892,24,16) color=#000000ff text="log" font=f4 glyphs=3 advance=24
+  text bounds=(137,884,56,32) pos=(145,892,40,16) color=#000000ff text="lines" font=f4 glyphs=5 advance=40
+  text bounds=(185,884,48,32) pos=(193,892,32,16) color=#000000ff text="too." font=f4 glyphs=4 advance=32
+  text bounds=(279,902,56,32) pos=(287,910,40,16) color=#6e6e73ff text="09:30" font=f5 glyphs=5 advance=40
+  text bounds=(12,1043,32,32) pos=(20,1051,16,16) color=#ffffffff text="PR" font=f3 glyphs=2 advance=16
+  text bounds=(49,936,56,32) pos=(57,944,40,16) color=#34c759ff text="Priya" font=f2 glyphs=5 advance=40
+  text bounds=(60,953,64,32) pos=(68,961,48,16) color=#6e6e73ff text="Ticker" font=f7 glyphs=6 advance=48
+  text bounds=(116,953,32,32) pos=(124,961,16,16) color=#6e6e73ff text="at" font=f7 glyphs=2 advance=16
+  text bounds=(140,953,24,32) pos=(148,961,8,16) color=#6e6e73ff text="2" font=f7 glyphs=1 advance=8
+  text bounds=(156,953,32,32) pos=(164,961,16,16) color=#6e6e73ff text="Hz" font=f7 glyphs=2 advance=16
+  text bounds=(180,953,32,32) pos=(188,961,16,16) color=#6e6e73ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(204,953,48,32) pos=(212,961,32,16) color=#6e6e73ff text="fine" font=f7 glyphs=4 advance=32
+  text bounds=(244,953,32,32) pos=(252,961,16,16) color=#6e6e73ff text="on" font=f7 glyphs=2 advance=16
+  text bounds=(268,953,40,32) pos=(276,961,24,16) color=#6e6e73ff text="all" font=f7 glyphs=3 advance=24
+  text bounds=(60,969,64,32) pos=(68,977,48,16) color=#6e6e73ff text="three," font=f7 glyphs=6 advance=48
+  text bounds=(116,969,40,32) pos=(124,977,24,16) color=#6e6e73ff text="log" font=f7 glyphs=3 advance=24
+  text bounds=(148,969,56,32) pos=(156,977,40,16) color=#6e6e73ff text="lines" font=f7 glyphs=5 advance=40
+  text bounds=(196,969,48,32) pos=(204,977,32,16) color=#6e6e73ff text="too." font=f7 glyphs=4 advance=32
+  text bounds=(49,991,40,32) pos=(57,999,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(81,991,96,32) pos=(89,999,80,16) color=#000000ff text="typewriter" font=f4 glyphs=10 advance=80
+  text bounds=(169,991,32,32) pos=(177,999,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(193,991,32,32) pos=(201,999,16,16) color=#000000ff text="30" font=f4 glyphs=2 advance=16
+  text bounds=(217,991,72,32) pos=(225,999,56,16) color=#000000ff text="updates" font=f4 glyphs=7 advance=56
+  text bounds=(281,991,40,32) pos=(289,999,24,16) color=#000000ff text="per" font=f4 glyphs=3 advance=24
+  text bounds=(49,1008,64,32) pos=(57,1016,48,16) color=#000000ff text="second" font=f4 glyphs=6 advance=48
+  text bounds=(105,1008,32,32) pos=(113,1016,16,16) color=#000000ff text="of" font=f4 glyphs=2 advance=16
+  text bounds=(129,1008,56,32) pos=(137,1016,40,16) color=#000000ff text="text;" font=f4 glyphs=5 advance=40
+  text bounds=(177,1008,80,32) pos=(185,1016,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(249,1008,80,32) pos=(257,1016,64,16) color=#000000ff text="rebuilds" font=f4 glyphs=8 advance=64
+  text bounds=(49,1024,56,32) pos=(57,1032,40,16) color=#000000ff text="every" font=f4 glyphs=5 advance=40
+  text bounds=(97,1024,56,32) pos=(105,1032,40,16) color=#000000ff text="time," font=f4 glyphs=5 advance=40
+  text bounds=(145,1024,56,32) pos=(153,1032,40,16) color=#000000ff text="which" font=f4 glyphs=5 advance=40
+  text bounds=(193,1024,32,32) pos=(201,1032,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(217,1024,40,32) pos=(225,1032,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(249,1024,64,32) pos=(257,1032,48,16) color=#000000ff text="point." font=f4 glyphs=6 advance=48
+  text bounds=(279,1042,56,32) pos=(287,1050,40,16) color=#6e6e73ff text="09:33" font=f5 glyphs=5 advance=40
+  text bounds=(12,1110,32,32) pos=(20,1118,16,16) color=#ffffffff text="TO" font=f3 glyphs=2 advance=16
+  text bounds=(49,1076,40,32) pos=(57,1084,24,16) color=#ff2d55ff text="Tom" font=f2 glyphs=3 advance=24
+  text bounds=(49,1092,72,32) pos=(57,1100,56,16) color=#000000ff text="Agreed," font=f4 glyphs=7 advance=56
+  text bounds=(113,1092,48,32) pos=(121,1100,32,16) color=#000000ff text="keep" font=f4 glyphs=4 advance=32
+  text bounds=(153,1092,40,32) pos=(161,1100,24,16) color=#000000ff text="it." font=f4 glyphs=3 advance=24
+  text bounds=(137,1110,56,32) pos=(145,1118,40,16) color=#6e6e73ff text="09:34" font=f5 glyphs=5 advance=40
+  text bounds=(95,1144,48,32) pos=(103,1152,32,16) color=#ffffffff text="What" font=f4 glyphs=4 advance=32
+  text bounds=(135,1144,56,32) pos=(143,1152,40,16) color=#ffffffff text="about" font=f4 glyphs=5 advance=40
+  text bounds=(183,1144,40,32) pos=(191,1152,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(215,1144,80,32) pos=(223,1152,64,16) color=#ffffffff text="skeleton" font=f4 glyphs=8 advance=64
+  text bounds=(287,1144,56,32) pos=(295,1152,40,16) color=#ffffffff text="swap?" font=f4 glyphs=5 advance=40
+  text bounds=(101,1163,32,32) pos=(109,1171,16,16) color=#ffffffff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(125,1163,32,32) pos=(133,1171,16,16) color=#ffffffff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(149,1163,24,32) pos=(157,1171,8,16) color=#ffffffff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(173,1163,32,32) pos=(181,1171,16,16) color=#ffffffff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(197,1163,32,32) pos=(205,1171,16,16) color=#ffffffff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(221,1163,24,32) pos=(229,1171,8,16) color=#ffffffff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(287,1179,56,32) pos=(295,1187,40,16) color=#ffffffbf text="09:40" font=f5 glyphs=5 advance=40
+  text bounds=(12,1264,32,32) pos=(20,1272,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,1213,48,32) pos=(57,1221,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,1229,40,32) pos=(57,1237,24,16) color=#000000ff text="One" font=f4 glyphs=3 advance=24
+  text bounds=(81,1229,88,32) pos=(89,1237,72,16) color=#000000ff text="innerHTML" font=f4 glyphs=9 advance=72
+  text bounds=(161,1229,56,32) pos=(169,1237,40,16) color=#000000ff text="after" font=f4 glyphs=5 advance=40
+  text bounds=(209,1229,40,32) pos=(217,1237,24,16) color=#000000ff text="1.4" font=f4 glyphs=3 advance=24
+  text bounds=(241,1229,32,32) pos=(249,1237,16,16) color=#000000ff text="s." font=f4 glyphs=2 advance=16
+  text bounds=(265,1229,56,32) pos=(273,1237,40,16) color=#000000ff text="Cheap" font=f4 glyphs=5 advance=40
+  text bounds=(49,1246,40,32) pos=(57,1254,24,16) color=#000000ff text="for" font=f4 glyphs=3 advance=24
+  text bounds=(81,1246,88,32) pos=(89,1254,72,16) color=#000000ff text="everyone." font=f4 glyphs=9 advance=72
+  text bounds=(279,1264,56,32) pos=(287,1272,40,16) color=#6e6e73ff text="09:41" font=f5 glyphs=5 advance=40
+  text bounds=(12,1365,32,32) pos=(20,1373,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,1298,40,32) pos=(57,1306,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(49,1313,88,32) pos=(57,1321,72,16) color=#000000ff text="Slideshow" font=f4 glyphs=9 advance=72
+  text bounds=(129,1313,72,32) pos=(137,1321,56,16) color=#000000ff text="caption" font=f4 glyphs=7 advance=56
+  text bounds=(193,1313,56,32) pos=(201,1321,40,16) color=#000000ff text="lives" font=f4 glyphs=5 advance=40
+  text bounds=(241,1313,32,32) pos=(249,1321,16,16) color=#000000ff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(49,1330,88,32) pos=(57,1338,72,16) color=#000000ff text="position:" font=f4 glyphs=9 advance=72
+  text bounds=(129,1330,88,32) pos=(137,1338,72,16) color=#000000ff text="absolute," font=f4 glyphs=9 advance=72
+  text bounds=(209,1330,64,32) pos=(217,1338,48,16) color=#000000ff text="worked" font=f4 glyphs=6 advance=48
+  text bounds=(49,1347,104,32) pos=(57,1355,88,16) color=#000000ff text="everywhere." font=f4 glyphs=11 advance=88
+  text bounds=(279,1365,56,32) pos=(287,1373,40,16) color=#6e6e73ff text="09:45" font=f5 glyphs=5 advance=40
+  text bounds=(12,1432,32,32) pos=(20,1440,16,16) color=#ffffffff text="PR" font=f3 glyphs=2 advance=16
+  text bounds=(49,1399,56,32) pos=(57,1407,40,16) color=#34c759ff text="Priya" font=f2 glyphs=5 advance=40
+  text bounds=(49,1414,64,32) pos=(57,1422,48,16) color=#000000ff text="Should" font=f4 glyphs=6 advance=48
+  text bounds=(105,1414,32,32) pos=(113,1422,16,16) color=#000000ff text="we" font=f4 glyphs=2 advance=16
+  text bounds=(129,1414,40,32) pos=(137,1422,24,16) color=#000000ff text="add" font=f4 glyphs=3 advance=24
+  text bounds=(161,1414,24,32) pos=(169,1422,8,16) color=#000000ff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(177,1414,80,32) pos=(185,1422,64,16) color=#000000ff text="300-chip" font=f4 glyphs=8 advance=64
+  text bounds=(249,1414,64,32) pos=(257,1422,48,16) color=#000000ff text="cloud?" font=f4 glyphs=6 advance=48
+  text bounds=(257,1432,56,32) pos=(265,1440,40,16) color=#6e6e73ff text="09:52" font=f5 glyphs=5 advance=40
+  text bounds=(57,1466,64,32) pos=(65,1474,48,16) color=#ffffffff text="Added." font=f4 glyphs=6 advance=48
+  text bounds=(113,1466,48,32) pos=(121,1474,32,16) color=#ffffffff text="Also" font=f4 glyphs=4 advance=32
+  text bounds=(153,1466,24,32) pos=(161,1474,8,16) color=#ffffffff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(169,1466,64,32) pos=(177,1474,48,16) color=#ffffffff text="60-row" font=f4 glyphs=6 advance=48
+  text bounds=(225,1466,56,32) pos=(233,1474,40,16) color=#ffffffff text="table" font=f4 glyphs=5 advance=40
+  text bounds=(273,1466,40,32) pos=(281,1474,24,16) color=#ffffffff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(305,1466,24,32) pos=(313,1474,8,16) color=#ffffffff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(57,1483,56,32) pos=(65,1491,40,16) color=#ffffffff text="tree." font=f4 glyphs=5 advance=40
+  text bounds=(287,1501,56,32) pos=(295,1509,40,16) color=#ffffffbf text="09:53" font=f5 glyphs=5 advance=40
+  text bounds=(12,1642,32,32) pos=(20,1650,16,16) color=#ffffffff text="TO" font=f3 glyphs=2 advance=16
+  text bounds=(49,1535,40,32) pos=(57,1543,24,16) color=#ff2d55ff text="Tom" font=f2 glyphs=3 advance=24
+  text bounds=(60,1552,64,32) pos=(68,1560,48,16) color=#6e6e73ff text="Added." font=f7 glyphs=6 advance=48
+  text bounds=(116,1552,48,32) pos=(124,1560,32,16) color=#6e6e73ff text="Also" font=f7 glyphs=4 advance=32
+  text bounds=(156,1552,24,32) pos=(164,1560,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(172,1552,64,32) pos=(180,1560,48,16) color=#6e6e73ff text="60-row" font=f7 glyphs=6 advance=48
+  text bounds=(228,1552,56,32) pos=(236,1560,40,16) color=#6e6e73ff text="table" font=f7 glyphs=5 advance=40
+  text bounds=(276,1552,40,32) pos=(284,1560,24,16) color=#6e6e73ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(60,1567,24,32) pos=(68,1575,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(76,1567,56,32) pos=(84,1575,40,16) color=#6e6e73ff text="tree." font=f7 glyphs=5 advance=40
+  text bounds=(49,1589,40,32) pos=(57,1597,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(81,1589,72,32) pos=(89,1597,56,16) color=#000000ff text="article" font=f4 glyphs=7 advance=56
+  text bounds=(145,1589,32,32) pos=(153,1597,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(169,1589,40,32) pos=(177,1597,24,16) color=#000000ff text="900" font=f4 glyphs=3 advance=24
+  text bounds=(201,1589,64,32) pos=(209,1597,48,16) color=#000000ff text="words," font=f4 glyphs=6 advance=48
+  text bounds=(257,1589,48,32) pos=(265,1597,32,16) color=#000000ff text="pure" font=f4 glyphs=4 advance=32
+  text bounds=(49,1606,48,32) pos=(57,1614,32,16) color=#000000ff text="text" font=f4 glyphs=4 advance=32
+  text bounds=(89,1606,72,32) pos=(97,1614,56,16) color=#000000ff text="layout." font=f4 glyphs=7 advance=56
+  text bounds=(55,1626,32,32) pos=(63,1634,16,16) color=#000000ff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(79,1626,32,32) pos=(87,1634,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(103,1626,24,32) pos=(111,1634,8,16) color=#000000ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(127,1626,32,32) pos=(135,1634,16,16) color=#000000ff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(151,1626,32,32) pos=(159,1634,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(175,1626,24,32) pos=(183,1634,8,16) color=#000000ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(279,1642,56,32) pos=(287,1650,40,16) color=#6e6e73ff text="09:58" font=f5 glyphs=5 advance=40
+  text bounds=(12,1726,32,32) pos=(20,1734,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,1676,48,32) pos=(57,1684,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,1691,48,32) pos=(57,1699,32,16) color=#000000ff text="That" font=f4 glyphs=4 advance=32
+  text bounds=(89,1691,32,32) pos=(97,1699,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(113,1691,40,32) pos=(121,1699,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(145,1691,40,32) pos=(153,1699,24,16) color=#000000ff text="one" font=f4 glyphs=3 advance=24
+  text bounds=(177,1691,80,32) pos=(185,1699,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(249,1691,48,32) pos=(257,1699,32,16) color=#000000ff text="will" font=f4 glyphs=4 advance=32
+  text bounds=(49,1708,56,32) pos=(57,1716,40,16) color=#000000ff text="feel." font=f4 glyphs=5 advance=40
+  text bounds=(279,1726,56,32) pos=(287,1734,40,16) color=#6e6e73ff text="10:04" font=f5 glyphs=5 advance=40
+  text bounds=(12,1794,32,32) pos=(20,1802,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,1760,40,32) pos=(57,1768,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(49,1775,56,32) pos=(57,1783,40,16) color=#000000ff text="Good." font=f4 glyphs=5 advance=40
+  text bounds=(97,1775,72,32) pos=(105,1783,56,16) color=#000000ff text="Numbers" font=f4 glyphs=7 advance=56
+  text bounds=(161,1775,32,32) pos=(169,1783,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(185,1775,40,32) pos=(193,1783,24,16) color=#000000ff text="11." font=f4 glyphs=3 advance=24
+  text bounds=(169,1793,56,32) pos=(177,1801,40,16) color=#6e6e73ff text="10:05" font=f5 glyphs=5 advance=40
+  solid-fill bounds=(151,1830,58,20) layer=(border=(151,1830,58,20),radius=(8,8,8,8,8,8,8,8),clip=(151,1830,58,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(152,1824,56,32) pos=(160,1832,40,16) color=#6e6e73ff text="Today" font=f2 glyphs=5 advance=40
+  text bounds=(12,1902,32,32) pos=(20,1910,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,1851,48,32) pos=(57,1859,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,1867,80,32) pos=(57,1875,64,16) color=#000000ff text="Morning!" font=f4 glyphs=8 advance=64
+  text bounds=(121,1867,40,32) pos=(129,1875,24,16) color=#000000ff text="Kit" font=f4 glyphs=3 advance=24
+  text bounds=(153,1867,32,32) pos=(161,1875,16,16) color=#000000ff text="v2" font=f4 glyphs=2 advance=16
+  text bounds=(177,1867,64,32) pos=(185,1875,48,16) color=#000000ff text="review" font=f4 glyphs=6 advance=48
+  text bounds=(233,1867,32,32) pos=(241,1875,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(257,1867,40,32) pos=(265,1875,24,16) color=#000000ff text="11," font=f4 glyphs=3 advance=24
+  text bounds=(49,1884,48,32) pos=(57,1892,32,16) color=#000000ff text="same" font=f4 glyphs=4 advance=32
+  text bounds=(89,1884,56,32) pos=(97,1892,40,16) color=#000000ff text="room." font=f4 glyphs=5 advance=40
+  text bounds=(279,1902,56,32) pos=(287,1910,40,16) color=#6e6e73ff text="09:02" font=f5 glyphs=5 advance=40
+  text bounds=(119,1936,32,32) pos=(127,1944,16,16) color=#ffffffff text="On" font=f4 glyphs=2 advance=16
+  text bounds=(143,1936,40,32) pos=(151,1944,24,16) color=#ffffffff text="it." font=f4 glyphs=3 advance=24
+  text bounds=(175,1936,40,32) pos=(183,1944,24,16) color=#ffffffff text="Did" font=f4 glyphs=3 advance=24
+  text bounds=(207,1936,40,32) pos=(215,1944,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(239,1936,56,32) pos=(247,1944,40,16) color=#ffffffff text="chips" font=f4 glyphs=5 advance=40
+  text bounds=(287,1936,56,32) pos=(295,1944,40,16) color=#ffffffff text="land?" font=f4 glyphs=5 advance=40
+  text bounds=(287,1953,56,32) pos=(295,1961,40,16) color=#ffffffbf text="09:03" font=f5 glyphs=5 advance=40
+  text bounds=(12,2056,32,32) pos=(20,2064,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,1987,48,32) pos=(57,1995,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,2003,48,32) pos=(57,2011,32,16) color=#000000ff text="They" font=f4 glyphs=4 advance=32
+  text bounds=(89,2003,48,32) pos=(97,2011,32,16) color=#000000ff text="did." font=f4 glyphs=4 advance=32
+  text bounds=(129,2003,40,32) pos=(137,2011,24,16) color=#000000ff text="9px" font=f4 glyphs=3 advance=24
+  text bounds=(161,2003,72,32) pos=(169,2011,56,16) color=#000000ff text="radius," font=f4 glyphs=7 advance=56
+  text bounds=(225,2003,48,32) pos=(233,2011,32,16) color=#000000ff text="12px" font=f4 glyphs=4 advance=32
+  text bounds=(265,2003,56,32) pos=(273,2011,40,16) color=#000000ff text="text," font=f4 glyphs=5 advance=40
+  text bounds=(49,2020,64,32) pos=(57,2028,48,16) color=#000000ff text="tinted" font=f4 glyphs=6 advance=48
+  text bounds=(105,2020,112,32) pos=(113,2028,96,16) color=#000000ff text="backgrounds." font=f4 glyphs=12 advance=96
+  text bounds=(55,2040,32,32) pos=(63,2048,16,16) color=#000000ff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(79,2040,32,32) pos=(87,2048,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(103,2040,24,32) pos=(111,2048,8,16) color=#000000ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(127,2040,32,32) pos=(135,2048,16,16) color=#000000ff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(151,2040,32,32) pos=(159,2048,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(175,2040,24,32) pos=(183,2048,8,16) color=#000000ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(279,2056,56,32) pos=(287,2064,40,16) color=#6e6e73ff text="09:05" font=f5 glyphs=5 advance=40
+  text bounds=(12,2179,32,32) pos=(20,2187,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,2090,40,32) pos=(57,2098,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(60,2107,48,32) pos=(68,2115,32,16) color=#6e6e73ff text="They" font=f7 glyphs=4 advance=32
+  text bounds=(100,2107,48,32) pos=(108,2115,32,16) color=#6e6e73ff text="did." font=f7 glyphs=4 advance=32
+  text bounds=(140,2107,40,32) pos=(148,2115,24,16) color=#6e6e73ff text="9px" font=f7 glyphs=3 advance=24
+  text bounds=(172,2107,72,32) pos=(180,2115,56,16) color=#6e6e73ff text="radius," font=f7 glyphs=7 advance=56
+  text bounds=(236,2107,48,32) pos=(244,2115,32,16) color=#6e6e73ff text="12px" font=f7 glyphs=4 advance=32
+  text bounds=(60,2123,56,32) pos=(68,2131,40,16) color=#6e6e73ff text="text," font=f7 glyphs=5 advance=40
+  text bounds=(108,2123,64,32) pos=(116,2131,48,16) color=#6e6e73ff text="tinted" font=f7 glyphs=6 advance=48
+  text bounds=(164,2123,112,32) pos=(172,2131,96,16) color=#6e6e73ff text="backgrounds." font=f7 glyphs=12 advance=96
+  text bounds=(49,2144,40,32) pos=(57,2152,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(81,2144,72,32) pos=(89,2152,56,16) color=#000000ff text="pricing" font=f4 glyphs=7 advance=56
+  text bounds=(145,2144,48,32) pos=(153,2152,32,16) color=#000000ff text="card" font=f4 glyphs=4 advance=32
+  text bounds=(185,2144,56,32) pos=(193,2152,40,16) color=#000000ff text="looks" font=f4 glyphs=5 advance=40
+  text bounds=(233,2144,56,32) pos=(241,2152,40,16) color=#000000ff text="great" font=f4 glyphs=5 advance=40
+  text bounds=(281,2144,32,32) pos=(289,2152,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(49,2161,80,32) pos=(57,2169,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(121,2161,48,32) pos=(129,2169,32,16) color=#000000ff text="now." font=f4 glyphs=4 advance=32
+  text bounds=(279,2179,56,32) pos=(287,2187,40,16) color=#6e6e73ff text="09:11" font=f5 glyphs=5 advance=40
+  text bounds=(12,2280,32,32) pos=(20,2288,16,16) color=#ffffffff text="PR" font=f3 glyphs=2 advance=16
+  text bounds=(49,2213,56,32) pos=(57,2221,40,16) color=#34c759ff text="Priya" font=f2 glyphs=5 advance=40
+  text bounds=(49,2228,88,32) pos=(57,2236,72,16) color=#000000ff text="Timetable" font=f4 glyphs=9 advance=72
+  text bounds=(129,2228,48,32) pos=(137,2236,32,16) color=#000000ff text="rows" font=f4 glyphs=4 advance=32
+  text bounds=(169,2228,48,32) pos=(177,2236,32,16) color=#000000ff text="were" font=f4 glyphs=4 advance=32
+  text bounds=(209,2228,64,32) pos=(217,2236,48,16) color=#000000ff text="double" font=f4 glyphs=6 advance=48
+  text bounds=(265,2228,64,32) pos=(273,2236,48,16) color=#000000ff text="height" font=f4 glyphs=6 advance=48
+  text bounds=(49,2245,32,32) pos=(57,2253,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(73,2245,64,32) pos=(81,2253,48,16) color=#000000ff text="Blitz," font=f4 glyphs=6 advance=48
+  text bounds=(129,2245,56,32) pos=(137,2253,40,16) color=#000000ff text="fixed" font=f4 glyphs=5 advance=40
+  text bounds=(177,2245,32,32) pos=(185,2253,16,16) color=#000000ff text="by" font=f4 glyphs=2 advance=16
+  text bounds=(201,2245,80,32) pos=(209,2253,64,16) color=#000000ff text="dropping" font=f4 glyphs=8 advance=64
+  text bounds=(273,2245,40,32) pos=(281,2253,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(49,2262,48,32) pos=(57,2270,32,16) color=#000000ff text="cell" font=f4 glyphs=4 advance=32
+  text bounds=(89,2262,72,32) pos=(97,2270,56,16) color=#000000ff text="height." font=f4 glyphs=7 advance=56
+  text bounds=(279,2280,56,32) pos=(287,2288,40,16) color=#6e6e73ff text="09:14" font=f5 glyphs=5 advance=40
+  text bounds=(57,2314,48,32) pos=(65,2322,32,16) color=#ffffffff text="Nice" font=f4 glyphs=4 advance=32
+  text bounds=(97,2314,64,32) pos=(105,2322,48,16) color=#ffffffff text="catch." font=f4 glyphs=6 advance=48
+  text bounds=(153,2314,64,32) pos=(161,2322,48,16) color=#ffffffff text="Tables" font=f4 glyphs=6 advance=48
+  text bounds=(209,2314,40,32) pos=(217,2322,24,16) color=#ffffffff text="are" font=f4 glyphs=3 advance=24
+  text bounds=(241,2314,40,32) pos=(249,2322,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(273,2314,64,32) pos=(281,2322,48,16) color=#ffffffff text="tricky" font=f4 glyphs=6 advance=48
+  text bounds=(57,2331,56,32) pos=(65,2339,40,16) color=#ffffffff text="ones." font=f4 glyphs=5 advance=40
+  text bounds=(287,2349,56,32) pos=(295,2357,40,16) color=#ffffffbf text="09:15" font=f5 glyphs=5 advance=40
+  text bounds=(12,2433,32,32) pos=(20,2441,16,16) color=#ffffffff text="TO" font=f3 glyphs=2 advance=16
+  text bounds=(49,2383,40,32) pos=(57,2391,24,16) color=#ff2d55ff text="Tom" font=f2 glyphs=3 advance=24
+  text bounds=(49,2398,40,32) pos=(57,2406,24,16) color=#000000ff text="Can" font=f4 glyphs=3 advance=24
+  text bounds=(81,2398,72,32) pos=(89,2406,56,16) color=#000000ff text="someone" font=f4 glyphs=7 advance=56
+  text bounds=(145,2398,56,32) pos=(153,2406,40,16) color=#000000ff text="check" font=f4 glyphs=5 advance=40
+  text bounds=(193,2398,40,32) pos=(201,2406,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(225,2398,80,32) pos=(233,2406,64,16) color=#000000ff text="receipt?" font=f4 glyphs=8 advance=64
+  text bounds=(49,2415,72,32) pos=(57,2423,56,16) color=#000000ff text="Columns" font=f4 glyphs=7 advance=56
+  text bounds=(113,2415,80,32) pos=(121,2423,64,16) color=#000000ff text="collided" font=f4 glyphs=8 advance=64
+  text bounds=(185,2415,40,32) pos=(193,2423,24,16) color=#000000ff text="for" font=f4 glyphs=3 advance=24
+  text bounds=(217,2415,40,32) pos=(225,2423,24,16) color=#000000ff text="me." font=f4 glyphs=3 advance=24
+  text bounds=(279,2433,56,32) pos=(287,2441,40,16) color=#6e6e73ff text="09:20" font=f5 glyphs=5 advance=40
+  text bounds=(12,2535,32,32) pos=(20,2543,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,2467,48,32) pos=(57,2475,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,2482,72,32) pos=(57,2490,56,16) color=#000000ff text="Already" font=f4 glyphs=7 advance=56
+  text bounds=(113,2482,64,32) pos=(121,2490,48,16) color=#000000ff text="fixed:" font=f4 glyphs=6 advance=48
+  text bounds=(169,2482,80,32) pos=(177,2490,64,16) color=#000000ff text="explicit" font=f4 glyphs=8 advance=64
+  text bounds=(241,2482,64,32) pos=(249,2490,48,16) color=#000000ff text="widths" font=f4 glyphs=6 advance=48
+  text bounds=(49,2499,40,32) pos=(57,2507,24,16) color=#000000ff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(81,2499,64,32) pos=(89,2507,48,16) color=#000000ff text="nowrap" font=f4 glyphs=6 advance=48
+  text bounds=(137,2499,32,32) pos=(145,2507,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(161,2499,40,32) pos=(169,2507,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(193,2499,80,32) pos=(201,2507,64,16) color=#000000ff text="numbers." font=f4 glyphs=8 advance=64
+  text bounds=(55,2519,32,32) pos=(63,2527,16,16) color=#000000ff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(79,2519,32,32) pos=(87,2527,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(103,2519,24,32) pos=(111,2527,8,16) color=#000000ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(127,2519,32,32) pos=(135,2527,16,16) color=#000000ff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(151,2519,32,32) pos=(159,2527,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(175,2519,24,32) pos=(183,2527,8,16) color=#000000ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(279,2535,56,32) pos=(287,2543,40,16) color=#6e6e73ff text="09:21" font=f5 glyphs=5 advance=40
+  text bounds=(57,2569,24,32) pos=(65,2577,8,16) color=#ffffffff text="I" font=f4 glyphs=1 advance=8
+  text bounds=(73,2569,48,32) pos=(81,2577,32,16) color=#ffffffff text="will" font=f4 glyphs=4 advance=32
+  text bounds=(113,2569,56,32) pos=(121,2577,40,16) color=#ffffffff text="rerun" font=f4 glyphs=5 advance=40
+  text bounds=(161,2569,40,32) pos=(169,2577,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(193,2569,72,32) pos=(201,2577,56,16) color=#ffffffff text="gallery" font=f4 glyphs=7 advance=56
+  text bounds=(257,2569,56,32) pos=(265,2577,40,16) color=#ffffffff text="after" font=f4 glyphs=5 advance=40
+  text bounds=(57,2586,64,32) pos=(65,2594,48,16) color=#ffffffff text="lunch." font=f4 glyphs=6 advance=48
+  text bounds=(287,2604,56,32) pos=(295,2612,40,16) color=#ffffffbf text="09:24" font=f5 glyphs=5 advance=40
+  text bounds=(12,2688,32,32) pos=(20,2696,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,2638,40,32) pos=(57,2646,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(49,2653,64,32) pos=(57,2661,48,16) color=#000000ff text="Ticker" font=f4 glyphs=6 advance=48
+  text bounds=(105,2653,32,32) pos=(113,2661,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(129,2653,24,32) pos=(137,2661,8,16) color=#000000ff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(145,2653,32,32) pos=(153,2661,16,16) color=#000000ff text="Hz" font=f4 glyphs=2 advance=16
+  text bounds=(169,2653,32,32) pos=(177,2661,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(193,2653,48,32) pos=(201,2661,32,16) color=#000000ff text="fine" font=f4 glyphs=4 advance=32
+  text bounds=(233,2653,32,32) pos=(241,2661,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(257,2653,40,32) pos=(265,2661,24,16) color=#000000ff text="all" font=f4 glyphs=3 advance=24
+  text bounds=(49,2670,64,32) pos=(57,2678,48,16) color=#000000ff text="three," font=f4 glyphs=6 advance=48
+  text bounds=(105,2670,40,32) pos=(113,2678,24,16) color=#000000ff text="log" font=f4 glyphs=3 advance=24
+  text bounds=(137,2670,56,32) pos=(145,2678,40,16) color=#000000ff text="lines" font=f4 glyphs=5 advance=40
+  text bounds=(185,2670,48,32) pos=(193,2678,32,16) color=#000000ff text="too." font=f4 glyphs=4 advance=32
+  text bounds=(279,2688,56,32) pos=(287,2696,40,16) color=#6e6e73ff text="09:30" font=f5 glyphs=5 advance=40
+  text bounds=(12,2829,32,32) pos=(20,2837,16,16) color=#ffffffff text="PR" font=f3 glyphs=2 advance=16
+  text bounds=(49,2722,56,32) pos=(57,2730,40,16) color=#34c759ff text="Priya" font=f2 glyphs=5 advance=40
+  text bounds=(60,2739,64,32) pos=(68,2747,48,16) color=#6e6e73ff text="Ticker" font=f7 glyphs=6 advance=48
+  text bounds=(116,2739,32,32) pos=(124,2747,16,16) color=#6e6e73ff text="at" font=f7 glyphs=2 advance=16
+  text bounds=(140,2739,24,32) pos=(148,2747,8,16) color=#6e6e73ff text="2" font=f7 glyphs=1 advance=8
+  text bounds=(156,2739,32,32) pos=(164,2747,16,16) color=#6e6e73ff text="Hz" font=f7 glyphs=2 advance=16
+  text bounds=(180,2739,32,32) pos=(188,2747,16,16) color=#6e6e73ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(204,2739,48,32) pos=(212,2747,32,16) color=#6e6e73ff text="fine" font=f7 glyphs=4 advance=32
+  text bounds=(244,2739,32,32) pos=(252,2747,16,16) color=#6e6e73ff text="on" font=f7 glyphs=2 advance=16
+  text bounds=(268,2739,40,32) pos=(276,2747,24,16) color=#6e6e73ff text="all" font=f7 glyphs=3 advance=24
+  text bounds=(60,2755,64,32) pos=(68,2763,48,16) color=#6e6e73ff text="three," font=f7 glyphs=6 advance=48
+  text bounds=(116,2755,40,32) pos=(124,2763,24,16) color=#6e6e73ff text="log" font=f7 glyphs=3 advance=24
+  text bounds=(148,2755,56,32) pos=(156,2763,40,16) color=#6e6e73ff text="lines" font=f7 glyphs=5 advance=40
+  text bounds=(196,2755,48,32) pos=(204,2763,32,16) color=#6e6e73ff text="too." font=f7 glyphs=4 advance=32
+  text bounds=(49,2776,40,32) pos=(57,2784,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(81,2776,96,32) pos=(89,2784,80,16) color=#000000ff text="typewriter" font=f4 glyphs=10 advance=80
+  text bounds=(169,2776,32,32) pos=(177,2784,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(193,2776,32,32) pos=(201,2784,16,16) color=#000000ff text="30" font=f4 glyphs=2 advance=16
+  text bounds=(217,2776,72,32) pos=(225,2784,56,16) color=#000000ff text="updates" font=f4 glyphs=7 advance=56
+  text bounds=(281,2776,40,32) pos=(289,2784,24,16) color=#000000ff text="per" font=f4 glyphs=3 advance=24
+  text bounds=(49,2793,64,32) pos=(57,2801,48,16) color=#000000ff text="second" font=f4 glyphs=6 advance=48
+  text bounds=(105,2793,32,32) pos=(113,2801,16,16) color=#000000ff text="of" font=f4 glyphs=2 advance=16
+  text bounds=(129,2793,56,32) pos=(137,2801,40,16) color=#000000ff text="text;" font=f4 glyphs=5 advance=40
+  text bounds=(177,2793,80,32) pos=(185,2801,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(249,2793,80,32) pos=(257,2801,64,16) color=#000000ff text="rebuilds" font=f4 glyphs=8 advance=64
+  text bounds=(49,2810,56,32) pos=(57,2818,40,16) color=#000000ff text="every" font=f4 glyphs=5 advance=40
+  text bounds=(97,2810,56,32) pos=(105,2818,40,16) color=#000000ff text="time," font=f4 glyphs=5 advance=40
+  text bounds=(145,2810,56,32) pos=(153,2818,40,16) color=#000000ff text="which" font=f4 glyphs=5 advance=40
+  text bounds=(193,2810,32,32) pos=(201,2818,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(217,2810,40,32) pos=(225,2818,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(249,2810,64,32) pos=(257,2818,48,16) color=#000000ff text="point." font=f4 glyphs=6 advance=48
+  text bounds=(279,2828,56,32) pos=(287,2836,40,16) color=#6e6e73ff text="09:33" font=f5 glyphs=5 advance=40
+  text bounds=(12,2896,32,32) pos=(20,2904,16,16) color=#ffffffff text="TO" font=f3 glyphs=2 advance=16
+  text bounds=(49,2862,40,32) pos=(57,2870,24,16) color=#ff2d55ff text="Tom" font=f2 glyphs=3 advance=24
+  text bounds=(49,2877,72,32) pos=(57,2885,56,16) color=#000000ff text="Agreed," font=f4 glyphs=7 advance=56
+  text bounds=(113,2877,48,32) pos=(121,2885,32,16) color=#000000ff text="keep" font=f4 glyphs=4 advance=32
+  text bounds=(153,2877,40,32) pos=(161,2885,24,16) color=#000000ff text="it." font=f4 glyphs=3 advance=24
+  text bounds=(137,2895,56,32) pos=(145,2903,40,16) color=#6e6e73ff text="09:34" font=f5 glyphs=5 advance=40
+  text bounds=(95,2929,48,32) pos=(103,2937,32,16) color=#ffffffff text="What" font=f4 glyphs=4 advance=32
+  text bounds=(135,2929,56,32) pos=(143,2937,40,16) color=#ffffffff text="about" font=f4 glyphs=5 advance=40
+  text bounds=(183,2929,40,32) pos=(191,2937,24,16) color=#ffffffff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(215,2929,80,32) pos=(223,2937,64,16) color=#ffffffff text="skeleton" font=f4 glyphs=8 advance=64
+  text bounds=(287,2929,56,32) pos=(295,2937,40,16) color=#ffffffff text="swap?" font=f4 glyphs=5 advance=40
+  text bounds=(101,2949,32,32) pos=(109,2957,16,16) color=#ffffffff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(125,2949,32,32) pos=(133,2957,16,16) color=#ffffffff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(149,2949,24,32) pos=(157,2957,8,16) color=#ffffffff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(173,2949,32,32) pos=(181,2957,16,16) color=#ffffffff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(197,2949,32,32) pos=(205,2957,16,16) color=#ffffffff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(221,2949,24,32) pos=(229,2957,8,16) color=#ffffffff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(287,2965,56,32) pos=(295,2973,40,16) color=#ffffffbf text="09:40" font=f5 glyphs=5 advance=40
+  text bounds=(12,3050,32,32) pos=(20,3058,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,2999,48,32) pos=(57,3007,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,3014,40,32) pos=(57,3022,24,16) color=#000000ff text="One" font=f4 glyphs=3 advance=24
+  text bounds=(81,3014,88,32) pos=(89,3022,72,16) color=#000000ff text="innerHTML" font=f4 glyphs=9 advance=72
+  text bounds=(161,3014,56,32) pos=(169,3022,40,16) color=#000000ff text="after" font=f4 glyphs=5 advance=40
+  text bounds=(209,3014,40,32) pos=(217,3022,24,16) color=#000000ff text="1.4" font=f4 glyphs=3 advance=24
+  text bounds=(241,3014,32,32) pos=(249,3022,16,16) color=#000000ff text="s." font=f4 glyphs=2 advance=16
+  text bounds=(265,3014,56,32) pos=(273,3022,40,16) color=#000000ff text="Cheap" font=f4 glyphs=5 advance=40
+  text bounds=(49,3031,40,32) pos=(57,3039,24,16) color=#000000ff text="for" font=f4 glyphs=3 advance=24
+  text bounds=(81,3031,88,32) pos=(89,3039,72,16) color=#000000ff text="everyone." font=f4 glyphs=9 advance=72
+  text bounds=(279,3049,56,32) pos=(287,3057,40,16) color=#6e6e73ff text="09:41" font=f5 glyphs=5 advance=40
+  text bounds=(12,3151,32,32) pos=(20,3159,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,3083,40,32) pos=(57,3091,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(49,3099,88,32) pos=(57,3107,72,16) color=#000000ff text="Slideshow" font=f4 glyphs=9 advance=72
+  text bounds=(129,3099,72,32) pos=(137,3107,56,16) color=#000000ff text="caption" font=f4 glyphs=7 advance=56
+  text bounds=(193,3099,56,32) pos=(201,3107,40,16) color=#000000ff text="lives" font=f4 glyphs=5 advance=40
+  text bounds=(241,3099,32,32) pos=(249,3107,16,16) color=#000000ff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(49,3115,88,32) pos=(57,3123,72,16) color=#000000ff text="position:" font=f4 glyphs=9 advance=72
+  text bounds=(129,3115,88,32) pos=(137,3123,72,16) color=#000000ff text="absolute," font=f4 glyphs=9 advance=72
+  text bounds=(209,3115,64,32) pos=(217,3123,48,16) color=#000000ff text="worked" font=f4 glyphs=6 advance=48
+  text bounds=(49,3132,104,32) pos=(57,3140,88,16) color=#000000ff text="everywhere." font=f4 glyphs=11 advance=88
+  text bounds=(279,3150,56,32) pos=(287,3158,40,16) color=#6e6e73ff text="09:45" font=f5 glyphs=5 advance=40
+  text bounds=(12,3218,32,32) pos=(20,3226,16,16) color=#ffffffff text="PR" font=f3 glyphs=2 advance=16
+  text bounds=(49,3184,56,32) pos=(57,3192,40,16) color=#34c759ff text="Priya" font=f2 glyphs=5 advance=40
+  text bounds=(49,3200,64,32) pos=(57,3208,48,16) color=#000000ff text="Should" font=f4 glyphs=6 advance=48
+  text bounds=(105,3200,32,32) pos=(113,3208,16,16) color=#000000ff text="we" font=f4 glyphs=2 advance=16
+  text bounds=(129,3200,40,32) pos=(137,3208,24,16) color=#000000ff text="add" font=f4 glyphs=3 advance=24
+  text bounds=(161,3200,24,32) pos=(169,3208,8,16) color=#000000ff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(177,3200,80,32) pos=(185,3208,64,16) color=#000000ff text="300-chip" font=f4 glyphs=8 advance=64
+  text bounds=(249,3200,64,32) pos=(257,3208,48,16) color=#000000ff text="cloud?" font=f4 glyphs=6 advance=48
+  text bounds=(257,3217,56,32) pos=(265,3225,40,16) color=#6e6e73ff text="09:52" font=f5 glyphs=5 advance=40
+  text bounds=(57,3251,64,32) pos=(65,3259,48,16) color=#ffffffff text="Added." font=f4 glyphs=6 advance=48
+  text bounds=(113,3251,48,32) pos=(121,3259,32,16) color=#ffffffff text="Also" font=f4 glyphs=4 advance=32
+  text bounds=(153,3251,24,32) pos=(161,3259,8,16) color=#ffffffff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(169,3251,64,32) pos=(177,3259,48,16) color=#ffffffff text="60-row" font=f4 glyphs=6 advance=48
+  text bounds=(225,3251,56,32) pos=(233,3259,40,16) color=#ffffffff text="table" font=f4 glyphs=5 advance=40
+  text bounds=(273,3251,40,32) pos=(281,3259,24,16) color=#ffffffff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(305,3251,24,32) pos=(313,3259,8,16) color=#ffffffff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(57,3268,56,32) pos=(65,3276,40,16) color=#ffffffff text="tree." font=f4 glyphs=5 advance=40
+  text bounds=(287,3286,56,32) pos=(295,3294,40,16) color=#ffffffbf text="09:53" font=f5 glyphs=5 advance=40
+  text bounds=(12,3428,32,32) pos=(20,3436,16,16) color=#ffffffff text="TO" font=f3 glyphs=2 advance=16
+  text bounds=(49,3320,40,32) pos=(57,3328,24,16) color=#ff2d55ff text="Tom" font=f2 glyphs=3 advance=24
+  text bounds=(60,3338,64,32) pos=(68,3346,48,16) color=#6e6e73ff text="Added." font=f7 glyphs=6 advance=48
+  text bounds=(116,3338,48,32) pos=(124,3346,32,16) color=#6e6e73ff text="Also" font=f7 glyphs=4 advance=32
+  text bounds=(156,3338,24,32) pos=(164,3346,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(172,3338,64,32) pos=(180,3346,48,16) color=#6e6e73ff text="60-row" font=f7 glyphs=6 advance=48
+  text bounds=(228,3338,56,32) pos=(236,3346,40,16) color=#6e6e73ff text="table" font=f7 glyphs=5 advance=40
+  text bounds=(276,3338,40,32) pos=(284,3346,24,16) color=#6e6e73ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(60,3353,24,32) pos=(68,3361,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(76,3353,56,32) pos=(84,3361,40,16) color=#6e6e73ff text="tree." font=f7 glyphs=5 advance=40
+  text bounds=(49,3375,40,32) pos=(57,3383,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(81,3375,72,32) pos=(89,3383,56,16) color=#000000ff text="article" font=f4 glyphs=7 advance=56
+  text bounds=(145,3375,32,32) pos=(153,3383,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(169,3375,40,32) pos=(177,3383,24,16) color=#000000ff text="900" font=f4 glyphs=3 advance=24
+  text bounds=(201,3375,64,32) pos=(209,3383,48,16) color=#000000ff text="words," font=f4 glyphs=6 advance=48
+  text bounds=(257,3375,48,32) pos=(265,3383,32,16) color=#000000ff text="pure" font=f4 glyphs=4 advance=32
+  text bounds=(49,3392,48,32) pos=(57,3400,32,16) color=#000000ff text="text" font=f4 glyphs=4 advance=32
+  text bounds=(89,3392,72,32) pos=(97,3400,56,16) color=#000000ff text="layout." font=f4 glyphs=7 advance=56
+  text bounds=(55,3412,32,32) pos=(63,3420,16,16) color=#000000ff text="+1" font=f6 glyphs=2 advance=16
+  text bounds=(79,3412,32,32) pos=(87,3420,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(103,3412,24,32) pos=(111,3420,8,16) color=#000000ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(127,3412,32,32) pos=(135,3420,16,16) color=#000000ff text="ok" font=f6 glyphs=2 advance=16
+  text bounds=(151,3412,32,32) pos=(159,3420,16,16) color=#000000ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(175,3412,24,32) pos=(183,3420,8,16) color=#000000ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(279,3428,56,32) pos=(287,3436,40,16) color=#6e6e73ff text="09:58" font=f5 glyphs=5 advance=40
+  text bounds=(12,3512,32,32) pos=(20,3520,16,16) color=#ffffffff text="MA" font=f3 glyphs=2 advance=16
+  text bounds=(49,3462,48,32) pos=(57,3470,32,16) color=#5856d6ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(49,3477,48,32) pos=(57,3485,32,16) color=#000000ff text="That" font=f4 glyphs=4 advance=32
+  text bounds=(89,3477,32,32) pos=(97,3485,16,16) color=#000000ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(113,3477,40,32) pos=(121,3485,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(145,3477,40,32) pos=(153,3485,24,16) color=#000000ff text="one" font=f4 glyphs=3 advance=24
+  text bounds=(177,3477,80,32) pos=(185,3485,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(249,3477,48,32) pos=(257,3485,32,16) color=#000000ff text="will" font=f4 glyphs=4 advance=32
+  text bounds=(49,3494,56,32) pos=(57,3502,40,16) color=#000000ff text="feel." font=f4 glyphs=5 advance=40
+  text bounds=(279,3512,56,32) pos=(287,3520,40,16) color=#6e6e73ff text="10:04" font=f5 glyphs=5 advance=40
+  text bounds=(12,3579,32,32) pos=(20,3587,16,16) color=#ffffffff text="LE" font=f3 glyphs=2 advance=16
+  text bounds=(49,3546,40,32) pos=(57,3554,24,16) color=#ff9500ff text="Leo" font=f2 glyphs=3 advance=24
+  text bounds=(49,3561,56,32) pos=(57,3569,40,16) color=#000000ff text="Good." font=f4 glyphs=5 advance=40
+  text bounds=(97,3561,72,32) pos=(105,3569,56,16) color=#000000ff text="Numbers" font=f4 glyphs=7 advance=56
+  text bounds=(161,3561,32,32) pos=(169,3569,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(185,3561,40,32) pos=(193,3569,24,16) color=#000000ff text="11." font=f4 glyphs=3 advance=24
+  text bounds=(169,3579,56,32) pos=(177,3587,40,16) color=#6e6e73ff text="10:05" font=f5 glyphs=5 advance=40
+  text bounds=(128,3610,32,32) pos=(136,3618,16,16) color=#6e6e73ff text="40" font=f8 glyphs=2 advance=16
+  text bounds=(152,3610,80,32) pos=(160,3618,64,16) color=#6e6e73ff text="messages" font=f8 glyphs=8 advance=64
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=10,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

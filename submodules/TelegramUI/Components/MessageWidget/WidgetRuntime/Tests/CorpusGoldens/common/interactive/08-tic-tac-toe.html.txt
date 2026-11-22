@@ -1,0 +1,99 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Tic-tac-toe</span><span class="tiny muted">you are X · bot is O</span></div>
+  <div class="board" id="board"><div class="r"><div class="c" data-k="0" role="button"></div><div class="c" data-k="1" role="button"></div><div class="c" data-k="2" role="button"></div></div><div class="r"><div class="c" data-k="3" role="button"></div><div class="c" data-k="4" role="button"></div><div class="c" data-k="5" role="button"></div></div><div class="r"><div class="c" data-k="6" role="button"></div><div class="c" data-k="7" role="button"></div><div class="c" data-k="8" role="button"></div></div></div>
+  <div class="status" id="status">Your move</div>
+  <div class="tally"><div><b id="tw">0</b><div class="tiny muted">You</div></div><div><b id="td">0</b><div class="tiny muted">Draws</div></div><div><b id="tb">0</b><div class="tiny muted">Bot</div></div></div>
+  <div style="text-align: center; margin-top: 10px"><span class="btn primary" role="button" id="reset">New game</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 466.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 466.9
+    div 15 13 330 440.9
+      div 15 13 330 20.8
+        span 15 13 88 20.8
+        span 177 16.25 168 14.3
+      div 45 45.8 270 270
+        div 45 45.8 270 90
+          div 48 48.8 84 84
+          div 138 48.8 84 84
+          div 228 48.8 84 84
+        div 45 135.8 270 90
+          div 48 138.8 84 84
+          div 138 138.8 84 84
+          div 228 138.8 84 84
+        div 45 225.8 270 90
+          div 48 228.8 84 84
+          div 138 228.8 84 84
+          div 228 228.8 84 84
+      div 15 325.8 330 18.2
+      div 15 352 330 61.7
+        div 15 358 106 49.7
+          b 15 358 0 0
+          div 15 387.4 106 14.3
+        div 127 358 106 49.7
+          b 127 358 0 0
+          div 127 387.4 106 14.3
+        div 239 358 106 49.7
+          b 239 358 0 0
+          div 239 387.4 106 14.3
+      div 15 423.7 330 30.2
+        span 148 429.7 64 18.2
+
+== paint
+root 360x466.9 items=38
+  solid-fill bounds=(0,0,360,467) layer=(border=(0,0,360,467),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,467),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,467) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,467) root=0
+  solid-fill bounds=(48,49,84,84) layer=(border=(48,49,84,84),radius=(12,12,12,12,12,12,12,12),clip=(48,49,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(138,49,84,84) layer=(border=(138,49,84,84),radius=(12,12,12,12,12,12,12,12),clip=(138,49,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(228,49,84,84) layer=(border=(228,49,84,84),radius=(12,12,12,12,12,12,12,12),clip=(228,49,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(48,139,84,84) layer=(border=(48,139,84,84),radius=(12,12,12,12,12,12,12,12),clip=(48,139,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(138,139,84,84) layer=(border=(138,139,84,84),radius=(12,12,12,12,12,12,12,12),clip=(138,139,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(228,139,84,84) layer=(border=(228,139,84,84),radius=(12,12,12,12,12,12,12,12),clip=(228,139,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(48,229,84,84) layer=(border=(48,229,84,84),radius=(12,12,12,12,12,12,12,12),clip=(48,229,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(138,229,84,84) layer=(border=(138,229,84,84),radius=(12,12,12,12,12,12,12,12),clip=(138,229,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(228,229,84,84) layer=(border=(228,229,84,84),radius=(12,12,12,12,12,12,12,12),clip=(228,229,84,84),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,352,106,62) layer=(border=(15,352,106,62),radius=(10,10,10,10,10,10,10,10),clip=(15,352,106,62),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,381,106,27) layer=(border=(15,381,106,27),radius=(10,10,10,10,10,10,10,10),clip=(15,381,106,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(127,352,106,62) layer=(border=(127,352,106,62),radius=(10,10,10,10,10,10,10,10),clip=(127,352,106,62),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(127,381,106,27) layer=(border=(127,381,106,27),radius=(10,10,10,10,10,10,10,10),clip=(127,381,106,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(239,352,106,62) layer=(border=(239,352,106,62),radius=(10,10,10,10,10,10,10,10),clip=(239,352,106,62),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(239,381,106,27) layer=(border=(239,381,106,27),radius=(10,10,10,10,10,10,10,10),clip=(239,381,106,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(7,7,48,32) pos=(15,15,32,16) color=#000000ff text="Tic-" font=f1 glyphs=4 advance=32
+  text bounds=(39,7,48,32) pos=(47,15,32,16) color=#000000ff text="tac-" font=f1 glyphs=4 advance=32
+  text bounds=(71,7,40,32) pos=(79,15,24,16) color=#000000ff text="toe" font=f1 glyphs=3 advance=24
+  text bounds=(169,8,40,32) pos=(177,16,24,16) color=#6e6e73ff text="you" font=f2 glyphs=3 advance=24
+  text bounds=(201,8,40,32) pos=(209,16,24,16) color=#6e6e73ff text="are" font=f2 glyphs=3 advance=24
+  text bounds=(233,8,24,32) pos=(241,16,8,16) color=#6e6e73ff text="X" font=f2 glyphs=1 advance=8
+  text bounds=(249,8,32,32) pos=(257,16,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(273,8,40,32) pos=(281,16,24,16) color=#6e6e73ff text="bot" font=f2 glyphs=3 advance=24
+  text bounds=(305,8,32,32) pos=(313,16,16,16) color=#6e6e73ff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(329,8,24,32) pos=(337,16,8,16) color=#6e6e73ff text="O" font=f2 glyphs=1 advance=8
+  text bounds=(136,319,48,32) pos=(144,327,32,16) color=#000000ff text="Your" font=f3 glyphs=4 advance=32
+  text bounds=(176,319,48,32) pos=(184,327,32,16) color=#000000ff text="move" font=f3 glyphs=4 advance=32
+  text bounds=(56,353,24,32) pos=(64,361,8,16) color=#000000ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(48,379,40,32) pos=(56,387,24,16) color=#6e6e73ff text="You" font=f2 glyphs=3 advance=24
+  text bounds=(168,353,24,32) pos=(176,361,8,16) color=#000000ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(152,379,56,32) pos=(160,387,40,16) color=#6e6e73ff text="Draws" font=f2 glyphs=5 advance=40
+  text bounds=(280,353,24,32) pos=(288,361,8,16) color=#000000ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(272,379,40,32) pos=(280,387,24,16) color=#6e6e73ff text="Bot" font=f2 glyphs=3 advance=24
+  solid-fill bounds=(134,424,92,30) layer=(border=(134,424,92,30),radius=(9,9,9,9,9,9,9,9),clip=(134,424,92,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(140,423,40,32) pos=(148,431,24,16) color=#ffffffff text="New" font=f5 glyphs=3 advance=24
+  text bounds=(172,423,48,32) pos=(180,431,32,16) color=#ffffffff text="game" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

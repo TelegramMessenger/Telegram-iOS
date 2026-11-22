@@ -1,43 +1,47 @@
 import Foundation
-import Postbox
 import SwiftSignalKit
+import TelegramCore
 
-public struct ChatArchiveSettings: Equatable, PreferencesEntry {
+public struct ChatArchiveSettings: Equatable, Codable {
     public var isHiddenByDefault: Bool
+    public var hiddenPsaPeerId: EnginePeer.Id?
     
     public static var `default`: ChatArchiveSettings {
-        return ChatArchiveSettings(isHiddenByDefault: false)
+        return ChatArchiveSettings(isHiddenByDefault: false, hiddenPsaPeerId: nil)
     }
     
-    public init(isHiddenByDefault: Bool) {
+    public init(isHiddenByDefault: Bool, hiddenPsaPeerId: EnginePeer.Id?) {
         self.isHiddenByDefault = isHiddenByDefault
+        self.hiddenPsaPeerId = hiddenPsaPeerId
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.isHiddenByDefault = decoder.decodeInt32ForKey("isHiddenByDefault", orElse: 1) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.isHiddenByDefault = (try container.decode(Int32.self, forKey: "isHiddenByDefault")) != 0
+        self.hiddenPsaPeerId = (try container.decodeIfPresent(Int64.self, forKey: "hiddenPsaPeerId")).flatMap(EnginePeer.Id.init)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.isHiddenByDefault ? 1 : 0, forKey: "isHiddenByDefault")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ChatArchiveSettings {
-            return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.isHiddenByDefault ? 1 : 0) as Int32, forKey: "isHiddenByDefault")
+        if let hiddenPsaPeerId = self.hiddenPsaPeerId {
+            try container.encode(hiddenPsaPeerId.toInt64(), forKey: "hiddenPsaPeerId")
         } else {
-            return false
+            try container.encodeNil(forKey: "hiddenPsaPeerId")
         }
     }
 }
 
-public func updateChatArchiveSettings(transaction: Transaction, _ f: @escaping (ChatArchiveSettings) -> ChatArchiveSettings) {
-    transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatArchiveSettings, { entry in
+public func updateChatArchiveSettings(engine: TelegramEngine, _ f: @escaping (ChatArchiveSettings) -> ChatArchiveSettings) -> Signal<Never, NoError> {
+    return engine.preferences.update(id: ApplicationSpecificPreferencesKeys.chatArchiveSettings, { entry in
         let currentSettings: ChatArchiveSettings
-        if let entry = entry as? ChatArchiveSettings {
+        if let entry = entry?.get(ChatArchiveSettings.self) {
             currentSettings = entry
         } else {
             currentSettings = .default
         }
-        return f(currentSettings)
+        return SharedPreferencesEntry(f(currentSettings))
     })
 }

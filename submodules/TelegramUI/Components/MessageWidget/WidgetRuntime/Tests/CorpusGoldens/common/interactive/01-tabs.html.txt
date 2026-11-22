@@ -1,0 +1,165 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Ridge 2 Headphones</span><span class="price">€249</span></div>
+  <div class="tabs" id="tabs"><span class="tab on" role="button" data-tab="0">Overview</span><span class="tab" role="button" data-tab="1">Specs</span><span class="tab" role="button" data-tab="2">Reviews</span></div>
+  <div class="panel" data-panel="0">
+    <div class="hero"></div>
+    <p style="margin: 10px 0 0 0">Over-ear, 40 h of battery, adaptive noise cancelling and a fold-flat hinge. Pairs with two devices at once and switches between them on its own.</p>
+    <div class="tiny muted" style="margin-top: 8px">In stock · ships tomorrow · 30-day returns</div>
+  </div>
+  <div class="panel" data-panel="1" hidden="">
+    <div class="kv"><span class="k">Driver</span><span>40 mm, titanium-coated</span></div>
+    <div class="kv"><span class="k">Battery</span><span>40 h ANC on, 60 h off</span></div>
+    <div class="kv"><span class="k">Charging</span><span>USB-C, 10 min = 5 h</span></div>
+    <div class="kv"><span class="k">Codecs</span><span>SBC, AAC, LDAC</span></div>
+    <div class="kv"><span class="k">Weight</span><span>254 g</span></div>
+    <div class="kv"><span class="k">Bluetooth</span><span>5.3, multipoint</span></div>
+    <div class="kv" style="border-bottom: none"><span class="k">Colours</span><span>Graphite, Sand, Moss</span></div>
+  </div>
+  <div class="panel" data-panel="2" hidden="">
+    <div class="rv"><div class="who"><span class="av" style="background-color: #5856d6">AN</span><span class="bold">Ana</span><span class="muted">&nbsp;· 2 days ago</span><span class="stars"><i></i><i></i><i></i><i></i><i></i></span></div><div class="small" style="margin-top: 4px">Noise cancelling is the real thing: the tram disappears. Clamp is firm for the first week.</div></div>
+    <div class="rv"><div class="who"><span class="av" style="background-color: #ff9500">TM</span><span class="bold">Tom</span><span class="muted">&nbsp;· last week</span><span class="stars"><i></i><i></i><i></i><i></i><i class="off"></i></span></div><div class="small" style="margin-top: 4px">Great sound, slightly bass-heavy out of the box. The EQ in the app fixes it.</div></div>
+    <div class="rv" style="border-bottom: none"><div class="who"><span class="av" style="background-color: #34c759">LE</span><span class="bold">Leo</span><span class="muted">&nbsp;· 3 weeks ago</span><span class="stars"><i></i><i></i><i></i><i class="off"></i><i class="off"></i></span></div><div class="small" style="margin-top: 4px">Multipoint drops the laptop sometimes when a call comes in. Firmware 2.1 helped.</div></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 344.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 344.3
+    div 15 13 330 318.3
+      div 15 13 330 26
+        span 15 15.6 144 20.8
+        span 297 13 48 26
+      div 17 51 326 26.9
+        span 17 56 108.667 16.9
+        span 125.667 56 108.667 16.9
+        span 234.333 56 108.667 16.9
+      div 15 91.9 330 239.4
+        div 15 91.9 330 120
+        p 15 221.9 330 72.8
+        div 15 302.7 330 28.6
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+              i 0 0 0 0
+          div 0 0 0 0
+
+== paint
+root 360x344.3 items=47
+  solid-fill bounds=(0,0,360,344) layer=(border=(0,0,360,344),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,344),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,344) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,344) root=0
+  solid-fill bounds=(15,49,330,31) layer=(border=(15,49,330,31),radius=(9,9,9,9,9,9,9,9),clip=(15,49,330,31),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(17,51,109,27) layer=(border=(17,51,109,27),radius=(7,7,7,7,7,7,7,7),clip=(17,51,109,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  linear-gradient bounds=(15,92,330,120) layer=(border=(15,92,330,120),radius=(12,12,12,12,12,12,12,12),clip=(15,92,330,120),origin=(15,92,330,120),attachment=0,repeat=0,root=0) points=((0,#0f2027ff,-),(0.5,#203a43ff,-),(1,#2c5364ff,-)) space=0 hue=0 start=(67.5,39.5) end=(292.5,264.5)
+  text bounds=(7,10,56,32) pos=(15,18,40,16) color=#000000ff text="Ridge" font=f1 glyphs=5 advance=40
+  text bounds=(55,10,24,32) pos=(63,18,8,16) color=#000000ff text="2" font=f1 glyphs=1 advance=8
+  text bounds=(71,10,96,32) pos=(79,18,80,16) color=#000000ff text="Headphones" font=f1 glyphs=10 advance=80
+  text bounds=(289,10,64,32) pos=(297,18,48,16) color=#000000ff text="€249" font=f2 glyphs=6 advance=48
+  text bounds=(31.3333,48,80,32) pos=(39.3333,56,64,16) color=#000000ff text="Overview" font=f3 glyphs=8 advance=64
+  text bounds=(152,48,56,32) pos=(160,56,40,16) color=#000000ff text="Specs" font=f3 glyphs=5 advance=40
+  text bounds=(252.667,48,72,32) pos=(260.667,56,56,16) color=#000000ff text="Reviews" font=f3 glyphs=7 advance=56
+  text bounds=(7,215,56,32) pos=(15,223,40,16) color=#000000ff text="Over-" font=f4 glyphs=5 advance=40
+  text bounds=(47,215,48,32) pos=(55,223,32,16) color=#000000ff text="ear," font=f4 glyphs=4 advance=32
+  text bounds=(87,215,32,32) pos=(95,223,16,16) color=#000000ff text="40" font=f4 glyphs=2 advance=16
+  text bounds=(111,215,24,32) pos=(119,223,8,16) color=#000000ff text="h" font=f4 glyphs=1 advance=8
+  text bounds=(127,215,32,32) pos=(135,223,16,16) color=#000000ff text="of" font=f4 glyphs=2 advance=16
+  text bounds=(151,215,80,32) pos=(159,223,64,16) color=#000000ff text="battery," font=f4 glyphs=8 advance=64
+  text bounds=(223,215,80,32) pos=(231,223,64,16) color=#000000ff text="adaptive" font=f4 glyphs=8 advance=64
+  text bounds=(295,215,56,32) pos=(303,223,40,16) color=#000000ff text="noise" font=f4 glyphs=5 advance=40
+  text bounds=(7,233,96,32) pos=(15,241,80,16) color=#000000ff text="cancelling" font=f4 glyphs=10 advance=80
+  text bounds=(95,233,40,32) pos=(103,241,24,16) color=#000000ff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(127,233,24,32) pos=(135,241,8,16) color=#000000ff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(143,233,56,32) pos=(151,241,40,16) color=#000000ff text="fold-" font=f4 glyphs=5 advance=40
+  text bounds=(183,233,48,32) pos=(191,241,32,16) color=#000000ff text="flat" font=f4 glyphs=4 advance=32
+  text bounds=(223,233,64,32) pos=(231,241,48,16) color=#000000ff text="hinge." font=f4 glyphs=6 advance=48
+  text bounds=(279,233,56,32) pos=(287,241,40,16) color=#000000ff text="Pairs" font=f4 glyphs=5 advance=40
+  text bounds=(7,251,48,32) pos=(15,259,32,16) color=#000000ff text="with" font=f4 glyphs=4 advance=32
+  text bounds=(47,251,40,32) pos=(55,259,24,16) color=#000000ff text="two" font=f4 glyphs=3 advance=24
+  text bounds=(79,251,72,32) pos=(87,259,56,16) color=#000000ff text="devices" font=f4 glyphs=7 advance=56
+  text bounds=(143,251,32,32) pos=(151,259,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(167,251,48,32) pos=(175,259,32,16) color=#000000ff text="once" font=f4 glyphs=4 advance=32
+  text bounds=(207,251,40,32) pos=(215,259,24,16) color=#000000ff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(239,251,80,32) pos=(247,259,64,16) color=#000000ff text="switches" font=f4 glyphs=8 advance=64
+  text bounds=(7,270,72,32) pos=(15,278,56,16) color=#000000ff text="between" font=f4 glyphs=7 advance=56
+  text bounds=(71,270,48,32) pos=(79,278,32,16) color=#000000ff text="them" font=f4 glyphs=4 advance=32
+  text bounds=(111,270,32,32) pos=(119,278,16,16) color=#000000ff text="on" font=f4 glyphs=2 advance=16
+  text bounds=(135,270,40,32) pos=(143,278,24,16) color=#000000ff text="its" font=f4 glyphs=3 advance=24
+  text bounds=(167,270,48,32) pos=(175,278,32,16) color=#000000ff text="own." font=f4 glyphs=4 advance=32
+  text bounds=(7,295,32,32) pos=(15,303,16,16) color=#6e6e73ff text="In" font=f5 glyphs=2 advance=16
+  text bounds=(31,295,56,32) pos=(39,303,40,16) color=#6e6e73ff text="stock" font=f5 glyphs=5 advance=40
+  text bounds=(79,295,32,32) pos=(87,303,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(103,295,56,32) pos=(111,303,40,16) color=#6e6e73ff text="ships" font=f5 glyphs=5 advance=40
+  text bounds=(151,295,80,32) pos=(159,303,64,16) color=#6e6e73ff text="tomorrow" font=f5 glyphs=8 advance=64
+  text bounds=(223,295,32,32) pos=(231,303,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(247,295,64,32) pos=(255,303,48,16) color=#6e6e73ff text="30-day" font=f5 glyphs=6 advance=48
+  text bounds=(7,309,72,32) pos=(15,317,56,16) color=#6e6e73ff text="returns" font=f5 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=20,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

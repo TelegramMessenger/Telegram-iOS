@@ -1,0 +1,187 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker</title>
+<style></style>
+</head>
+<body>
+<div class="head"><h2>💧 Drink water</h2><span class="streak" id="streak">🔥 0 day streak</span></div>
+<div class="grid" id="grid"><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div><div class="dow">S</div><div class="day empty"></div><div class="day empty"></div><div class="day empty"></div><button class="day today" id="day-1">1</button><button class="day" id="day-2">2</button><button class="day" id="day-3">3</button><button class="day" id="day-4">4</button><button class="day" id="day-5">5</button><button class="day" id="day-6">6</button><button class="day" id="day-7">7</button><button class="day" id="day-8">8</button><button class="day" id="day-9">9</button><button class="day" id="day-10">10</button><button class="day" id="day-11">11</button><button class="day" id="day-12">12</button><button class="day" id="day-13">13</button><button class="day" id="day-14">14</button><button class="day" id="day-15">15</button><button class="day" id="day-16">16</button><button class="day" id="day-17">17</button><button class="day" id="day-18">18</button><button class="day" id="day-19">19</button><button class="day" id="day-20">20</button><button class="day" id="day-21">21</button><button class="day" id="day-22">22</button><button class="day" id="day-23">23</button><button class="day" id="day-24">24</button><button class="day" id="day-25">25</button><button class="day" id="day-26">26</button><button class="day" id="day-27">27</button><button class="day" id="day-28">28</button><button class="day" id="day-29">29</button><button class="day" id="day-30">30</button><button class="day" id="day-31">31</button></div>
+<div class="stats"><div><b id="done">0</b>days done</div><div><b id="pct">0%</b>of month</div><div><b id="best">0</b>best streak</div></div>
+<div class="foot"><span>Saved on this device</span><button class="save" id="save">Clear month</button></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 415.929
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 387.929
+    div 14 14 332 25.55
+      h2 14 16.15 128 21.25
+      span 200 18 136 17.55
+    div 14 49.55 332 256.279
+      div 14 49.55 42.2857 14.85
+      div 62.2857 49.55 42.2857 14.85
+      div 110.571 49.55 42.2857 14.85
+      div 158.857 49.55 42.2857 14.85
+      div 207.143 49.55 42.2857 14.85
+      div 255.429 49.55 42.2857 14.85
+      div 303.714 49.55 42.2857 14.85
+      div 14 70.4 42.2857 42.2857
+      div 62.2857 70.4 42.2857 42.2857
+      div 110.571 70.4 42.2857 42.2857
+      button 158.857 70.4 42.2857 42.2857
+      button 207.143 70.4 42.2857 42.2857
+      button 255.429 70.4 42.2857 42.2857
+      button 303.714 70.4 42.2857 42.2857
+      button 14 118.686 42.2857 42.2857
+      button 62.2857 118.686 42.2857 42.2857
+      button 110.571 118.686 42.2857 42.2857
+      button 158.857 118.686 42.2857 42.2857
+      button 207.143 118.686 42.2857 42.2857
+      button 255.429 118.686 42.2857 42.2857
+      button 303.714 118.686 42.2857 42.2857
+      button 14 166.971 42.2857 42.2857
+      button 62.2857 166.971 42.2857 42.2857
+      button 110.571 166.971 42.2857 42.2857
+      button 158.857 166.971 42.2857 42.2857
+      button 207.143 166.971 42.2857 42.2857
+      button 255.429 166.971 42.2857 42.2857
+      button 303.714 166.971 42.2857 42.2857
+      button 14 215.257 42.2857 42.2857
+      button 62.2857 215.257 42.2857 42.2857
+      button 110.571 215.257 42.2857 42.2857
+      button 158.857 215.257 42.2857 42.2857
+      button 207.143 215.257 42.2857 42.2857
+      button 255.429 215.257 42.2857 42.2857
+      button 303.714 215.257 42.2857 42.2857
+      button 14 263.543 42.2857 42.2857
+      button 62.2857 263.543 42.2857 42.2857
+      button 110.571 263.543 42.2857 42.2857
+      button 158.857 263.543 42.2857 42.2857
+      button 207.143 263.543 42.2857 42.2857
+      button 255.429 263.543 42.2857 42.2857
+    div 14 317.829 332 40.5
+      div 32 317.829 72 40.5
+        b 32 317.829 72 24.3
+      div 140 317.829 64 40.5
+        b 140 317.829 64 24.3
+      div 240 317.829 88 40.5
+        b 240 317.829 88 24.3
+    div 14 370.329 332 31.6
+      span 14 378.029 160 16.2
+      button 245 378.329 88 15.6
+
+== paint
+root 360x415.929 items=95
+  solid-fill bounds=(0,0,360,416) layer=(border=(0,0,360,416),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,416),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(190,14,156,26) layer=(border=(190,14,156,26),radius=(12.775,12.775,12.775,12.775,12.775,12.775,12.775,12.775),clip=(190,14,156,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fef3c7ff
+  solid-fill bounds=(159,70,42,43) layer=(border=(159,70,42,43),radius=(8,8,8,8,8,8,8,8),clip=(159,70,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  borders bounds=(159,70,42,43) borders=(left=(2,4,#0ea5e9ff),top=(2,4,#0ea5e9ff),right=(2,4,#0ea5e9ff),bottom=(2,4,#0ea5e9ff),radius=(8,8,8,8,8,8,8,8)) pos=(159,70,42,43) root=0
+  solid-fill bounds=(207,70,42,43) layer=(border=(207,70,42,43),radius=(8,8,8,8,8,8,8,8),clip=(207,70,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(255,70,43,43) layer=(border=(255,70,43,43),radius=(8,8,8,8,8,8,8,8),clip=(255,70,43,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(304,70,42,43) layer=(border=(304,70,42,43),radius=(8,8,8,8,8,8,8,8),clip=(304,70,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(14,119,42,42) layer=(border=(14,119,42,42),radius=(8,8,8,8,8,8,8,8),clip=(14,119,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(62,119,43,42) layer=(border=(62,119,43,42),radius=(8,8,8,8,8,8,8,8),clip=(62,119,43,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(111,119,42,42) layer=(border=(111,119,42,42),radius=(8,8,8,8,8,8,8,8),clip=(111,119,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(159,119,42,42) layer=(border=(159,119,42,42),radius=(8,8,8,8,8,8,8,8),clip=(159,119,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(207,119,42,42) layer=(border=(207,119,42,42),radius=(8,8,8,8,8,8,8,8),clip=(207,119,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(255,119,43,42) layer=(border=(255,119,43,42),radius=(8,8,8,8,8,8,8,8),clip=(255,119,43,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(304,119,42,42) layer=(border=(304,119,42,42),radius=(8,8,8,8,8,8,8,8),clip=(304,119,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(14,167,42,42) layer=(border=(14,167,42,42),radius=(8,8,8,8,8,8,8,8),clip=(14,167,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(62,167,43,42) layer=(border=(62,167,43,42),radius=(8,8,8,8,8,8,8,8),clip=(62,167,43,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(111,167,42,42) layer=(border=(111,167,42,42),radius=(8,8,8,8,8,8,8,8),clip=(111,167,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(159,167,42,42) layer=(border=(159,167,42,42),radius=(8,8,8,8,8,8,8,8),clip=(159,167,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(207,167,42,42) layer=(border=(207,167,42,42),radius=(8,8,8,8,8,8,8,8),clip=(207,167,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(255,167,43,42) layer=(border=(255,167,43,42),radius=(8,8,8,8,8,8,8,8),clip=(255,167,43,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(304,167,42,42) layer=(border=(304,167,42,42),radius=(8,8,8,8,8,8,8,8),clip=(304,167,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(14,215,42,43) layer=(border=(14,215,42,43),radius=(8,8,8,8,8,8,8,8),clip=(14,215,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(62,215,43,43) layer=(border=(62,215,43,43),radius=(8,8,8,8,8,8,8,8),clip=(62,215,43,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(111,215,42,43) layer=(border=(111,215,42,43),radius=(8,8,8,8,8,8,8,8),clip=(111,215,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(159,215,42,43) layer=(border=(159,215,42,43),radius=(8,8,8,8,8,8,8,8),clip=(159,215,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(207,215,42,43) layer=(border=(207,215,42,43),radius=(8,8,8,8,8,8,8,8),clip=(207,215,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(255,215,43,43) layer=(border=(255,215,43,43),radius=(8,8,8,8,8,8,8,8),clip=(255,215,43,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(304,215,42,43) layer=(border=(304,215,42,43),radius=(8,8,8,8,8,8,8,8),clip=(304,215,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(14,264,42,42) layer=(border=(14,264,42,42),radius=(8,8,8,8,8,8,8,8),clip=(14,264,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(62,264,43,42) layer=(border=(62,264,43,42),radius=(8,8,8,8,8,8,8,8),clip=(62,264,43,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(111,264,42,42) layer=(border=(111,264,42,42),radius=(8,8,8,8,8,8,8,8),clip=(111,264,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(159,264,42,42) layer=(border=(159,264,42,42),radius=(8,8,8,8,8,8,8,8),clip=(159,264,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(207,264,42,42) layer=(border=(207,264,42,42),radius=(8,8,8,8,8,8,8,8),clip=(207,264,42,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  solid-fill bounds=(255,264,43,42) layer=(border=(255,264,43,42),radius=(8,8,8,8,8,8,8,8),clip=(255,264,43,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1f5f9ff
+  borders bounds=(232,370,114,32) borders=(left=(1,4,#0ea5e9ff),top=(1,4,#0ea5e9ff),right=(1,4,#0ea5e9ff),bottom=(1,4,#0ea5e9ff),radius=(8,8,8,8,8,8,8,8)) pos=(232,370,114,32) root=0
+  text bounds=(6,10,48,32) pos=(14,18,32,16) color=#0c4a6eff text="💧" font=f1 glyphs=4 advance=32
+  text bounds=(46,10,56,32) pos=(54,18,40,16) color=#0c4a6eff text="Drink" font=f1 glyphs=5 advance=40
+  text bounds=(94,10,56,32) pos=(102,18,40,16) color=#0c4a6eff text="water" font=f1 glyphs=5 advance=40
+  text bounds=(192,10,48,32) pos=(200,18,32,16) color=#92400eff text="🔥" font=f2 glyphs=4 advance=32
+  text bounds=(232,10,24,32) pos=(240,18,8,16) color=#92400eff text="0" font=f2 glyphs=1 advance=8
+  text bounds=(248,10,40,32) pos=(256,18,24,16) color=#92400eff text="day" font=f2 glyphs=3 advance=24
+  text bounds=(280,10,64,32) pos=(288,18,48,16) color=#92400eff text="streak" font=f2 glyphs=6 advance=48
+  text bounds=(23.1429,42,24,32) pos=(31.1429,50,8,16) color=#6b7280ff text="M" font=f3 glyphs=1 advance=8
+  text bounds=(71.4286,42,24,32) pos=(79.4286,50,8,16) color=#6b7280ff text="T" font=f3 glyphs=1 advance=8
+  text bounds=(119.714,42,24,32) pos=(127.714,50,8,16) color=#6b7280ff text="W" font=f3 glyphs=1 advance=8
+  text bounds=(168,42,24,32) pos=(176,50,8,16) color=#6b7280ff text="T" font=f3 glyphs=1 advance=8
+  text bounds=(216.286,42,24,32) pos=(224.286,50,8,16) color=#6b7280ff text="F" font=f3 glyphs=1 advance=8
+  text bounds=(264.571,42,24,32) pos=(272.571,50,8,16) color=#6b7280ff text="S" font=f3 glyphs=1 advance=8
+  text bounds=(312.857,42,24,32) pos=(320.857,50,8,16) color=#6b7280ff text="S" font=f3 glyphs=1 advance=8
+  text bounds=(168,76,24,32) pos=(176,84,8,16) color=#0c4a6eff text="1" font=f4 glyphs=1 advance=8
+  text bounds=(216.286,76,24,32) pos=(224.286,84,8,16) color=#0c4a6eff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(264.571,76,24,32) pos=(272.571,84,8,16) color=#0c4a6eff text="3" font=f4 glyphs=1 advance=8
+  text bounds=(312.857,76,24,32) pos=(320.857,84,8,16) color=#0c4a6eff text="4" font=f4 glyphs=1 advance=8
+  text bounds=(23.1429,124,24,32) pos=(31.1429,132,8,16) color=#0c4a6eff text="5" font=f4 glyphs=1 advance=8
+  text bounds=(71.4286,124,24,32) pos=(79.4286,132,8,16) color=#0c4a6eff text="6" font=f4 glyphs=1 advance=8
+  text bounds=(119.714,124,24,32) pos=(127.714,132,8,16) color=#0c4a6eff text="7" font=f4 glyphs=1 advance=8
+  text bounds=(168,124,24,32) pos=(176,132,8,16) color=#0c4a6eff text="8" font=f4 glyphs=1 advance=8
+  text bounds=(216.286,124,24,32) pos=(224.286,132,8,16) color=#0c4a6eff text="9" font=f4 glyphs=1 advance=8
+  text bounds=(260.571,124,32,32) pos=(268.571,132,16,16) color=#0c4a6eff text="10" font=f4 glyphs=2 advance=16
+  text bounds=(308.857,124,32,32) pos=(316.857,132,16,16) color=#0c4a6eff text="11" font=f4 glyphs=2 advance=16
+  text bounds=(19.1429,172,32,32) pos=(27.1429,180,16,16) color=#0c4a6eff text="12" font=f4 glyphs=2 advance=16
+  text bounds=(67.4286,172,32,32) pos=(75.4286,180,16,16) color=#0c4a6eff text="13" font=f4 glyphs=2 advance=16
+  text bounds=(115.714,172,32,32) pos=(123.714,180,16,16) color=#0c4a6eff text="14" font=f4 glyphs=2 advance=16
+  text bounds=(164,172,32,32) pos=(172,180,16,16) color=#0c4a6eff text="15" font=f4 glyphs=2 advance=16
+  text bounds=(212.286,172,32,32) pos=(220.286,180,16,16) color=#0c4a6eff text="16" font=f4 glyphs=2 advance=16
+  text bounds=(260.571,172,32,32) pos=(268.571,180,16,16) color=#0c4a6eff text="17" font=f4 glyphs=2 advance=16
+  text bounds=(308.857,172,32,32) pos=(316.857,180,16,16) color=#0c4a6eff text="18" font=f4 glyphs=2 advance=16
+  text bounds=(19.1429,221,32,32) pos=(27.1429,229,16,16) color=#0c4a6eff text="19" font=f4 glyphs=2 advance=16
+  text bounds=(67.4286,221,32,32) pos=(75.4286,229,16,16) color=#0c4a6eff text="20" font=f4 glyphs=2 advance=16
+  text bounds=(115.714,221,32,32) pos=(123.714,229,16,16) color=#0c4a6eff text="21" font=f4 glyphs=2 advance=16
+  text bounds=(164,221,32,32) pos=(172,229,16,16) color=#0c4a6eff text="22" font=f4 glyphs=2 advance=16
+  text bounds=(212.286,221,32,32) pos=(220.286,229,16,16) color=#0c4a6eff text="23" font=f4 glyphs=2 advance=16
+  text bounds=(260.571,221,32,32) pos=(268.571,229,16,16) color=#0c4a6eff text="24" font=f4 glyphs=2 advance=16
+  text bounds=(308.857,221,32,32) pos=(316.857,229,16,16) color=#0c4a6eff text="25" font=f4 glyphs=2 advance=16
+  text bounds=(19.1429,269,32,32) pos=(27.1429,277,16,16) color=#0c4a6eff text="26" font=f4 glyphs=2 advance=16
+  text bounds=(67.4286,269,32,32) pos=(75.4286,277,16,16) color=#0c4a6eff text="27" font=f4 glyphs=2 advance=16
+  text bounds=(115.714,269,32,32) pos=(123.714,277,16,16) color=#0c4a6eff text="28" font=f4 glyphs=2 advance=16
+  text bounds=(164,269,32,32) pos=(172,277,16,16) color=#0c4a6eff text="29" font=f4 glyphs=2 advance=16
+  text bounds=(212.286,269,32,32) pos=(220.286,277,16,16) color=#0c4a6eff text="30" font=f4 glyphs=2 advance=16
+  text bounds=(260.571,269,32,32) pos=(268.571,277,16,16) color=#0c4a6eff text="31" font=f4 glyphs=2 advance=16
+  text bounds=(56,314,24,32) pos=(64,322,8,16) color=#0c4a6eff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(24,334,48,32) pos=(32,342,32,16) color=#6b7280ff text="days" font=f6 glyphs=4 advance=32
+  text bounds=(64,334,48,32) pos=(72,342,32,16) color=#6b7280ff text="done" font=f6 glyphs=4 advance=32
+  text bounds=(156,314,32,32) pos=(164,322,16,16) color=#0c4a6eff text="0%" font=f5 glyphs=2 advance=16
+  text bounds=(132,334,32,32) pos=(140,342,16,16) color=#6b7280ff text="of" font=f6 glyphs=2 advance=16
+  text bounds=(156,334,56,32) pos=(164,342,40,16) color=#6b7280ff text="month" font=f6 glyphs=5 advance=40
+  text bounds=(272,314,24,32) pos=(280,322,8,16) color=#0c4a6eff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(232,334,48,32) pos=(240,342,32,16) color=#6b7280ff text="best" font=f6 glyphs=4 advance=32
+  text bounds=(272,334,64,32) pos=(280,342,48,16) color=#6b7280ff text="streak" font=f6 glyphs=6 advance=48
+  text bounds=(6,370,56,32) pos=(14,378,40,16) color=#6b7280ff text="Saved" font=f6 glyphs=5 advance=40
+  text bounds=(54,370,32,32) pos=(62,378,16,16) color=#6b7280ff text="on" font=f6 glyphs=2 advance=16
+  text bounds=(78,370,48,32) pos=(86,378,32,16) color=#6b7280ff text="this" font=f6 glyphs=4 advance=32
+  text bounds=(118,370,64,32) pos=(126,378,48,16) color=#6b7280ff text="device" font=f6 glyphs=6 advance=48
+  text bounds=(237,370,56,32) pos=(245,378,40,16) color=#0c4a6eff text="Clear" font=f4 glyphs=5 advance=40
+  text bounds=(285,370,56,32) pos=(293,378,40,16) color=#0c4a6eff text="month" font=f4 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

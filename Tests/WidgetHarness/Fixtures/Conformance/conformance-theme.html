@@ -1,0 +1,17 @@
+<!doctype html>
+<html data-test="fixture/theme">
+<head><style>body { margin: 0 }</style></head>
+<body>
+<p>A conformance fixture: publishes the theme the host gave it, the palette's background and the text size.</p>
+<script>
+setTimeout(() => {
+  const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  document.documentElement.setAttribute('data-conformance', JSON.stringify({
+    v: 1, id: 'fixture/theme', status: 'done',
+    n: { pass: 2, fail: 0, xfail: 0, xpass: 0, skip: 0, pending: 0 },
+    checks: [['tw.theme-params', 'bg', 'pass', v('--tg-theme-bg-color')], ['tw.theme-params', 'text size', 'pass', v('--tg-text-font-size')]]
+  }));
+}, 20);
+</script>
+</body>
+</html>

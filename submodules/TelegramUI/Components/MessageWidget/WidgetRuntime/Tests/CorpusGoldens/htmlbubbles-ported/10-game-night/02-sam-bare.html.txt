@@ -1,0 +1,686 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad chs" id="root">
+  <div class="hd"><b class="grow" style="font-size: 16px">♟️ Sam vs Kai</b><span id="status" class="badge orange">Black to move</span></div>
+  <div class="tiny muted" id="note">You play Black for Kai · Sam answers from the book</div>
+  <div class="wrap">
+    <div>
+      <div class="row" style="align-items: flex-start"><div class="rk" id="ranks"><div>8</div><div>7</div><div>6</div><div>5</div><div>4</div><div>3</div><div>2</div><div>1</div></div><div class="bd" id="board"><div class="rw"><div class="sq" data-s="0" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="1" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="2" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="3" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="4" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="5" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="6" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="7" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="8" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="9" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="10" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="11" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="12" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="13" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="14" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="15" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="16" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="17" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="18" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="19" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="20" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="21" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="22" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="23" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="24" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="25" style="background-color: #cdd26a;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="26" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="27" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="28" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="29" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="30" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="31" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="32" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="33" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="34" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="35" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="36" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="37" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="38" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="39" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="40" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="41" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="42" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="43" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="44" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="45" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="46" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="47" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="48" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="49" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="50" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="51" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="52" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="53" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="54" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="55" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div></div><div class="rw"><div class="sq" data-s="56" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="57" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="58" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="59" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="60" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="61" style="background-color: #cdd26a;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="62" style="background-color: #b58863;"><div class="hv"><div class="dot"></div></div></div><div class="sq" data-s="63" style="background-color: #f0d9b5;"><div class="hv"><div class="dot"></div></div></div></div><div class="pc b act" style="--mv: 0ms; left: 0px; top: 0px; z-index: 0;" data-s="0"><span>♜</span></div><div class="pc b act" style="--mv: 0ms; left: 0px; top: 34px; z-index: 0;" data-s="8"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 0px; top: 204px; z-index: 0;" data-s="48"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 0px; top: 238px; z-index: 0;" data-s="56"><span>♜</span><div class="ol">♖</div></div><div class="pc b act" style="--mv: 0ms; left: 68px; top: 68px; z-index: 4;" data-s="18"><span>♞</span></div><div class="pc b act" style="--mv: 0ms; left: 34px; top: 34px; z-index: 0;" data-s="9"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 34px; top: 204px; z-index: 0;" data-s="49"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 34px; top: 238px; z-index: 0;" data-s="57"><span>♞</span><div class="ol">♘</div></div><div class="pc b act" style="--mv: 0ms; left: 68px; top: 0px; z-index: 0;" data-s="2"><span>♝</span></div><div class="pc b act" style="--mv: 0ms; left: 68px; top: 34px; z-index: 0;" data-s="10"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 68px; top: 204px; z-index: 0;" data-s="50"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 68px; top: 238px; z-index: 0;" data-s="58"><span>♝</span><div class="ol">♗</div></div><div class="pc b act" style="--mv: 0ms; left: 102px; top: 0px; z-index: 0;" data-s="3"><span>♛</span></div><div class="pc b act" style="--mv: 0ms; left: 102px; top: 34px; z-index: 0;" data-s="11"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 102px; top: 204px; z-index: 0;" data-s="51"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 102px; top: 238px; z-index: 0;" data-s="59"><span>♛</span><div class="ol">♕</div></div><div class="pc b act" style="--mv: 0ms; left: 136px; top: 0px; z-index: 0;" data-s="4"><span>♚</span></div><div class="pc b act" style="--mv: 0ms; left: 136px; top: 102px; z-index: 2;" data-s="28"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 136px; top: 136px; z-index: 1;" data-s="36"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 136px; top: 238px; z-index: 0;" data-s="60"><span>♚</span><div class="ol">♔</div></div><div class="pc b act" style="--mv: 0ms; left: 170px; top: 0px; z-index: 0;" data-s="5"><span>♝</span></div><div class="pc b act" style="--mv: 0ms; left: 170px; top: 34px; z-index: 0;" data-s="13"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 170px; top: 204px; z-index: 0;" data-s="53"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 560ms; left: 34px; top: 102px; z-index: 5;" data-s="25"><span>♝</span><div class="ol">♗</div></div><div class="pc b act" style="--mv: 0ms; left: 204px; top: 0px; z-index: 0;" data-s="6"><span>♞</span></div><div class="pc b act" style="--mv: 0ms; left: 204px; top: 34px; z-index: 0;" data-s="14"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 204px; top: 204px; z-index: 0;" data-s="54"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 170px; top: 170px; z-index: 3;" data-s="45"><span>♞</span><div class="ol">♘</div></div><div class="pc b act" style="--mv: 0ms; left: 238px; top: 0px; z-index: 0;" data-s="7"><span>♜</span></div><div class="pc b act" style="--mv: 0ms; left: 238px; top: 34px; z-index: 0;" data-s="15"><span>♟︎</span></div><div class="pc w" style="--mv: 0ms; left: 238px; top: 204px; z-index: 0;" data-s="55"><span>♟︎</span><div class="ol">♙</div></div><div class="pc w" style="--mv: 0ms; left: 238px; top: 238px; z-index: 0;" data-s="63"><span>♜</span><div class="ol">♖</div></div><div class="banner" id="banner" hidden=""><div class="t" id="overT"></div><div class="small s" id="overS"></div></div></div></div>
+      <div class="fl" id="files"><div>a</div><div>b</div><div>c</div><div>d</div><div>e</div><div>f</div><div>g</div><div>h</div></div>
+    </div>
+    <div class="side" id="side">
+      <div class="clk on" id="clkTop"><div class="tiny" id="whoTop">Kai · you</div><b id="timeTop">4:58</b></div>
+      <div class="cap" id="capTop">&nbsp;</div>
+      <div style="margin-top: 6px"><div class="caps">Opening</div><div class="small" style="margin-top: 2px">Ruy Lopez<span id="oname"></span></div>
+        <div id="bookWrap"><div class="caps" style="margin-top: 8px">Book</div><div id="book"><span class="bk" data-san="a6">a6</span><span class="bk" data-san="Nf6">Nf6</span><span class="bk" data-san="Bc5">Bc5</span></div></div></div>
+      <div class="bottom"><div class="cap" id="capBottom">&nbsp;</div><div class="clk" id="clkBottom"><div class="tiny" id="whoBottom">Sam · White</div><b id="timeBottom">4:51</b></div></div>
+    </div>
+  </div>
+  <div class="pgn" id="pgn"><span class="n">1.</span><span class="m">e4</span> <span class="m">e5</span> <span class="n">2.</span><span class="m">Nf3</span> <span class="m">Nc6</span> <span class="n">3.</span><span class="m last">Bb5</span> </div>
+  <div class="ctl"><span class="small muted grow" id="hint">Tap a black piece</span>
+    <button id="undoBtn" class="off">↶ Undo</button><button id="flipBtn">⇅ Flip</button><button id="newBtn">↻ New</button></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 447.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 447.6
+    div 15 13 360 421.6
+      div 15 13 360 20.8
+        b 15 13 240 20.8
+        span 263 16.25 104 14.3
+      div 15 33.8 360 28.6
+      div 15 72.4 360 286
+        div 15 72.4 284 286
+          div 15 72.4 284 272
+            div 15 72.4 12 272
+              div 15 72.4 12 34
+              div 15 106.4 12 34
+              div 15 140.4 12 34
+              div 15 174.4 12 34
+              div 15 208.4 12 34
+              div 15 242.4 12 34
+              div 15 276.4 12 34
+              div 15 310.4 12 34
+            div 27 72.4 272 272
+              div 27 72.4 272 34
+                div 27 72.4 34 34
+                  div 27 72.4 34 34
+                    div 44 89.4 0 0
+                div 61 72.4 34 34
+                  div 61 72.4 34 34
+                    div 78 89.4 0 0
+                div 95 72.4 34 34
+                  div 95 72.4 34 34
+                    div 112 89.4 0 0
+                div 129 72.4 34 34
+                  div 129 72.4 34 34
+                    div 146 89.4 0 0
+                div 163 72.4 34 34
+                  div 163 72.4 34 34
+                    div 180 89.4 0 0
+                div 197 72.4 34 34
+                  div 197 72.4 34 34
+                    div 214 89.4 0 0
+                div 231 72.4 34 34
+                  div 231 72.4 34 34
+                    div 248 89.4 0 0
+                div 265 72.4 34 34
+                  div 265 72.4 34 34
+                    div 282 89.4 0 0
+              div 27 106.4 272 34
+                div 27 106.4 34 34
+                  div 27 106.4 34 34
+                    div 44 123.4 0 0
+                div 61 106.4 34 34
+                  div 61 106.4 34 34
+                    div 78 123.4 0 0
+                div 95 106.4 34 34
+                  div 95 106.4 34 34
+                    div 112 123.4 0 0
+                div 129 106.4 34 34
+                  div 129 106.4 34 34
+                    div 146 123.4 0 0
+                div 163 106.4 34 34
+                  div 163 106.4 34 34
+                    div 180 123.4 0 0
+                div 197 106.4 34 34
+                  div 197 106.4 34 34
+                    div 214 123.4 0 0
+                div 231 106.4 34 34
+                  div 231 106.4 34 34
+                    div 248 123.4 0 0
+                div 265 106.4 34 34
+                  div 265 106.4 34 34
+                    div 282 123.4 0 0
+              div 27 140.4 272 34
+                div 27 140.4 34 34
+                  div 27 140.4 34 34
+                    div 44 157.4 0 0
+                div 61 140.4 34 34
+                  div 61 140.4 34 34
+                    div 78 157.4 0 0
+                div 95 140.4 34 34
+                  div 95 140.4 34 34
+                    div 112 157.4 0 0
+                div 129 140.4 34 34
+                  div 129 140.4 34 34
+                    div 146 157.4 0 0
+                div 163 140.4 34 34
+                  div 163 140.4 34 34
+                    div 180 157.4 0 0
+                div 197 140.4 34 34
+                  div 197 140.4 34 34
+                    div 214 157.4 0 0
+                div 231 140.4 34 34
+                  div 231 140.4 34 34
+                    div 248 157.4 0 0
+                div 265 140.4 34 34
+                  div 265 140.4 34 34
+                    div 282 157.4 0 0
+              div 27 174.4 272 34
+                div 27 174.4 34 34
+                  div 27 174.4 34 34
+                    div 44 191.4 0 0
+                div 61 174.4 34 34
+                  div 61 174.4 34 34
+                    div 78 191.4 0 0
+                div 95 174.4 34 34
+                  div 95 174.4 34 34
+                    div 112 191.4 0 0
+                div 129 174.4 34 34
+                  div 129 174.4 34 34
+                    div 146 191.4 0 0
+                div 163 174.4 34 34
+                  div 163 174.4 34 34
+                    div 180 191.4 0 0
+                div 197 174.4 34 34
+                  div 197 174.4 34 34
+                    div 214 191.4 0 0
+                div 231 174.4 34 34
+                  div 231 174.4 34 34
+                    div 248 191.4 0 0
+                div 265 174.4 34 34
+                  div 265 174.4 34 34
+                    div 282 191.4 0 0
+              div 27 208.4 272 34
+                div 27 208.4 34 34
+                  div 27 208.4 34 34
+                    div 44 225.4 0 0
+                div 61 208.4 34 34
+                  div 61 208.4 34 34
+                    div 78 225.4 0 0
+                div 95 208.4 34 34
+                  div 95 208.4 34 34
+                    div 112 225.4 0 0
+                div 129 208.4 34 34
+                  div 129 208.4 34 34
+                    div 146 225.4 0 0
+                div 163 208.4 34 34
+                  div 163 208.4 34 34
+                    div 180 225.4 0 0
+                div 197 208.4 34 34
+                  div 197 208.4 34 34
+                    div 214 225.4 0 0
+                div 231 208.4 34 34
+                  div 231 208.4 34 34
+                    div 248 225.4 0 0
+                div 265 208.4 34 34
+                  div 265 208.4 34 34
+                    div 282 225.4 0 0
+              div 27 242.4 272 34
+                div 27 242.4 34 34
+                  div 27 242.4 34 34
+                    div 44 259.4 0 0
+                div 61 242.4 34 34
+                  div 61 242.4 34 34
+                    div 78 259.4 0 0
+                div 95 242.4 34 34
+                  div 95 242.4 34 34
+                    div 112 259.4 0 0
+                div 129 242.4 34 34
+                  div 129 242.4 34 34
+                    div 146 259.4 0 0
+                div 163 242.4 34 34
+                  div 163 242.4 34 34
+                    div 180 259.4 0 0
+                div 197 242.4 34 34
+                  div 197 242.4 34 34
+                    div 214 259.4 0 0
+                div 231 242.4 34 34
+                  div 231 242.4 34 34
+                    div 248 259.4 0 0
+                div 265 242.4 34 34
+                  div 265 242.4 34 34
+                    div 282 259.4 0 0
+              div 27 276.4 272 34
+                div 27 276.4 34 34
+                  div 27 276.4 34 34
+                    div 44 293.4 0 0
+                div 61 276.4 34 34
+                  div 61 276.4 34 34
+                    div 78 293.4 0 0
+                div 95 276.4 34 34
+                  div 95 276.4 34 34
+                    div 112 293.4 0 0
+                div 129 276.4 34 34
+                  div 129 276.4 34 34
+                    div 146 293.4 0 0
+                div 163 276.4 34 34
+                  div 163 276.4 34 34
+                    div 180 293.4 0 0
+                div 197 276.4 34 34
+                  div 197 276.4 34 34
+                    div 214 293.4 0 0
+                div 231 276.4 34 34
+                  div 231 276.4 34 34
+                    div 248 293.4 0 0
+                div 265 276.4 34 34
+                  div 265 276.4 34 34
+                    div 282 293.4 0 0
+              div 27 310.4 272 34
+                div 27 310.4 34 34
+                  div 27 310.4 34 34
+                    div 44 327.4 0 0
+                div 61 310.4 34 34
+                  div 61 310.4 34 34
+                    div 78 327.4 0 0
+                div 95 310.4 34 34
+                  div 95 310.4 34 34
+                    div 112 327.4 0 0
+                div 129 310.4 34 34
+                  div 129 310.4 34 34
+                    div 146 327.4 0 0
+                div 163 310.4 34 34
+                  div 163 310.4 34 34
+                    div 180 327.4 0 0
+                div 197 310.4 34 34
+                  div 197 310.4 34 34
+                    div 214 327.4 0 0
+                div 231 310.4 34 34
+                  div 231 310.4 34 34
+                    div 248 327.4 0 0
+                div 265 310.4 34 34
+                  div 265 310.4 34 34
+                    div 282 327.4 0 0
+              div 27 72.4 34 34
+                span 27 72.4 0 0
+              div 27 106.4 34 34
+                span 27 106.4 0 0
+              div 27 276.4 34 34
+                span 27 276.4 0 0
+                div 27 276.4 34 34
+              div 27 310.4 34 34
+                span 27 310.4 0 0
+                div 27 310.4 34 34
+              div 95 140.4 34 34
+                span 95 140.4 0 0
+              div 61 106.4 34 34
+                span 61 106.4 0 0
+              div 61 276.4 34 34
+                span 61 276.4 0 0
+                div 61 276.4 34 34
+              div 61 310.4 34 34
+                span 61 310.4 0 0
+                div 61 310.4 34 34
+              div 95 72.4 34 34
+                span 95 72.4 0 0
+              div 95 106.4 34 34
+                span 95 106.4 0 0
+              div 95 276.4 34 34
+                span 95 276.4 0 0
+                div 95 276.4 34 34
+              div 95 310.4 34 34
+                span 95 310.4 0 0
+                div 95 310.4 34 34
+              div 129 72.4 34 34
+                span 129 72.4 0 0
+              div 129 106.4 34 34
+                span 129 106.4 0 0
+              div 129 276.4 34 34
+                span 129 276.4 0 0
+                div 129 276.4 34 34
+              div 129 310.4 34 34
+                span 129 310.4 0 0
+                div 129 310.4 34 34
+              div 163 72.4 34 34
+                span 163 72.4 0 0
+              div 163 174.4 34 34
+                span 163 174.4 0 0
+              div 163 208.4 34 34
+                span 163 208.4 0 0
+                div 163 208.4 34 34
+              div 163 310.4 34 34
+                span 163 310.4 0 0
+                div 163 310.4 34 34
+              div 197 72.4 34 34
+                span 197 72.4 0 0
+              div 197 106.4 34 34
+                span 197 106.4 0 0
+              div 197 276.4 34 34
+                span 197 276.4 0 0
+                div 197 276.4 34 34
+              div 61 174.4 34 34
+                span 61 174.4 0 0
+                div 61 174.4 34 34
+              div 231 72.4 34 34
+                span 231 72.4 0 0
+              div 231 106.4 34 34
+                span 231 106.4 0 0
+              div 231 276.4 34 34
+                span 231 276.4 0 0
+                div 231 276.4 34 34
+              div 197 242.4 34 34
+                span 197 242.4 0 0
+                div 197 242.4 34 34
+              div 265 72.4 34 34
+                span 265 72.4 0 0
+              div 265 106.4 34 34
+                span 265 106.4 0 0
+              div 265 276.4 34 34
+                span 265 276.4 0 0
+                div 265 276.4 34 34
+              div 265 310.4 34 34
+                span 265 310.4 0 0
+                div 265 310.4 34 34
+              div 0 0 0 0
+                div 0 0 0 0
+                div 0 0 0 0
+          div 27 344.4 272 14
+            div 27 344.4 34 14
+            div 61 344.4 34 14
+            div 95 344.4 34 14
+            div 129 344.4 34 14
+            div 163 344.4 34 14
+            div 197 344.4 34 14
+            div 231 344.4 34 14
+            div 265 344.4 34 14
+        div 309 72.4 96 286
+          div 317 76.4 80 35.1
+            div 317 76.4 80 14.3
+            b 317 90.7 0 0
+          div 309 119.5 96 16
+          div 309 141.5 96 105.4
+            div 309 141.5 96 14.3
+            div 309 157.8 96 15.6
+              span 309 157.8 0 0
+            div 309 181.4 96 65.5
+              div 309 181.4 96 14.3
+              div 309 195.7 96 51.2
+                span 319 202.7 16 15.6
+                span 359 202.7 24 15.6
+                span 319 228.3 24 15.6
+          div 309 290.4 98 81.4
+            div 309 294.4 98 16
+            div 317 318.4 82 49.4
+              div 317 318.4 82 28.6
+              b 317 347 0 0
+      div 15 366.4 360 21
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+        span 15 366.4 0 0
+      div 15 395.4 360 39.2
+        span 15 399.4 120.497 31.2
+        button 152.497 399.4 54.1969 31.2
+        button 234.694 399.4 54.1969 31.2
+        button 316.891 399.4 47.1088 31.2
+
+== paint
+root 407x447.6 items=291
+  solid-fill bounds=(0,0,390,448) layer=(border=(0,0,390,448),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,448),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,448) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,448) root=0
+  solid-fill bounds=(255,15,120,17) layer=(border=(255,15,120,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(255,15,120,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  solid-fill bounds=(141,395,77,40) layer=(border=(141,395,77,40),radius=(8,8,8,8,8,8,8,8),clip=(141,395,77,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  solid-fill bounds=(224,395,76,40) layer=(border=(224,395,76,40),radius=(8,8,8,8,8,8,8,8),clip=(224,395,76,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  solid-fill bounds=(306,395,69,40) layer=(border=(306,395,69,40),radius=(8,8,8,8,8,8,8,8),clip=(306,395,69,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(7,7,64,32) pos=(15,15,48,16) color=#000000ff text="♟️" font=f1 glyphs=6 advance=48
+  text bounds=(63,7,40,32) pos=(71,15,24,16) color=#000000ff text="Sam" font=f1 glyphs=3 advance=24
+  text bounds=(95,7,32,32) pos=(103,15,16,16) color=#000000ff text="vs" font=f1 glyphs=2 advance=16
+  text bounds=(119,7,40,32) pos=(127,15,24,16) color=#000000ff text="Kai" font=f1 glyphs=3 advance=24
+  text bounds=(255,8,56,32) pos=(263,16,40,16) color=#ff9500ff text="Black" font=f2 glyphs=5 advance=40
+  text bounds=(303,8,32,32) pos=(311,16,16,16) color=#ff9500ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(327,8,48,32) pos=(335,16,32,16) color=#ff9500ff text="move" font=f2 glyphs=4 advance=32
+  text bounds=(7,26,40,32) pos=(15,34,24,16) color=#6e6e73ff text="You" font=f3 glyphs=3 advance=24
+  text bounds=(39,26,48,32) pos=(47,34,32,16) color=#6e6e73ff text="play" font=f3 glyphs=4 advance=32
+  text bounds=(79,26,56,32) pos=(87,34,40,16) color=#6e6e73ff text="Black" font=f3 glyphs=5 advance=40
+  text bounds=(127,26,40,32) pos=(135,34,24,16) color=#6e6e73ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(159,26,40,32) pos=(167,34,24,16) color=#6e6e73ff text="Kai" font=f3 glyphs=3 advance=24
+  text bounds=(191,26,32,32) pos=(199,34,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(215,26,40,32) pos=(223,34,24,16) color=#6e6e73ff text="Sam" font=f3 glyphs=3 advance=24
+  text bounds=(247,26,72,32) pos=(255,34,56,16) color=#6e6e73ff text="answers" font=f3 glyphs=7 advance=56
+  text bounds=(311,26,48,32) pos=(319,34,32,16) color=#6e6e73ff text="from" font=f3 glyphs=4 advance=32
+  text bounds=(7,40,40,32) pos=(15,48,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(39,40,48,32) pos=(47,48,32,16) color=#6e6e73ff text="book" font=f3 glyphs=4 advance=32
+  text bounds=(7,73,24,32) pos=(15,81,8,16) color=#8e8e93ff text="8" font=f4 glyphs=1 advance=8
+  text bounds=(7,107,24,32) pos=(15,115,8,16) color=#8e8e93ff text="7" font=f4 glyphs=1 advance=8
+  text bounds=(7,141,24,32) pos=(15,149,8,16) color=#8e8e93ff text="6" font=f4 glyphs=1 advance=8
+  text bounds=(7,175,24,32) pos=(15,183,8,16) color=#8e8e93ff text="5" font=f4 glyphs=1 advance=8
+  text bounds=(7,209,24,32) pos=(15,217,8,16) color=#8e8e93ff text="4" font=f4 glyphs=1 advance=8
+  text bounds=(7,243,24,32) pos=(15,251,8,16) color=#8e8e93ff text="3" font=f4 glyphs=1 advance=8
+  text bounds=(7,277,24,32) pos=(15,285,8,16) color=#8e8e93ff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(7,311,24,32) pos=(15,319,8,16) color=#8e8e93ff text="1" font=f4 glyphs=1 advance=8
+  text bounds=(32,335,24,32) pos=(40,343,8,16) color=#8e8e93ff text="a" font=f4 glyphs=1 advance=8
+  text bounds=(66,335,24,32) pos=(74,343,8,16) color=#8e8e93ff text="b" font=f4 glyphs=1 advance=8
+  text bounds=(100,335,24,32) pos=(108,343,8,16) color=#8e8e93ff text="c" font=f4 glyphs=1 advance=8
+  text bounds=(134,335,24,32) pos=(142,343,8,16) color=#8e8e93ff text="d" font=f4 glyphs=1 advance=8
+  text bounds=(168,335,24,32) pos=(176,343,8,16) color=#8e8e93ff text="e" font=f4 glyphs=1 advance=8
+  text bounds=(202,335,24,32) pos=(210,343,8,16) color=#8e8e93ff text="f" font=f4 glyphs=1 advance=8
+  text bounds=(236,335,24,32) pos=(244,343,8,16) color=#8e8e93ff text="g" font=f4 glyphs=1 advance=8
+  text bounds=(270,335,24,32) pos=(278,343,8,16) color=#8e8e93ff text="h" font=f4 glyphs=1 advance=8
+  text bounds=(7,360,32,32) pos=(15,368,16,16) color=#8e8e93ff text="1." font=f5 glyphs=2 advance=16
+  text bounds=(30,360,32,32) pos=(38,368,16,16) color=#000000ff text="e4" font=f5 glyphs=2 advance=16
+  text bounds=(64,360,32,32) pos=(72,368,16,16) color=#000000ff text="e5" font=f5 glyphs=2 advance=16
+  text bounds=(94,360,32,32) pos=(102,368,16,16) color=#8e8e93ff text="2." font=f5 glyphs=2 advance=16
+  text bounds=(117,360,40,32) pos=(125,368,24,16) color=#000000ff text="Nf3" font=f5 glyphs=3 advance=24
+  text bounds=(159,360,40,32) pos=(167,368,24,16) color=#000000ff text="Nc6" font=f5 glyphs=3 advance=24
+  text bounds=(197,360,32,32) pos=(205,368,16,16) color=#8e8e93ff text="3." font=f5 glyphs=2 advance=16
+  solid-fill bounds=(224,367,34,18) layer=(border=(224,367,34,18),radius=(4,4,4,4,4,4,4,4),clip=(224,367,34,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cdd26a8c
+  text bounds=(220,360,40,32) pos=(228,368,24,16) color=#000000ff text="Bb5" font=f6 glyphs=3 advance=24
+  text bounds=(7,391,40,32) pos=(15,399,24,16) color=#6e6e73ff text="Tap" font=f7 glyphs=3 advance=24
+  text bounds=(39,391,24,32) pos=(47,399,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(55,391,56,32) pos=(63,399,40,16) color=#6e6e73ff text="black" font=f7 glyphs=5 advance=40
+  text bounds=(7,407,56,32) pos=(15,415,40,16) color=#6e6e73ff text="piece" font=f7 glyphs=5 advance=40
+  text bounds=(159.596,391,40,32) pos=(167.596,399,24,16) color=#8e8e93ff text="↶" font=f8 glyphs=3 advance=24
+  text bounds=(155.596,407,48,32) pos=(163.596,415,32,16) color=#8e8e93ff text="Undo" font=f8 glyphs=4 advance=32
+  text bounds=(241.793,391,40,32) pos=(249.793,399,24,16) color=#000000ff text="⇅" font=f8 glyphs=3 advance=24
+  text bounds=(237.793,407,48,32) pos=(245.793,415,32,16) color=#000000ff text="Flip" font=f8 glyphs=4 advance=32
+  text bounds=(320.446,391,40,32) pos=(328.446,399,24,16) color=#000000ff text="↻" font=f8 glyphs=3 advance=24
+  text bounds=(320.446,407,40,32) pos=(328.446,415,24,16) color=#000000ff text="New" font=f8 glyphs=3 advance=24
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  solid-fill bounds=(27,72,34,34) layer=(border=(27,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(44,89,0,0) layer=(border=(44,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,72,34,34) layer=(border=(61,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(78,89,0,0) layer=(border=(78,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,72,34,34) layer=(border=(95,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(112,89,0,0) layer=(border=(112,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,72,34,34) layer=(border=(129,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(146,89,0,0) layer=(border=(146,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,72,34,34) layer=(border=(163,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(180,89,0,0) layer=(border=(180,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,72,34,34) layer=(border=(197,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(214,89,0,0) layer=(border=(214,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,72,34,34) layer=(border=(231,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(248,89,0,0) layer=(border=(248,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,72,34,34) layer=(border=(265,72,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,72,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(282,89,0,0) layer=(border=(282,89,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,89,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,106,34,34) layer=(border=(27,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(44,123,0,0) layer=(border=(44,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,106,34,34) layer=(border=(61,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(78,123,0,0) layer=(border=(78,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,106,34,34) layer=(border=(95,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(112,123,0,0) layer=(border=(112,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,106,34,34) layer=(border=(129,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(146,123,0,0) layer=(border=(146,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,106,34,34) layer=(border=(163,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(180,123,0,0) layer=(border=(180,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,106,34,34) layer=(border=(197,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(214,123,0,0) layer=(border=(214,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,106,34,34) layer=(border=(231,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(248,123,0,0) layer=(border=(248,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,106,34,34) layer=(border=(265,106,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,106,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(282,123,0,0) layer=(border=(282,123,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,123,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,140,34,34) layer=(border=(27,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(44,157,0,0) layer=(border=(44,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,140,34,34) layer=(border=(61,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(78,157,0,0) layer=(border=(78,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,140,34,34) layer=(border=(95,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(112,157,0,0) layer=(border=(112,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,140,34,34) layer=(border=(129,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(146,157,0,0) layer=(border=(146,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,140,34,34) layer=(border=(163,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(180,157,0,0) layer=(border=(180,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,140,34,34) layer=(border=(197,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(214,157,0,0) layer=(border=(214,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,140,34,34) layer=(border=(231,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(248,157,0,0) layer=(border=(248,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,140,34,34) layer=(border=(265,140,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,140,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(282,157,0,0) layer=(border=(282,157,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,157,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,174,34,34) layer=(border=(27,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(44,191,0,0) layer=(border=(44,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,174,34,34) layer=(border=(61,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cdd26aff
+  solid-fill bounds=(78,191,0,0) layer=(border=(78,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,174,34,34) layer=(border=(95,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(112,191,0,0) layer=(border=(112,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,174,34,34) layer=(border=(129,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(146,191,0,0) layer=(border=(146,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,174,34,34) layer=(border=(163,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(180,191,0,0) layer=(border=(180,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,174,34,34) layer=(border=(197,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(214,191,0,0) layer=(border=(214,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,174,34,34) layer=(border=(231,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(248,191,0,0) layer=(border=(248,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,174,34,34) layer=(border=(265,174,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,174,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(282,191,0,0) layer=(border=(282,191,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,191,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,208,34,34) layer=(border=(27,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(44,225,0,0) layer=(border=(44,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,208,34,34) layer=(border=(61,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(78,225,0,0) layer=(border=(78,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,208,34,34) layer=(border=(95,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(112,225,0,0) layer=(border=(112,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,208,34,34) layer=(border=(129,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(146,225,0,0) layer=(border=(146,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,208,34,34) layer=(border=(163,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(180,225,0,0) layer=(border=(180,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,208,34,34) layer=(border=(197,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(214,225,0,0) layer=(border=(214,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,208,34,34) layer=(border=(231,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(248,225,0,0) layer=(border=(248,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,208,34,34) layer=(border=(265,208,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,208,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(282,225,0,0) layer=(border=(282,225,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,225,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,242,34,34) layer=(border=(27,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(44,259,0,0) layer=(border=(44,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,242,34,34) layer=(border=(61,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(78,259,0,0) layer=(border=(78,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,242,34,34) layer=(border=(95,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(112,259,0,0) layer=(border=(112,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,242,34,34) layer=(border=(129,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(146,259,0,0) layer=(border=(146,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,242,34,34) layer=(border=(163,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(180,259,0,0) layer=(border=(180,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,242,34,34) layer=(border=(197,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(214,259,0,0) layer=(border=(214,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,242,34,34) layer=(border=(231,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(248,259,0,0) layer=(border=(248,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,242,34,34) layer=(border=(265,242,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,242,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(282,259,0,0) layer=(border=(282,259,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,259,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,276,34,34) layer=(border=(27,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(44,293,0,0) layer=(border=(44,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,276,34,34) layer=(border=(61,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(78,293,0,0) layer=(border=(78,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,276,34,34) layer=(border=(95,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(112,293,0,0) layer=(border=(112,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,276,34,34) layer=(border=(129,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(146,293,0,0) layer=(border=(146,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,276,34,34) layer=(border=(163,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(180,293,0,0) layer=(border=(180,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,276,34,34) layer=(border=(197,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(214,293,0,0) layer=(border=(214,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,276,34,34) layer=(border=(231,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(248,293,0,0) layer=(border=(248,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,276,34,34) layer=(border=(265,276,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,276,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(282,293,0,0) layer=(border=(282,293,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,293,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(27,310,34,34) layer=(border=(27,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(27,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(44,327,0,0) layer=(border=(44,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(44,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(61,310,34,34) layer=(border=(61,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(61,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(78,327,0,0) layer=(border=(78,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(78,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(95,310,34,34) layer=(border=(95,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(95,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(112,327,0,0) layer=(border=(112,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(112,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(129,310,34,34) layer=(border=(129,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(129,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(146,327,0,0) layer=(border=(146,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(146,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(163,310,34,34) layer=(border=(163,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(163,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(180,327,0,0) layer=(border=(180,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(180,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(197,310,34,34) layer=(border=(197,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(197,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cdd26aff
+  solid-fill bounds=(214,327,0,0) layer=(border=(214,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(214,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(231,310,34,34) layer=(border=(231,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(231,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b58863ff
+  solid-fill bounds=(248,327,0,0) layer=(border=(248,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(248,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  solid-fill bounds=(265,310,34,34) layer=(border=(265,310,34,34),radius=(0,0,0,0,0,0,0,0),clip=(265,310,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d9b5ff
+  solid-fill bounds=(282,327,0,0) layer=(border=(282,327,0,0),radius=(0,0,0,0,0,0,0,0),clip=(282,327,0,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#14141447
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  text bounds=(24,73,40,32) pos=(32,81,24,16) color=#1c1c1eff text="♜" font=f9 glyphs=3 advance=24
+  text bounds=(24,107,40,32) pos=(32,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(24,141,40,32) pos=(32,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(24,277,40,32) pos=(32,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(24,311,40,32) pos=(32,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(24,277,40,32) pos=(32,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(24,311,40,32) pos=(32,319,24,16) color=#ffffffff text="♜" font=f9 glyphs=3 advance=24
+  text bounds=(24,311,40,32) pos=(32,319,24,16) color=#1c1c1eff text="♖" font=f9 glyphs=3 advance=24
+  text bounds=(58,107,40,32) pos=(66,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(58,141,40,32) pos=(66,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(58,277,40,32) pos=(66,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(58,311,40,32) pos=(66,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(58,277,40,32) pos=(66,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(58,311,40,32) pos=(66,319,24,16) color=#ffffffff text="♞" font=f9 glyphs=3 advance=24
+  text bounds=(58,311,40,32) pos=(66,319,24,16) color=#1c1c1eff text="♘" font=f9 glyphs=3 advance=24
+  text bounds=(92,73,40,32) pos=(100,81,24,16) color=#1c1c1eff text="♝" font=f9 glyphs=3 advance=24
+  text bounds=(92,107,40,32) pos=(100,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(92,141,40,32) pos=(100,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(92,277,40,32) pos=(100,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(92,311,40,32) pos=(100,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(92,277,40,32) pos=(100,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(92,311,40,32) pos=(100,319,24,16) color=#ffffffff text="♝" font=f9 glyphs=3 advance=24
+  text bounds=(92,311,40,32) pos=(100,319,24,16) color=#1c1c1eff text="♗" font=f9 glyphs=3 advance=24
+  text bounds=(126,73,40,32) pos=(134,81,24,16) color=#1c1c1eff text="♛" font=f9 glyphs=3 advance=24
+  text bounds=(126,107,40,32) pos=(134,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(126,141,40,32) pos=(134,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(126,277,40,32) pos=(134,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(126,311,40,32) pos=(134,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(126,277,40,32) pos=(134,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(126,311,40,32) pos=(134,319,24,16) color=#ffffffff text="♛" font=f9 glyphs=3 advance=24
+  text bounds=(126,311,40,32) pos=(134,319,24,16) color=#1c1c1eff text="♕" font=f9 glyphs=3 advance=24
+  text bounds=(160,73,40,32) pos=(168,81,24,16) color=#1c1c1eff text="♚" font=f9 glyphs=3 advance=24
+  text bounds=(160,311,40,32) pos=(168,319,24,16) color=#ffffffff text="♚" font=f9 glyphs=3 advance=24
+  text bounds=(160,311,40,32) pos=(168,319,24,16) color=#1c1c1eff text="♔" font=f9 glyphs=3 advance=24
+  text bounds=(194,73,40,32) pos=(202,81,24,16) color=#1c1c1eff text="♝" font=f9 glyphs=3 advance=24
+  text bounds=(194,107,40,32) pos=(202,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(194,141,40,32) pos=(202,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(194,277,40,32) pos=(202,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(194,311,40,32) pos=(202,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(194,277,40,32) pos=(202,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(228,73,40,32) pos=(236,81,24,16) color=#1c1c1eff text="♞" font=f9 glyphs=3 advance=24
+  text bounds=(228,107,40,32) pos=(236,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(228,141,40,32) pos=(236,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(228,277,40,32) pos=(236,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(228,311,40,32) pos=(236,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(228,277,40,32) pos=(236,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(262,73,40,32) pos=(270,81,24,16) color=#1c1c1eff text="♜" font=f9 glyphs=3 advance=24
+  text bounds=(262,107,40,32) pos=(270,115,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(262,141,40,32) pos=(270,149,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(262,277,40,32) pos=(270,285,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(262,311,40,32) pos=(270,319,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(262,277,40,32) pos=(270,285,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  text bounds=(262,311,40,32) pos=(270,319,24,16) color=#ffffffff text="♜" font=f9 glyphs=3 advance=24
+  text bounds=(262,311,40,32) pos=(270,319,24,16) color=#1c1c1eff text="♖" font=f9 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  text bounds=(160,209,40,32) pos=(168,217,24,16) color=#ffffffff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(160,243,40,32) pos=(168,251,24,16) color=#ffffffff text="︎" font=f9 glyphs=3 advance=24
+  text bounds=(160,209,40,32) pos=(168,217,24,16) color=#1c1c1eff text="♙" font=f9 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  text bounds=(160,175,40,32) pos=(168,183,24,16) color=#1c1c1eff text="♟" font=f9 glyphs=3 advance=24
+  text bounds=(160,209,40,32) pos=(168,217,24,16) color=#1c1c1eff text="︎" font=f9 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  text bounds=(194,243,40,32) pos=(202,251,24,16) color=#ffffffff text="♞" font=f9 glyphs=3 advance=24
+  text bounds=(194,243,40,32) pos=(202,251,24,16) color=#1c1c1eff text="♘" font=f9 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  text bounds=(92,141,40,32) pos=(100,149,24,16) color=#1c1c1eff text="♞" font=f9 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(27,72.4,272,272) pos=(27,72.4,272,272) radius=(4,4,4,4,4,4,4,4)
+  text bounds=(58,175,40,32) pos=(66,183,24,16) color=#ffffffff text="♝" font=f9 glyphs=3 advance=24
+  text bounds=(58,175,40,32) pos=(66,183,24,16) color=#1c1c1eff text="♗" font=f9 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(309,72,96,43) layer=(border=(309,72,96,43),radius=(8,8,8,8,8,8,8,8),clip=(309,72,96,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1c1c1eff
+  text bounds=(309,68,40,32) pos=(317,76,24,16) color=#ffffffff text="Kai" font=f3 glyphs=3 advance=24
+  text bounds=(341,68,32,32) pos=(349,76,16,16) color=#ffffffff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(365,68,40,32) pos=(373,76,24,16) color=#ffffffff text="you" font=f3 glyphs=3 advance=24
+  text bounds=(309,85,48,32) pos=(317,93,32,16) color=#ffffffff text="4:58" font=f10 glyphs=4 advance=32
+  set-clip bounds=(309,119.5,96,16) pos=(309,119.5,96,16) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(301,111,32,32) pos=(309,119,16,16) color=#8e8e93ff text=" " font=f11 glyphs=2 advance=16
+  del-clip bounds=(0,0,0,0)
+  text bounds=(301,134,72,32) pos=(309,142,56,16) color=#6e6e73ff text="OPENING" font=f2 glyphs=7 advance=56
+  text bounds=(301,150,40,32) pos=(309,158,24,16) color=#000000ff text="Ruy" font=f7 glyphs=3 advance=24
+  text bounds=(333,150,56,32) pos=(341,158,40,16) color=#000000ff text="Lopez" font=f7 glyphs=5 advance=40
+  text bounds=(301,173,48,32) pos=(309,181,32,16) color=#6e6e73ff text="BOOK" font=f2 glyphs=4 advance=32
+  borders bounds=(309,200,36,21) borders=(left=(1,4,#ff9500ff),top=(1,4,#ff9500ff),right=(1,4,#ff9500ff),bottom=(1,4,#ff9500ff),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(309,200,36,21) root=0
+  text bounds=(311,195,32,32) pos=(319,203,16,16) color=#ff9500ff text="a6" font=f12 glyphs=2 advance=16
+  borders bounds=(349,200,44,21) borders=(left=(1,4,#ff9500ff),top=(1,4,#ff9500ff),right=(1,4,#ff9500ff),bottom=(1,4,#ff9500ff),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(349,200,44,21) root=0
+  text bounds=(351,195,40,32) pos=(359,203,24,16) color=#ff9500ff text="Nf6" font=f12 glyphs=3 advance=24
+  borders bounds=(309,225,44,22) borders=(left=(1,4,#ff9500ff),top=(1,4,#ff9500ff),right=(1,4,#ff9500ff),bottom=(1,4,#ff9500ff),radius=(11,11,11,11,11,11,11,11)) pos=(309,225,44,22) root=0
+  text bounds=(311,220,40,32) pos=(319,228,24,16) color=#ff9500ff text="Bc5" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(309,314,98,58) layer=(border=(309,314,98,58),radius=(8,8,8,8,8,8,8,8),clip=(309,314,98,58),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(309,294.4,98,16) pos=(309,294.4,98,16) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(301,286,32,32) pos=(309,294,16,16) color=#8e8e93ff text=" " font=f11 glyphs=2 advance=16
+  del-clip bounds=(0,0,0,0)
+  text bounds=(309,310,40,32) pos=(317,318,24,16) color=#000000ff text="Sam" font=f3 glyphs=3 advance=24
+  text bounds=(341,310,32,32) pos=(349,318,16,16) color=#000000ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(309,325,56,32) pos=(317,333,40,16) color=#000000ff text="White" font=f3 glyphs=5 advance=40
+  text bounds=(309,341,48,32) pos=(317,349,32,16) color=#000000ff text="4:51" font=f10 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12.5,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=29,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="ui-monospace,monospace",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

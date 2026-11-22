@@ -1,0 +1,52 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>📊 <b>Weekly report</b> for <b>LiteChat</b> · 29 Sep – 5 Oct 2026. Everything below is plain HTML and CSS — no images except four tiny inline SVG sparklines.</p>
+</body></html>
+
+== layout
+html 0 0 360 72.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 72.8
+    p 0 0 360 72.8
+      b 0 0 0 0
+      b 0 0 0 0
+
+== paint
+root 360x72.8 items=28
+  text bounds=(-8,-7,48,32) pos=(0,1,32,16) color=#000000ff text="📊" font=f1 glyphs=4 advance=32
+  text bounds=(32,-7,64,32) pos=(40,1,48,16) color=#000000ff text="Weekly" font=f2 glyphs=6 advance=48
+  text bounds=(88,-7,64,32) pos=(96,1,48,16) color=#000000ff text="report" font=f2 glyphs=6 advance=48
+  text bounds=(144,-7,40,32) pos=(152,1,24,16) color=#000000ff text="for" font=f1 glyphs=3 advance=24
+  text bounds=(176,-7,80,32) pos=(184,1,64,16) color=#000000ff text="LiteChat" font=f2 glyphs=8 advance=64
+  text bounds=(248,-7,32,32) pos=(256,1,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(272,-7,32,32) pos=(280,1,16,16) color=#000000ff text="29" font=f1 glyphs=2 advance=16
+  text bounds=(296,-7,40,32) pos=(304,1,24,16) color=#000000ff text="Sep" font=f1 glyphs=3 advance=24
+  text bounds=(328,-7,40,32) pos=(336,1,24,16) color=#000000ff text="–" font=f1 glyphs=3 advance=24
+  text bounds=(-8,11,24,32) pos=(0,19,8,16) color=#000000ff text="5" font=f1 glyphs=1 advance=8
+  text bounds=(8,11,40,32) pos=(16,19,24,16) color=#000000ff text="Oct" font=f1 glyphs=3 advance=24
+  text bounds=(40,11,56,32) pos=(48,19,40,16) color=#000000ff text="2026." font=f1 glyphs=5 advance=40
+  text bounds=(88,11,96,32) pos=(96,19,80,16) color=#000000ff text="Everything" font=f1 glyphs=10 advance=80
+  text bounds=(176,11,56,32) pos=(184,19,40,16) color=#000000ff text="below" font=f1 glyphs=5 advance=40
+  text bounds=(224,11,32,32) pos=(232,19,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(248,11,56,32) pos=(256,19,40,16) color=#000000ff text="plain" font=f1 glyphs=5 advance=40
+  text bounds=(296,11,48,32) pos=(304,19,32,16) color=#000000ff text="HTML" font=f1 glyphs=4 advance=32
+  text bounds=(-8,29,40,32) pos=(0,37,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(24,29,40,32) pos=(32,37,24,16) color=#000000ff text="CSS" font=f1 glyphs=3 advance=24
+  text bounds=(56,29,40,32) pos=(64,37,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(88,29,32,32) pos=(96,37,16,16) color=#000000ff text="no" font=f1 glyphs=2 advance=16
+  text bounds=(112,29,64,32) pos=(120,37,48,16) color=#000000ff text="images" font=f1 glyphs=6 advance=48
+  text bounds=(168,29,64,32) pos=(176,37,48,16) color=#000000ff text="except" font=f1 glyphs=6 advance=48
+  text bounds=(224,29,48,32) pos=(232,37,32,16) color=#000000ff text="four" font=f1 glyphs=4 advance=32
+  text bounds=(264,29,48,32) pos=(272,37,32,16) color=#000000ff text="tiny" font=f1 glyphs=4 advance=32
+  text bounds=(304,29,64,32) pos=(312,37,48,16) color=#000000ff text="inline" font=f1 glyphs=6 advance=48
+  text bounds=(-8,48,40,32) pos=(0,56,24,16) color=#000000ff text="SVG" font=f1 glyphs=3 advance=24
+  text bounds=(24,48,104,32) pos=(32,56,88,16) color=#000000ff text="sparklines." font=f1 glyphs=11 advance=88
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

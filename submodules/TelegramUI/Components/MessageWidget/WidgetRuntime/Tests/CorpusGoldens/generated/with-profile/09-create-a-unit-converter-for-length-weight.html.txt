@@ -1,0 +1,144 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit Converter</title>
+<style></style>
+</head>
+<body>
+<h2>🔄 Unit Converter</h2>
+<div class="tabs"><button class="active" data-c="length" id="tab-length">Length</button><button data-c="weight" id="tab-weight">Weight</button><button data-c="temperature" id="tab-temp">Temperature</button></div>
+<div class="box">
+  <div class="value"><button data-d="-10">−10</button><button data-d="-1">−1</button><span id="from">1</span><button data-d="1">+1</button><button data-d="10">+10</button></div>
+  <div class="units" id="fromU"><button data-u="m" class="on">m</button><button data-u="km">km</button><button data-u="cm">cm</button><button data-u="mm">mm</button><button data-u="mi">mi</button><button data-u="yd">yd</button><button data-u="ft">ft</button><button data-u="in">in</button></div>
+</div>
+<div class="swap"><button id="swap" title="Swap units">⇅</button></div>
+<div class="box">
+  <div class="value"><span id="to">0.001</span></div>
+  <div class="units" id="toU"><button data-u="m">m</button><button data-u="km" class="on">km</button><button data-u="cm">cm</button><button data-u="mm">mm</button><button data-u="mi">mi</button><button data-u="yd">yd</button><button data-u="ft">ft</button><button data-u="in">in</button></div>
+</div>
+<div class="out" id="formula">1 m = 0.001 km</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 407.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 379.75
+    h2 14 14 332 21.25
+    div 14 47.25 332 34.8
+      button 23 56.25 88.6667 16.8
+      button 135.667 56.25 88.6667 16.8
+      button 248.333 56.25 88.6667 16.8
+    div 23 105.05 314 100.2
+      div 23 105.05 314 35
+        button 32 106.55 40 32
+        button 96 106.55 32 32
+        span 143 109.05 106 27
+        button 264 106.55 16 32
+        button 304 106.55 24 32
+      div 23 146.05 314 59.2
+        button 24 152.05 39.4286 15.6
+        button 69.4286 152.05 39.4286 15.6
+        button 114.857 152.05 39.4286 15.6
+        button 160.286 152.05 39.4286 15.6
+        button 205.714 152.05 39.4286 15.6
+        button 251.143 152.05 39.4286 15.6
+        button 296.571 152.05 39.4286 15.6
+        button 24 183.65 312 15.6
+    div 14 216.25 332 30.4
+      button 168 218.25 24 26.4
+    div 23 257.65 314 100.2
+      div 23 257.65 314 35
+        span 23 261.65 314 27
+      div 23 298.65 314 59.2
+        button 24 304.65 39.4286 15.6
+        button 69.4286 304.65 39.4286 15.6
+        button 114.857 304.65 39.4286 15.6
+        button 160.286 304.65 39.4286 15.6
+        button 205.714 304.65 39.4286 15.6
+        button 251.143 304.65 39.4286 15.6
+        button 296.571 304.65 39.4286 15.6
+        button 24 336.25 312 15.6
+    div 14 374.85 332 18.9
+
+== paint
+root 360x407.75 items=63
+  solid-fill bounds=(0,0,360,408) layer=(border=(0,0,360,408),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,408),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(14,47,107,35) layer=(border=(14,47,107,35),radius=(8,8,8,8,8,8,8,8),clip=(14,47,107,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(14,47,107,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(14,47,107,35) root=0
+  borders bounds=(127,47,106,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(127,47,106,35) root=0
+  borders bounds=(239,47,107,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(239,47,107,35) root=0
+  borders bounds=(14,96,332,118) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(10,10,10,10,10,10,10,10)) pos=(14,96,332,118) root=0
+  solid-fill bounds=(23,107,58,32) layer=(border=(23,107,58,32),radius=(8,8,8,8,8,8,8,8),clip=(23,107,58,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eff6ffff
+  solid-fill bounds=(87,107,50,32) layer=(border=(87,107,50,32),radius=(8,8,8,8,8,8,8,8),clip=(87,107,50,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eff6ffff
+  solid-fill bounds=(255,107,34,32) layer=(border=(255,107,34,32),radius=(8,8,8,8,8,8,8,8),clip=(255,107,34,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eff6ffff
+  solid-fill bounds=(295,107,42,32) layer=(border=(295,107,42,32),radius=(8,8,8,8,8,8,8,8),clip=(295,107,42,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eff6ffff
+  solid-fill bounds=(23,146,41,28) layer=(border=(23,146,41,28),radius=(8,8,8,8,8,8,8,8),clip=(23,146,41,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(23,146,41,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(23,146,41,28) root=0
+  borders bounds=(68,146,42,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(68,146,42,28) root=0
+  borders bounds=(114,146,41,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(114,146,41,28) root=0
+  borders bounds=(159,146,42,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(159,146,42,28) root=0
+  borders bounds=(205,146,41,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(205,146,41,28) root=0
+  borders bounds=(250,146,42,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(250,146,42,28) root=0
+  borders bounds=(296,146,41,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(296,146,41,28) root=0
+  borders bounds=(23,178,314,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(23,178,314,27) root=0
+  borders bounds=(14,249,332,118) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(10,10,10,10,10,10,10,10)) pos=(14,249,332,118) root=0
+  borders bounds=(23,299,41,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(23,299,41,27) root=0
+  solid-fill bounds=(68,299,42,27) layer=(border=(68,299,42,27),radius=(8,8,8,8,8,8,8,8),clip=(68,299,42,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(68,299,42,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(68,299,42,27) root=0
+  borders bounds=(114,299,41,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(114,299,41,27) root=0
+  borders bounds=(159,299,42,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(159,299,42,27) root=0
+  borders bounds=(205,299,41,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(205,299,41,27) root=0
+  borders bounds=(250,299,42,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(250,299,42,27) root=0
+  borders bounds=(296,299,41,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(296,299,41,27) root=0
+  borders bounds=(23,330,314,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(23,330,314,28) root=0
+  text bounds=(6,8,48,32) pos=(14,16,32,16) color=#111827ff text="🔄" font=f1 glyphs=4 advance=32
+  text bounds=(46,8,48,32) pos=(54,16,32,16) color=#111827ff text="Unit" font=f1 glyphs=4 advance=32
+  text bounds=(86,8,88,32) pos=(94,16,72,16) color=#111827ff text="Converter" font=f1 glyphs=9 advance=72
+  text bounds=(35.3333,48,64,32) pos=(43.3333,56,48,16) color=#ffffffff text="Length" font=f2 glyphs=6 advance=48
+  text bounds=(148,48,64,32) pos=(156,56,48,16) color=#111827ff text="Weight" font=f2 glyphs=6 advance=48
+  text bounds=(240.667,48,104,32) pos=(248.667,56,88,16) color=#111827ff text="Temperature" font=f2 glyphs=11 advance=88
+  text bounds=(24,107,56,32) pos=(32,115,40,16) color=#2563ebff text="−10" font=f3 glyphs=5 advance=40
+  text bounds=(88,107,48,32) pos=(96,115,32,16) color=#2563ebff text="−1" font=f3 glyphs=4 advance=32
+  text bounds=(184,106,24,32) pos=(192,114,8,16) color=#111827ff text="1" font=f4 glyphs=1 advance=8
+  text bounds=(256,107,32,32) pos=(264,115,16,16) color=#2563ebff text="+1" font=f3 glyphs=2 advance=16
+  text bounds=(296,107,40,32) pos=(304,115,24,16) color=#2563ebff text="+10" font=f3 glyphs=3 advance=24
+  text bounds=(31.7143,144,24,32) pos=(39.7143,152,8,16) color=#ffffffff text="m" font=f3 glyphs=1 advance=8
+  text bounds=(73.1429,144,32,32) pos=(81.1429,152,16,16) color=#111827ff text="km" font=f3 glyphs=2 advance=16
+  text bounds=(118.571,144,32,32) pos=(126.571,152,16,16) color=#111827ff text="cm" font=f3 glyphs=2 advance=16
+  text bounds=(164,144,32,32) pos=(172,152,16,16) color=#111827ff text="mm" font=f3 glyphs=2 advance=16
+  text bounds=(209.429,144,32,32) pos=(217.429,152,16,16) color=#111827ff text="mi" font=f3 glyphs=2 advance=16
+  text bounds=(254.857,144,32,32) pos=(262.857,152,16,16) color=#111827ff text="yd" font=f3 glyphs=2 advance=16
+  text bounds=(300.286,144,32,32) pos=(308.286,152,16,16) color=#111827ff text="ft" font=f3 glyphs=2 advance=16
+  text bounds=(164,176,32,32) pos=(172,184,16,16) color=#111827ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(160,215,40,32) pos=(168,223,24,16) color=#2563ebff text="⇅" font=f5 glyphs=3 advance=24
+  text bounds=(152,259,56,32) pos=(160,267,40,16) color=#111827ff text="0.001" font=f4 glyphs=5 advance=40
+  text bounds=(31.7143,297,24,32) pos=(39.7143,305,8,16) color=#111827ff text="m" font=f3 glyphs=1 advance=8
+  text bounds=(73.1429,297,32,32) pos=(81.1429,305,16,16) color=#ffffffff text="km" font=f3 glyphs=2 advance=16
+  text bounds=(118.571,297,32,32) pos=(126.571,305,16,16) color=#111827ff text="cm" font=f3 glyphs=2 advance=16
+  text bounds=(164,297,32,32) pos=(172,305,16,16) color=#111827ff text="mm" font=f3 glyphs=2 advance=16
+  text bounds=(209.429,297,32,32) pos=(217.429,305,16,16) color=#111827ff text="mi" font=f3 glyphs=2 advance=16
+  text bounds=(254.857,297,32,32) pos=(262.857,305,16,16) color=#111827ff text="yd" font=f3 glyphs=2 advance=16
+  text bounds=(300.286,297,32,32) pos=(308.286,305,16,16) color=#111827ff text="ft" font=f3 glyphs=2 advance=16
+  text bounds=(164,328,32,32) pos=(172,336,16,16) color=#111827ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(116,368,24,32) pos=(124,376,8,16) color=#6b7280ff text="1" font=f6 glyphs=1 advance=8
+  text bounds=(132,368,24,32) pos=(140,376,8,16) color=#6b7280ff text="m" font=f6 glyphs=1 advance=8
+  text bounds=(148,368,24,32) pos=(156,376,8,16) color=#6b7280ff text="=" font=f6 glyphs=1 advance=8
+  text bounds=(164,368,56,32) pos=(172,376,40,16) color=#6b7280ff text="0.001" font=f6 glyphs=5 advance=40
+  text bounds=(212,368,32,32) pos=(220,376,16,16) color=#6b7280ff text="km" font=f6 glyphs=2 advance=16
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=20,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=22,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,155 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMI Calculator</title>
+<style></style>
+</head>
+<body>
+<div class="card">
+  <h2>⚖️ BMI Calculator</h2>
+  <div class="toggle"><button class="on" data-u="metric">Metric</button><button data-u="imperial">Imperial</button></div>
+  <div id="metric">
+    <div class="two">
+      <div class="field"><span class="lbl">Height (cm)</span><div class="num" data-k="cm"><button data-d="-1">−</button><span id="cm">175</span><button data-d="1">+</button></div></div>
+      <div class="field"><span class="lbl">Weight (kg)</span><div class="num" data-k="kg"><button data-d="-1">−</button><span id="kg">70</span><button data-d="1">+</button></div></div>
+    </div>
+  </div>
+  <div id="imperial" style="display:none">
+    <div class="two">
+      <div class="field"><span class="lbl">Height (ft)</span><div class="num" data-k="ft"><button data-d="-1">−</button><span id="ft">5</span><button data-d="1">+</button></div></div>
+      <div class="field"><span class="lbl">Height (in)</span><div class="num" data-k="in"><button data-d="-1">−</button><span id="in">9</span><button data-d="1">+</button></div></div>
+    </div>
+    <div class="field"><span class="lbl">Weight (lb)</span><div class="num" data-k="lb"><button data-d="-1">−</button><span id="lb">154</span><button data-d="1">+</button></div></div>
+  </div>
+  <div class="result">
+    <div class="bmi" id="bmi" style="color: #16a34a;">22.9</div>
+    <div class="cat" id="cat" style="color: #16a34a;">Normal weight</div>
+  </div>
+  <div class="scale">
+    <div style="background:#60a5fa"></div><div style="background:#4ade80"></div><div style="background:#facc15"></div><div style="background:#f87171"></div>
+    <div class="marker" id="marker" style="left: 42.85714285714286%;"></div>
+  </div>
+  <div class="labels"><span>Under</span><span>Normal</span><span>Over</span><span>Obese</span></div>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 333.95
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 301.95
+    div 16 16 328 301.95
+      h2 16 16 328 22.5
+      div 19 53.5 322 32.8
+        button 27 61.5 145 16.8
+        button 188 61.5 145 16.8
+      div 16 105.3 328 73.55
+        div 16 105.3 328 73.55
+          div 16 105.3 159 61.55
+            span 16 105.3 159 17.55
+            div 20 130.85 151 32
+              button 20 130.85 34 32
+              span 54 136.05 83 21.6
+              button 137 130.85 34 32
+          div 185 105.3 159 61.55
+            span 185 105.3 159 17.55
+            div 189 130.85 151 32
+              button 189 130.85 34 32
+              span 223 136.05 83 21.6
+              button 306 130.85 34 32
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            div 0 0 0 0
+              button 0 0 0 0
+              span 0 0 0 0
+              button 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            div 0 0 0 0
+              button 0 0 0 0
+              span 0 0 0 0
+              button 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            button 0 0 0 0
+            span 0 0 0 0
+            button 0 0 0 0
+      div 16 194.85 328 76.25
+        div 16 194.85 328 54
+        div 16 250.85 328 20.25
+      div 16 285.1 328 14
+        div 16 285.1 82 14
+        div 98 285.1 82 14
+        div 180 285.1 82 14
+        div 262 285.1 82 14
+        div 154.571 279.1 4 26
+      div 16 303.1 328 14.85
+        span 16 303.1 40 14.85
+        span 112 303.1 48 14.85
+        span 216 303.1 32 14.85
+        span 304 303.1 40 14.85
+
+== paint
+root 360x333.95 items=41
+  solid-fill bounds=(0,0,360,334) layer=(border=(0,0,360,334),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,334),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(16,51,328,38) layer=(border=(16,51,328,38),radius=(19.4,19.4,19.4,19.4,19.4,19.4,19.4,19.4),clip=(16,51,328,38),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e5e7ebff
+  box-shadow bounds=(13,48,173,44) box=(19,54,161,32) radius=(8,8,8,8,8,8,8,8) shadow=(0,1,3,0,#00000026,0)
+  solid-fill bounds=(19,54,161,32) layer=(border=(19,54,161,32),radius=(8,8,8,8,8,8,8,8),clip=(19,54,161,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(16,127,159,40) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(16,127,159,40) root=0
+  solid-fill bounds=(20,131,34,32) layer=(border=(20,131,34,32),radius=(8,8,8,8,8,8,8,8),clip=(20,131,34,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f3f4f6ff
+  solid-fill bounds=(137,131,34,32) layer=(border=(137,131,34,32),radius=(8,8,8,8,8,8,8,8),clip=(137,131,34,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f3f4f6ff
+  borders bounds=(185,127,159,40) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(185,127,159,40) root=0
+  solid-fill bounds=(189,131,34,32) layer=(border=(189,131,34,32),radius=(8,8,8,8,8,8,8,8),clip=(189,131,34,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f3f4f6ff
+  solid-fill bounds=(306,131,34,32) layer=(border=(306,131,34,32),radius=(8,8,8,8,8,8,8,8),clip=(306,131,34,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f3f4f6ff
+  text bounds=(8,11,64,32) pos=(16,19,48,16) color=#1f2937ff text="⚖️" font=f1 glyphs=6 advance=48
+  text bounds=(64,11,40,32) pos=(72,19,24,16) color=#1f2937ff text="BMI" font=f1 glyphs=3 advance=24
+  text bounds=(96,11,96,32) pos=(104,19,80,16) color=#1f2937ff text="Calculator" font=f1 glyphs=10 advance=80
+  text bounds=(67.5,54,64,32) pos=(75.5,62,48,16) color=#111111ff text="Metric" font=f2 glyphs=6 advance=48
+  text bounds=(220.5,54,80,32) pos=(228.5,62,64,16) color=#4b5563ff text="Imperial" font=f2 glyphs=8 advance=64
+  text bounds=(8,97,64,32) pos=(16,105,48,16) color=#6b7280ff text="Height" font=f3 glyphs=6 advance=48
+  text bounds=(64,97,48,32) pos=(72,105,32,16) color=#6b7280ff text="(cm)" font=f3 glyphs=4 advance=32
+  text bounds=(17,130,40,32) pos=(25,138,24,16) color=#111111ff text="−" font=f4 glyphs=3 advance=24
+  text bounds=(75.5,130,40,32) pos=(83.5,138,24,16) color=#1f2937ff text="175" font=f5 glyphs=3 advance=24
+  text bounds=(142,130,24,32) pos=(150,138,8,16) color=#111111ff text="+" font=f4 glyphs=1 advance=8
+  text bounds=(177,97,64,32) pos=(185,105,48,16) color=#6b7280ff text="Weight" font=f3 glyphs=6 advance=48
+  text bounds=(233,97,48,32) pos=(241,105,32,16) color=#6b7280ff text="(kg)" font=f3 glyphs=4 advance=32
+  text bounds=(186,130,40,32) pos=(194,138,24,16) color=#111111ff text="−" font=f4 glyphs=3 advance=24
+  text bounds=(248.5,130,32,32) pos=(256.5,138,16,16) color=#1f2937ff text="70" font=f5 glyphs=2 advance=16
+  text bounds=(311,130,24,32) pos=(319,138,8,16) color=#111111ff text="+" font=f4 glyphs=1 advance=8
+  text bounds=(156,206,48,32) pos=(164,214,32,16) color=#16a34aff text="22.9" font=f6 glyphs=4 advance=32
+  text bounds=(120,245,64,32) pos=(128,253,48,16) color=#16a34aff text="Normal" font=f7 glyphs=6 advance=48
+  text bounds=(176,245,64,32) pos=(184,253,48,16) color=#16a34aff text="weight" font=f7 glyphs=6 advance=48
+  text bounds=(8,295,56,32) pos=(16,303,40,16) color=#6b7280ff text="Under" font=f8 glyphs=5 advance=40
+  text bounds=(104,295,64,32) pos=(112,303,48,16) color=#6b7280ff text="Normal" font=f8 glyphs=6 advance=48
+  text bounds=(208,295,48,32) pos=(216,303,32,16) color=#6b7280ff text="Over" font=f8 glyphs=4 advance=32
+  text bounds=(296,295,56,32) pos=(304,303,40,16) color=#6b7280ff text="Obese" font=f8 glyphs=5 advance=40
+  set-clip bounds=(16,285.1,328,14) pos=(16,285.1,328,14) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(16,285,82,14) layer=(border=(16,285,82,14),radius=(0,0,0,0,0,0,0,0),clip=(16,285,82,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#60a5faff
+  solid-fill bounds=(98,285,82,14) layer=(border=(98,285,82,14),radius=(0,0,0,0,0,0,0,0),clip=(98,285,82,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4ade80ff
+  solid-fill bounds=(180,285,82,14) layer=(border=(180,285,82,14),radius=(0,0,0,0,0,0,0,0),clip=(180,285,82,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#facc15ff
+  solid-fill bounds=(262,285,82,14) layer=(border=(262,285,82,14),radius=(0,0,0,0,0,0,0,0),clip=(262,285,82,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f87171ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(16,285.1,328,14) pos=(16,285.1,328,14) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(155,279,4,26) layer=(border=(155,279,4,26),radius=(2,2,2,2,2,2,2,2),clip=(155,279,4,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#111111ff
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=16,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=40,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

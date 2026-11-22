@@ -1,0 +1,76 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Tabs &amp; accordion</title>
+<style></style>
+</head>
+<body>
+  <div class="tabs">
+    <button class="tab active" id="tab-1" onclick="showTab(1)">Overview</button>
+    <button class="tab" id="tab-2" onclick="showTab(2)">Details</button>
+    <button class="tab" id="tab-3" onclick="showTab(3)">FAQ</button>
+  </div>
+  <div class="panel active" id="panel-1">This widget uses <code>onclick</code> attributes and plain DOM toggling.</div>
+  <div class="panel" id="panel-2">Details panel. Counter: <b id="count">0</b> <button onclick="bump()">+1</button></div>
+  <div class="panel" id="panel-3">
+    <div class="acc" id="acc-1"><div class="acc-h" onclick="toggleAcc('acc-1')">What is this? <span>▸</span></div><div class="acc-b">An accordion.</div></div>
+    <div class="acc" id="acc-2"><div class="acc-h" onclick="toggleAcc('acc-2')">Does it work? <span>▸</span></div><div class="acc-b">Yes, if you can read this.</div></div>
+  </div>
+  <script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 123.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 99.3
+    div 12 12 336 32.8
+      button 26 20 64 16.8
+      button 122 20 56 16.8
+      button 210 20 24 16.8
+    div 16 58.8 328 40.5
+      code 16 58.8 0 0
+    div 0 0 0 0
+      b 0 0 0 0
+      button 0 0 0 0
+    div 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+
+== paint
+root 360x123.3 items=17
+  solid-fill bounds=(0,0,360,123) layer=(border=(0,0,360,123),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,123),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  borders bounds=(12,12,336,35) borders=(left=(0,0,#222222ff),top=(0,0,#222222ff),right=(0,0,#222222ff),bottom=(2,4,#ddddddff),radius=(0,0,0,0,0,0,0,0)) pos=(12,12,336,35) root=0
+  borders bounds=(12,12,92,35) borders=(left=(0,0,#2481ccff),top=(0,0,#2481ccff),right=(0,0,#2481ccff),bottom=(2,4,#2481ccff),radius=(8,8,8,8,8,8,8,8)) pos=(12,12,92,35) root=0
+  borders bounds=(108,12,84,35) borders=(left=(0,0,#666666ff),top=(0,0,#666666ff),right=(0,0,#666666ff),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(108,12,84,35) root=0
+  borders bounds=(196,12,52,35) borders=(left=(0,0,#666666ff),top=(0,0,#666666ff),right=(0,0,#666666ff),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(196,12,52,35) root=0
+  text bounds=(18,12,80,32) pos=(26,20,64,16) color=#2481ccff text="Overview" font=f1 glyphs=8 advance=64
+  text bounds=(114,12,72,32) pos=(122,20,56,16) color=#666666ff text="Details" font=f2 glyphs=7 advance=56
+  text bounds=(202,12,40,32) pos=(210,20,24,16) color=#666666ff text="FAQ" font=f2 glyphs=3 advance=24
+  text bounds=(8,53,48,32) pos=(16,61,32,16) color=#222222ff text="This" font=f3 glyphs=4 advance=32
+  text bounds=(48,53,64,32) pos=(56,61,48,16) color=#222222ff text="widget" font=f3 glyphs=6 advance=48
+  text bounds=(104,53,48,32) pos=(112,61,32,16) color=#222222ff text="uses" font=f3 glyphs=4 advance=32
+  text bounds=(144,53,72,32) pos=(152,61,56,16) color=#222222ff text="onclick" font=f4 glyphs=7 advance=56
+  text bounds=(208,53,96,32) pos=(216,61,80,16) color=#222222ff text="attributes" font=f3 glyphs=10 advance=80
+  text bounds=(296,53,40,32) pos=(304,61,24,16) color=#222222ff text="and" font=f3 glyphs=3 advance=24
+  text bounds=(8,73,56,32) pos=(16,81,40,16) color=#222222ff text="plain" font=f3 glyphs=5 advance=40
+  text bounds=(56,73,40,32) pos=(64,81,24,16) color=#222222ff text="DOM" font=f3 glyphs=3 advance=24
+  text bounds=(88,73,88,32) pos=(96,81,72,16) color=#222222ff text="toggling." font=f3 glyphs=9 advance=72
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=13.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

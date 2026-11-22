@@ -1,0 +1,547 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Palette explorer</span><span class="tiny muted">224 swatches · hue × lightness</span></div>
+  <div class="pick" id="pick">hsl(228, 90%, 63%)</div>
+  <div class="pal" id="pal"><div class="r"><span class="s" data-v="hsl(0, 64%, 92%)" style="background-color: hsl(0, 64%, 92%)"></span><span class="s" data-v="hsl(23, 64%, 92%)" style="background-color: hsl(23, 64%, 92%)"></span><span class="s" data-v="hsl(45, 64%, 92%)" style="background-color: hsl(45, 64%, 92%)"></span><span class="s" data-v="hsl(68, 64%, 92%)" style="background-color: hsl(68, 64%, 92%)"></span><span class="s" data-v="hsl(90, 64%, 92%)" style="background-color: hsl(90, 64%, 92%)"></span><span class="s" data-v="hsl(113, 64%, 92%)" style="background-color: hsl(113, 64%, 92%)"></span><span class="s" data-v="hsl(135, 64%, 92%)" style="background-color: hsl(135, 64%, 92%)"></span><span class="s" data-v="hsl(158, 64%, 92%)" style="background-color: hsl(158, 64%, 92%)"></span><span class="s" data-v="hsl(180, 64%, 92%)" style="background-color: hsl(180, 64%, 92%)"></span><span class="s" data-v="hsl(203, 64%, 92%)" style="background-color: hsl(203, 64%, 92%)"></span><span class="s" data-v="hsl(225, 64%, 92%)" style="background-color: hsl(225, 64%, 92%)"></span><span class="s" data-v="hsl(248, 64%, 92%)" style="background-color: hsl(248, 64%, 92%)"></span><span class="s" data-v="hsl(270, 64%, 92%)" style="background-color: hsl(270, 64%, 92%)"></span><span class="s" data-v="hsl(293, 64%, 92%)" style="background-color: hsl(293, 64%, 92%)"></span><span class="s" data-v="hsl(315, 64%, 92%)" style="background-color: hsl(315, 64%, 92%)"></span><span class="s" data-v="hsl(338, 64%, 92%)" style="background-color: hsl(338, 64%, 92%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 69%, 86%)" style="background-color: hsl(0, 69%, 86%)"></span><span class="s" data-v="hsl(23, 69%, 86%)" style="background-color: hsl(23, 69%, 86%)"></span><span class="s" data-v="hsl(45, 69%, 86%)" style="background-color: hsl(45, 69%, 86%)"></span><span class="s" data-v="hsl(68, 69%, 86%)" style="background-color: hsl(68, 69%, 86%)"></span><span class="s" data-v="hsl(90, 69%, 86%)" style="background-color: hsl(90, 69%, 86%)"></span><span class="s" data-v="hsl(113, 69%, 86%)" style="background-color: hsl(113, 69%, 86%)"></span><span class="s" data-v="hsl(135, 69%, 86%)" style="background-color: hsl(135, 69%, 86%)"></span><span class="s" data-v="hsl(158, 69%, 86%)" style="background-color: hsl(158, 69%, 86%)"></span><span class="s" data-v="hsl(180, 69%, 86%)" style="background-color: hsl(180, 69%, 86%)"></span><span class="s" data-v="hsl(203, 69%, 86%)" style="background-color: hsl(203, 69%, 86%)"></span><span class="s" data-v="hsl(225, 69%, 86%)" style="background-color: hsl(225, 69%, 86%)"></span><span class="s" data-v="hsl(248, 69%, 86%)" style="background-color: hsl(248, 69%, 86%)"></span><span class="s" data-v="hsl(270, 69%, 86%)" style="background-color: hsl(270, 69%, 86%)"></span><span class="s" data-v="hsl(293, 69%, 86%)" style="background-color: hsl(293, 69%, 86%)"></span><span class="s" data-v="hsl(315, 69%, 86%)" style="background-color: hsl(315, 69%, 86%)"></span><span class="s" data-v="hsl(338, 69%, 86%)" style="background-color: hsl(338, 69%, 86%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 73%, 80%)" style="background-color: hsl(0, 73%, 80%)"></span><span class="s" data-v="hsl(23, 73%, 80%)" style="background-color: hsl(23, 73%, 80%)"></span><span class="s" data-v="hsl(45, 73%, 80%)" style="background-color: hsl(45, 73%, 80%)"></span><span class="s" data-v="hsl(68, 73%, 80%)" style="background-color: hsl(68, 73%, 80%)"></span><span class="s" data-v="hsl(90, 73%, 80%)" style="background-color: hsl(90, 73%, 80%)"></span><span class="s" data-v="hsl(113, 73%, 80%)" style="background-color: hsl(113, 73%, 80%)"></span><span class="s" data-v="hsl(135, 73%, 80%)" style="background-color: hsl(135, 73%, 80%)"></span><span class="s" data-v="hsl(158, 73%, 80%)" style="background-color: hsl(158, 73%, 80%)"></span><span class="s" data-v="hsl(180, 73%, 80%)" style="background-color: hsl(180, 73%, 80%)"></span><span class="s" data-v="hsl(203, 73%, 80%)" style="background-color: hsl(203, 73%, 80%)"></span><span class="s" data-v="hsl(225, 73%, 80%)" style="background-color: hsl(225, 73%, 80%)"></span><span class="s" data-v="hsl(248, 73%, 80%)" style="background-color: hsl(248, 73%, 80%)"></span><span class="s" data-v="hsl(270, 73%, 80%)" style="background-color: hsl(270, 73%, 80%)"></span><span class="s" data-v="hsl(293, 73%, 80%)" style="background-color: hsl(293, 73%, 80%)"></span><span class="s" data-v="hsl(315, 73%, 80%)" style="background-color: hsl(315, 73%, 80%)"></span><span class="s" data-v="hsl(338, 73%, 80%)" style="background-color: hsl(338, 73%, 80%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 77%, 74%)" style="background-color: hsl(0, 77%, 74%)"></span><span class="s" data-v="hsl(23, 77%, 74%)" style="background-color: hsl(23, 77%, 74%)"></span><span class="s" data-v="hsl(45, 77%, 74%)" style="background-color: hsl(45, 77%, 74%)"></span><span class="s" data-v="hsl(68, 77%, 74%)" style="background-color: hsl(68, 77%, 74%)"></span><span class="s" data-v="hsl(90, 77%, 74%)" style="background-color: hsl(90, 77%, 74%)"></span><span class="s" data-v="hsl(113, 77%, 74%)" style="background-color: hsl(113, 77%, 74%)"></span><span class="s" data-v="hsl(135, 77%, 74%)" style="background-color: hsl(135, 77%, 74%)"></span><span class="s" data-v="hsl(158, 77%, 74%)" style="background-color: hsl(158, 77%, 74%)"></span><span class="s" data-v="hsl(180, 77%, 74%)" style="background-color: hsl(180, 77%, 74%)"></span><span class="s" data-v="hsl(203, 77%, 74%)" style="background-color: hsl(203, 77%, 74%)"></span><span class="s" data-v="hsl(225, 77%, 74%)" style="background-color: hsl(225, 77%, 74%)"></span><span class="s" data-v="hsl(248, 77%, 74%)" style="background-color: hsl(248, 77%, 74%)"></span><span class="s" data-v="hsl(270, 77%, 74%)" style="background-color: hsl(270, 77%, 74%)"></span><span class="s" data-v="hsl(293, 77%, 74%)" style="background-color: hsl(293, 77%, 74%)"></span><span class="s" data-v="hsl(315, 77%, 74%)" style="background-color: hsl(315, 77%, 74%)"></span><span class="s" data-v="hsl(338, 77%, 74%)" style="background-color: hsl(338, 77%, 74%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 81%, 68%)" style="background-color: hsl(0, 81%, 68%)"></span><span class="s" data-v="hsl(23, 81%, 68%)" style="background-color: hsl(23, 81%, 68%)"></span><span class="s" data-v="hsl(45, 81%, 68%)" style="background-color: hsl(45, 81%, 68%)"></span><span class="s" data-v="hsl(68, 81%, 68%)" style="background-color: hsl(68, 81%, 68%)"></span><span class="s" data-v="hsl(90, 81%, 68%)" style="background-color: hsl(90, 81%, 68%)"></span><span class="s" data-v="hsl(113, 81%, 68%)" style="background-color: hsl(113, 81%, 68%)"></span><span class="s" data-v="hsl(135, 81%, 68%)" style="background-color: hsl(135, 81%, 68%)"></span><span class="s" data-v="hsl(158, 81%, 68%)" style="background-color: hsl(158, 81%, 68%)"></span><span class="s" data-v="hsl(180, 81%, 68%)" style="background-color: hsl(180, 81%, 68%)"></span><span class="s" data-v="hsl(203, 81%, 68%)" style="background-color: hsl(203, 81%, 68%)"></span><span class="s" data-v="hsl(225, 81%, 68%)" style="background-color: hsl(225, 81%, 68%)"></span><span class="s" data-v="hsl(248, 81%, 68%)" style="background-color: hsl(248, 81%, 68%)"></span><span class="s" data-v="hsl(270, 81%, 68%)" style="background-color: hsl(270, 81%, 68%)"></span><span class="s" data-v="hsl(293, 81%, 68%)" style="background-color: hsl(293, 81%, 68%)"></span><span class="s" data-v="hsl(315, 81%, 68%)" style="background-color: hsl(315, 81%, 68%)"></span><span class="s" data-v="hsl(338, 81%, 68%)" style="background-color: hsl(338, 81%, 68%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 86%, 62%)" style="background-color: hsl(0, 86%, 62%)"></span><span class="s" data-v="hsl(23, 86%, 62%)" style="background-color: hsl(23, 86%, 62%)"></span><span class="s" data-v="hsl(45, 86%, 62%)" style="background-color: hsl(45, 86%, 62%)"></span><span class="s" data-v="hsl(68, 86%, 62%)" style="background-color: hsl(68, 86%, 62%)"></span><span class="s" data-v="hsl(90, 86%, 62%)" style="background-color: hsl(90, 86%, 62%)"></span><span class="s" data-v="hsl(113, 86%, 62%)" style="background-color: hsl(113, 86%, 62%)"></span><span class="s" data-v="hsl(135, 86%, 62%)" style="background-color: hsl(135, 86%, 62%)"></span><span class="s" data-v="hsl(158, 86%, 62%)" style="background-color: hsl(158, 86%, 62%)"></span><span class="s" data-v="hsl(180, 86%, 62%)" style="background-color: hsl(180, 86%, 62%)"></span><span class="s" data-v="hsl(203, 86%, 62%)" style="background-color: hsl(203, 86%, 62%)"></span><span class="s" data-v="hsl(225, 86%, 62%)" style="background-color: hsl(225, 86%, 62%)"></span><span class="s" data-v="hsl(248, 86%, 62%)" style="background-color: hsl(248, 86%, 62%)"></span><span class="s" data-v="hsl(270, 86%, 62%)" style="background-color: hsl(270, 86%, 62%)"></span><span class="s" data-v="hsl(293, 86%, 62%)" style="background-color: hsl(293, 86%, 62%)"></span><span class="s" data-v="hsl(315, 86%, 62%)" style="background-color: hsl(315, 86%, 62%)"></span><span class="s" data-v="hsl(338, 86%, 62%)" style="background-color: hsl(338, 86%, 62%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 90%, 56%)" style="background-color: hsl(0, 90%, 56%)"></span><span class="s" data-v="hsl(23, 90%, 56%)" style="background-color: hsl(23, 90%, 56%)"></span><span class="s" data-v="hsl(45, 90%, 56%)" style="background-color: hsl(45, 90%, 56%)"></span><span class="s" data-v="hsl(68, 90%, 56%)" style="background-color: hsl(68, 90%, 56%)"></span><span class="s" data-v="hsl(90, 90%, 56%)" style="background-color: hsl(90, 90%, 56%)"></span><span class="s" data-v="hsl(113, 90%, 56%)" style="background-color: hsl(113, 90%, 56%)"></span><span class="s" data-v="hsl(135, 90%, 56%)" style="background-color: hsl(135, 90%, 56%)"></span><span class="s" data-v="hsl(158, 90%, 56%)" style="background-color: hsl(158, 90%, 56%)"></span><span class="s" data-v="hsl(180, 90%, 56%)" style="background-color: hsl(180, 90%, 56%)"></span><span class="s" data-v="hsl(203, 90%, 56%)" style="background-color: hsl(203, 90%, 56%)"></span><span class="s" data-v="hsl(225, 90%, 56%)" style="background-color: hsl(225, 90%, 56%)"></span><span class="s" data-v="hsl(248, 90%, 56%)" style="background-color: hsl(248, 90%, 56%)"></span><span class="s" data-v="hsl(270, 90%, 56%)" style="background-color: hsl(270, 90%, 56%)"></span><span class="s" data-v="hsl(293, 90%, 56%)" style="background-color: hsl(293, 90%, 56%)"></span><span class="s" data-v="hsl(315, 90%, 56%)" style="background-color: hsl(315, 90%, 56%)"></span><span class="s" data-v="hsl(338, 90%, 56%)" style="background-color: hsl(338, 90%, 56%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 86%, 50%)" style="background-color: hsl(0, 86%, 50%)"></span><span class="s" data-v="hsl(23, 86%, 50%)" style="background-color: hsl(23, 86%, 50%)"></span><span class="s" data-v="hsl(45, 86%, 50%)" style="background-color: hsl(45, 86%, 50%)"></span><span class="s" data-v="hsl(68, 86%, 50%)" style="background-color: hsl(68, 86%, 50%)"></span><span class="s" data-v="hsl(90, 86%, 50%)" style="background-color: hsl(90, 86%, 50%)"></span><span class="s" data-v="hsl(113, 86%, 50%)" style="background-color: hsl(113, 86%, 50%)"></span><span class="s" data-v="hsl(135, 86%, 50%)" style="background-color: hsl(135, 86%, 50%)"></span><span class="s" data-v="hsl(158, 86%, 50%)" style="background-color: hsl(158, 86%, 50%)"></span><span class="s" data-v="hsl(180, 86%, 50%)" style="background-color: hsl(180, 86%, 50%)"></span><span class="s" data-v="hsl(203, 86%, 50%)" style="background-color: hsl(203, 86%, 50%)"></span><span class="s" data-v="hsl(225, 86%, 50%)" style="background-color: hsl(225, 86%, 50%)"></span><span class="s" data-v="hsl(248, 86%, 50%)" style="background-color: hsl(248, 86%, 50%)"></span><span class="s" data-v="hsl(270, 86%, 50%)" style="background-color: hsl(270, 86%, 50%)"></span><span class="s" data-v="hsl(293, 86%, 50%)" style="background-color: hsl(293, 86%, 50%)"></span><span class="s" data-v="hsl(315, 86%, 50%)" style="background-color: hsl(315, 86%, 50%)"></span><span class="s" data-v="hsl(338, 86%, 50%)" style="background-color: hsl(338, 86%, 50%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 81%, 44%)" style="background-color: hsl(0, 81%, 44%)"></span><span class="s" data-v="hsl(23, 81%, 44%)" style="background-color: hsl(23, 81%, 44%)"></span><span class="s" data-v="hsl(45, 81%, 44%)" style="background-color: hsl(45, 81%, 44%)"></span><span class="s" data-v="hsl(68, 81%, 44%)" style="background-color: hsl(68, 81%, 44%)"></span><span class="s" data-v="hsl(90, 81%, 44%)" style="background-color: hsl(90, 81%, 44%)"></span><span class="s" data-v="hsl(113, 81%, 44%)" style="background-color: hsl(113, 81%, 44%)"></span><span class="s" data-v="hsl(135, 81%, 44%)" style="background-color: hsl(135, 81%, 44%)"></span><span class="s" data-v="hsl(158, 81%, 44%)" style="background-color: hsl(158, 81%, 44%)"></span><span class="s" data-v="hsl(180, 81%, 44%)" style="background-color: hsl(180, 81%, 44%)"></span><span class="s" data-v="hsl(203, 81%, 44%)" style="background-color: hsl(203, 81%, 44%)"></span><span class="s" data-v="hsl(225, 81%, 44%)" style="background-color: hsl(225, 81%, 44%)"></span><span class="s" data-v="hsl(248, 81%, 44%)" style="background-color: hsl(248, 81%, 44%)"></span><span class="s" data-v="hsl(270, 81%, 44%)" style="background-color: hsl(270, 81%, 44%)"></span><span class="s" data-v="hsl(293, 81%, 44%)" style="background-color: hsl(293, 81%, 44%)"></span><span class="s" data-v="hsl(315, 81%, 44%)" style="background-color: hsl(315, 81%, 44%)"></span><span class="s" data-v="hsl(338, 81%, 44%)" style="background-color: hsl(338, 81%, 44%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 77%, 38%)" style="background-color: hsl(0, 77%, 38%)"></span><span class="s" data-v="hsl(23, 77%, 38%)" style="background-color: hsl(23, 77%, 38%)"></span><span class="s" data-v="hsl(45, 77%, 38%)" style="background-color: hsl(45, 77%, 38%)"></span><span class="s" data-v="hsl(68, 77%, 38%)" style="background-color: hsl(68, 77%, 38%)"></span><span class="s" data-v="hsl(90, 77%, 38%)" style="background-color: hsl(90, 77%, 38%)"></span><span class="s" data-v="hsl(113, 77%, 38%)" style="background-color: hsl(113, 77%, 38%)"></span><span class="s" data-v="hsl(135, 77%, 38%)" style="background-color: hsl(135, 77%, 38%)"></span><span class="s" data-v="hsl(158, 77%, 38%)" style="background-color: hsl(158, 77%, 38%)"></span><span class="s" data-v="hsl(180, 77%, 38%)" style="background-color: hsl(180, 77%, 38%)"></span><span class="s" data-v="hsl(203, 77%, 38%)" style="background-color: hsl(203, 77%, 38%)"></span><span class="s" data-v="hsl(225, 77%, 38%)" style="background-color: hsl(225, 77%, 38%)"></span><span class="s" data-v="hsl(248, 77%, 38%)" style="background-color: hsl(248, 77%, 38%)"></span><span class="s" data-v="hsl(270, 77%, 38%)" style="background-color: hsl(270, 77%, 38%)"></span><span class="s" data-v="hsl(293, 77%, 38%)" style="background-color: hsl(293, 77%, 38%)"></span><span class="s" data-v="hsl(315, 77%, 38%)" style="background-color: hsl(315, 77%, 38%)"></span><span class="s" data-v="hsl(338, 77%, 38%)" style="background-color: hsl(338, 77%, 38%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 73%, 32%)" style="background-color: hsl(0, 73%, 32%)"></span><span class="s" data-v="hsl(23, 73%, 32%)" style="background-color: hsl(23, 73%, 32%)"></span><span class="s" data-v="hsl(45, 73%, 32%)" style="background-color: hsl(45, 73%, 32%)"></span><span class="s" data-v="hsl(68, 73%, 32%)" style="background-color: hsl(68, 73%, 32%)"></span><span class="s" data-v="hsl(90, 73%, 32%)" style="background-color: hsl(90, 73%, 32%)"></span><span class="s" data-v="hsl(113, 73%, 32%)" style="background-color: hsl(113, 73%, 32%)"></span><span class="s" data-v="hsl(135, 73%, 32%)" style="background-color: hsl(135, 73%, 32%)"></span><span class="s" data-v="hsl(158, 73%, 32%)" style="background-color: hsl(158, 73%, 32%)"></span><span class="s" data-v="hsl(180, 73%, 32%)" style="background-color: hsl(180, 73%, 32%)"></span><span class="s" data-v="hsl(203, 73%, 32%)" style="background-color: hsl(203, 73%, 32%)"></span><span class="s" data-v="hsl(225, 73%, 32%)" style="background-color: hsl(225, 73%, 32%)"></span><span class="s" data-v="hsl(248, 73%, 32%)" style="background-color: hsl(248, 73%, 32%)"></span><span class="s" data-v="hsl(270, 73%, 32%)" style="background-color: hsl(270, 73%, 32%)"></span><span class="s" data-v="hsl(293, 73%, 32%)" style="background-color: hsl(293, 73%, 32%)"></span><span class="s" data-v="hsl(315, 73%, 32%)" style="background-color: hsl(315, 73%, 32%)"></span><span class="s" data-v="hsl(338, 73%, 32%)" style="background-color: hsl(338, 73%, 32%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 69%, 26%)" style="background-color: hsl(0, 69%, 26%)"></span><span class="s" data-v="hsl(23, 69%, 26%)" style="background-color: hsl(23, 69%, 26%)"></span><span class="s" data-v="hsl(45, 69%, 26%)" style="background-color: hsl(45, 69%, 26%)"></span><span class="s" data-v="hsl(68, 69%, 26%)" style="background-color: hsl(68, 69%, 26%)"></span><span class="s" data-v="hsl(90, 69%, 26%)" style="background-color: hsl(90, 69%, 26%)"></span><span class="s" data-v="hsl(113, 69%, 26%)" style="background-color: hsl(113, 69%, 26%)"></span><span class="s" data-v="hsl(135, 69%, 26%)" style="background-color: hsl(135, 69%, 26%)"></span><span class="s" data-v="hsl(158, 69%, 26%)" style="background-color: hsl(158, 69%, 26%)"></span><span class="s" data-v="hsl(180, 69%, 26%)" style="background-color: hsl(180, 69%, 26%)"></span><span class="s" data-v="hsl(203, 69%, 26%)" style="background-color: hsl(203, 69%, 26%)"></span><span class="s" data-v="hsl(225, 69%, 26%)" style="background-color: hsl(225, 69%, 26%)"></span><span class="s" data-v="hsl(248, 69%, 26%)" style="background-color: hsl(248, 69%, 26%)"></span><span class="s" data-v="hsl(270, 69%, 26%)" style="background-color: hsl(270, 69%, 26%)"></span><span class="s" data-v="hsl(293, 69%, 26%)" style="background-color: hsl(293, 69%, 26%)"></span><span class="s" data-v="hsl(315, 69%, 26%)" style="background-color: hsl(315, 69%, 26%)"></span><span class="s" data-v="hsl(338, 69%, 26%)" style="background-color: hsl(338, 69%, 26%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 64%, 20%)" style="background-color: hsl(0, 64%, 20%)"></span><span class="s" data-v="hsl(23, 64%, 20%)" style="background-color: hsl(23, 64%, 20%)"></span><span class="s" data-v="hsl(45, 64%, 20%)" style="background-color: hsl(45, 64%, 20%)"></span><span class="s" data-v="hsl(68, 64%, 20%)" style="background-color: hsl(68, 64%, 20%)"></span><span class="s" data-v="hsl(90, 64%, 20%)" style="background-color: hsl(90, 64%, 20%)"></span><span class="s" data-v="hsl(113, 64%, 20%)" style="background-color: hsl(113, 64%, 20%)"></span><span class="s" data-v="hsl(135, 64%, 20%)" style="background-color: hsl(135, 64%, 20%)"></span><span class="s" data-v="hsl(158, 64%, 20%)" style="background-color: hsl(158, 64%, 20%)"></span><span class="s" data-v="hsl(180, 64%, 20%)" style="background-color: hsl(180, 64%, 20%)"></span><span class="s" data-v="hsl(203, 64%, 20%)" style="background-color: hsl(203, 64%, 20%)"></span><span class="s" data-v="hsl(225, 64%, 20%)" style="background-color: hsl(225, 64%, 20%)"></span><span class="s" data-v="hsl(248, 64%, 20%)" style="background-color: hsl(248, 64%, 20%)"></span><span class="s" data-v="hsl(270, 64%, 20%)" style="background-color: hsl(270, 64%, 20%)"></span><span class="s" data-v="hsl(293, 64%, 20%)" style="background-color: hsl(293, 64%, 20%)"></span><span class="s" data-v="hsl(315, 64%, 20%)" style="background-color: hsl(315, 64%, 20%)"></span><span class="s" data-v="hsl(338, 64%, 20%)" style="background-color: hsl(338, 64%, 20%)"></span></div><div class="r"><span class="s" data-v="hsl(0, 60%, 14%)" style="background-color: hsl(0, 60%, 14%)"></span><span class="s" data-v="hsl(23, 60%, 14%)" style="background-color: hsl(23, 60%, 14%)"></span><span class="s" data-v="hsl(45, 60%, 14%)" style="background-color: hsl(45, 60%, 14%)"></span><span class="s" data-v="hsl(68, 60%, 14%)" style="background-color: hsl(68, 60%, 14%)"></span><span class="s" data-v="hsl(90, 60%, 14%)" style="background-color: hsl(90, 60%, 14%)"></span><span class="s" data-v="hsl(113, 60%, 14%)" style="background-color: hsl(113, 60%, 14%)"></span><span class="s" data-v="hsl(135, 60%, 14%)" style="background-color: hsl(135, 60%, 14%)"></span><span class="s" data-v="hsl(158, 60%, 14%)" style="background-color: hsl(158, 60%, 14%)"></span><span class="s" data-v="hsl(180, 60%, 14%)" style="background-color: hsl(180, 60%, 14%)"></span><span class="s" data-v="hsl(203, 60%, 14%)" style="background-color: hsl(203, 60%, 14%)"></span><span class="s" data-v="hsl(225, 60%, 14%)" style="background-color: hsl(225, 60%, 14%)"></span><span class="s" data-v="hsl(248, 60%, 14%)" style="background-color: hsl(248, 60%, 14%)"></span><span class="s" data-v="hsl(270, 60%, 14%)" style="background-color: hsl(270, 60%, 14%)"></span><span class="s" data-v="hsl(293, 60%, 14%)" style="background-color: hsl(293, 60%, 14%)"></span><span class="s" data-v="hsl(315, 60%, 14%)" style="background-color: hsl(315, 60%, 14%)"></span><span class="s" data-v="hsl(338, 60%, 14%)" style="background-color: hsl(338, 60%, 14%)"></span></div></div>
+  <div class="axis"><span>0°</span><span>45°</span><span>90°</span><span>135°</span><span>180°</span><span>225°</span><span>270°</span><span>315°</span></div>
+  <div class="legend">rows: lightness 92% at the top to 14% at the bottom<i style="background-color: hsl(228, 90%, 92%)"></i>light<i style="background-color: hsl(228, 90%, 14%)"></i>dark</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 503.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 503.9
+    div 15 13 330 477.9
+      div 15 13 330 41.6
+        span 15 13 110 41.6
+        span 125 19.5 220 28.6
+      div 15 64.6 330 56
+      div 15 130.6 330 308
+        div 15 130.6 330 22
+          span 16 131.6 18.625 20
+          span 36.625 131.6 18.625 20
+          span 57.25 131.6 18.625 20
+          span 77.875 131.6 18.625 20
+          span 98.5 131.6 18.625 20
+          span 119.125 131.6 18.625 20
+          span 139.75 131.6 18.625 20
+          span 160.375 131.6 18.625 20
+          span 181 131.6 18.625 20
+          span 201.625 131.6 18.625 20
+          span 222.25 131.6 18.625 20
+          span 242.875 131.6 18.625 20
+          span 263.5 131.6 18.625 20
+          span 284.125 131.6 18.625 20
+          span 304.75 131.6 18.625 20
+          span 325.375 131.6 18.625 20
+        div 15 152.6 330 22
+          span 16 153.6 18.625 20
+          span 36.625 153.6 18.625 20
+          span 57.25 153.6 18.625 20
+          span 77.875 153.6 18.625 20
+          span 98.5 153.6 18.625 20
+          span 119.125 153.6 18.625 20
+          span 139.75 153.6 18.625 20
+          span 160.375 153.6 18.625 20
+          span 181 153.6 18.625 20
+          span 201.625 153.6 18.625 20
+          span 222.25 153.6 18.625 20
+          span 242.875 153.6 18.625 20
+          span 263.5 153.6 18.625 20
+          span 284.125 153.6 18.625 20
+          span 304.75 153.6 18.625 20
+          span 325.375 153.6 18.625 20
+        div 15 174.6 330 22
+          span 16 175.6 18.625 20
+          span 36.625 175.6 18.625 20
+          span 57.25 175.6 18.625 20
+          span 77.875 175.6 18.625 20
+          span 98.5 175.6 18.625 20
+          span 119.125 175.6 18.625 20
+          span 139.75 175.6 18.625 20
+          span 160.375 175.6 18.625 20
+          span 181 175.6 18.625 20
+          span 201.625 175.6 18.625 20
+          span 222.25 175.6 18.625 20
+          span 242.875 175.6 18.625 20
+          span 263.5 175.6 18.625 20
+          span 284.125 175.6 18.625 20
+          span 304.75 175.6 18.625 20
+          span 325.375 175.6 18.625 20
+        div 15 196.6 330 22
+          span 16 197.6 18.625 20
+          span 36.625 197.6 18.625 20
+          span 57.25 197.6 18.625 20
+          span 77.875 197.6 18.625 20
+          span 98.5 197.6 18.625 20
+          span 119.125 197.6 18.625 20
+          span 139.75 197.6 18.625 20
+          span 160.375 197.6 18.625 20
+          span 181 197.6 18.625 20
+          span 201.625 197.6 18.625 20
+          span 222.25 197.6 18.625 20
+          span 242.875 197.6 18.625 20
+          span 263.5 197.6 18.625 20
+          span 284.125 197.6 18.625 20
+          span 304.75 197.6 18.625 20
+          span 325.375 197.6 18.625 20
+        div 15 218.6 330 22
+          span 16 219.6 18.625 20
+          span 36.625 219.6 18.625 20
+          span 57.25 219.6 18.625 20
+          span 77.875 219.6 18.625 20
+          span 98.5 219.6 18.625 20
+          span 119.125 219.6 18.625 20
+          span 139.75 219.6 18.625 20
+          span 160.375 219.6 18.625 20
+          span 181 219.6 18.625 20
+          span 201.625 219.6 18.625 20
+          span 222.25 219.6 18.625 20
+          span 242.875 219.6 18.625 20
+          span 263.5 219.6 18.625 20
+          span 284.125 219.6 18.625 20
+          span 304.75 219.6 18.625 20
+          span 325.375 219.6 18.625 20
+        div 15 240.6 330 22
+          span 16 241.6 18.625 20
+          span 36.625 241.6 18.625 20
+          span 57.25 241.6 18.625 20
+          span 77.875 241.6 18.625 20
+          span 98.5 241.6 18.625 20
+          span 119.125 241.6 18.625 20
+          span 139.75 241.6 18.625 20
+          span 160.375 241.6 18.625 20
+          span 181 241.6 18.625 20
+          span 201.625 241.6 18.625 20
+          span 222.25 241.6 18.625 20
+          span 242.875 241.6 18.625 20
+          span 263.5 241.6 18.625 20
+          span 284.125 241.6 18.625 20
+          span 304.75 241.6 18.625 20
+          span 325.375 241.6 18.625 20
+        div 15 262.6 330 22
+          span 16 263.6 18.625 20
+          span 36.625 263.6 18.625 20
+          span 57.25 263.6 18.625 20
+          span 77.875 263.6 18.625 20
+          span 98.5 263.6 18.625 20
+          span 119.125 263.6 18.625 20
+          span 139.75 263.6 18.625 20
+          span 160.375 263.6 18.625 20
+          span 181 263.6 18.625 20
+          span 201.625 263.6 18.625 20
+          span 222.25 263.6 18.625 20
+          span 242.875 263.6 18.625 20
+          span 263.5 263.6 18.625 20
+          span 284.125 263.6 18.625 20
+          span 304.75 263.6 18.625 20
+          span 325.375 263.6 18.625 20
+        div 15 284.6 330 22
+          span 16 285.6 18.625 20
+          span 36.625 285.6 18.625 20
+          span 57.25 285.6 18.625 20
+          span 77.875 285.6 18.625 20
+          span 98.5 285.6 18.625 20
+          span 119.125 285.6 18.625 20
+          span 139.75 285.6 18.625 20
+          span 160.375 285.6 18.625 20
+          span 181 285.6 18.625 20
+          span 201.625 285.6 18.625 20
+          span 222.25 285.6 18.625 20
+          span 242.875 285.6 18.625 20
+          span 263.5 285.6 18.625 20
+          span 284.125 285.6 18.625 20
+          span 304.75 285.6 18.625 20
+          span 325.375 285.6 18.625 20
+        div 15 306.6 330 22
+          span 16 307.6 18.625 20
+          span 36.625 307.6 18.625 20
+          span 57.25 307.6 18.625 20
+          span 77.875 307.6 18.625 20
+          span 98.5 307.6 18.625 20
+          span 119.125 307.6 18.625 20
+          span 139.75 307.6 18.625 20
+          span 160.375 307.6 18.625 20
+          span 181 307.6 18.625 20
+          span 201.625 307.6 18.625 20
+          span 222.25 307.6 18.625 20
+          span 242.875 307.6 18.625 20
+          span 263.5 307.6 18.625 20
+          span 284.125 307.6 18.625 20
+          span 304.75 307.6 18.625 20
+          span 325.375 307.6 18.625 20
+        div 15 328.6 330 22
+          span 16 329.6 18.625 20
+          span 36.625 329.6 18.625 20
+          span 57.25 329.6 18.625 20
+          span 77.875 329.6 18.625 20
+          span 98.5 329.6 18.625 20
+          span 119.125 329.6 18.625 20
+          span 139.75 329.6 18.625 20
+          span 160.375 329.6 18.625 20
+          span 181 329.6 18.625 20
+          span 201.625 329.6 18.625 20
+          span 222.25 329.6 18.625 20
+          span 242.875 329.6 18.625 20
+          span 263.5 329.6 18.625 20
+          span 284.125 329.6 18.625 20
+          span 304.75 329.6 18.625 20
+          span 325.375 329.6 18.625 20
+        div 15 350.6 330 22
+          span 16 351.6 18.625 20
+          span 36.625 351.6 18.625 20
+          span 57.25 351.6 18.625 20
+          span 77.875 351.6 18.625 20
+          span 98.5 351.6 18.625 20
+          span 119.125 351.6 18.625 20
+          span 139.75 351.6 18.625 20
+          span 160.375 351.6 18.625 20
+          span 181 351.6 18.625 20
+          span 201.625 351.6 18.625 20
+          span 222.25 351.6 18.625 20
+          span 242.875 351.6 18.625 20
+          span 263.5 351.6 18.625 20
+          span 284.125 351.6 18.625 20
+          span 304.75 351.6 18.625 20
+          span 325.375 351.6 18.625 20
+        div 15 372.6 330 22
+          span 16 373.6 18.625 20
+          span 36.625 373.6 18.625 20
+          span 57.25 373.6 18.625 20
+          span 77.875 373.6 18.625 20
+          span 98.5 373.6 18.625 20
+          span 119.125 373.6 18.625 20
+          span 139.75 373.6 18.625 20
+          span 160.375 373.6 18.625 20
+          span 181 373.6 18.625 20
+          span 201.625 373.6 18.625 20
+          span 222.25 373.6 18.625 20
+          span 242.875 373.6 18.625 20
+          span 263.5 373.6 18.625 20
+          span 284.125 373.6 18.625 20
+          span 304.75 373.6 18.625 20
+          span 325.375 373.6 18.625 20
+        div 15 394.6 330 22
+          span 16 395.6 18.625 20
+          span 36.625 395.6 18.625 20
+          span 57.25 395.6 18.625 20
+          span 77.875 395.6 18.625 20
+          span 98.5 395.6 18.625 20
+          span 119.125 395.6 18.625 20
+          span 139.75 395.6 18.625 20
+          span 160.375 395.6 18.625 20
+          span 181 395.6 18.625 20
+          span 201.625 395.6 18.625 20
+          span 222.25 395.6 18.625 20
+          span 242.875 395.6 18.625 20
+          span 263.5 395.6 18.625 20
+          span 284.125 395.6 18.625 20
+          span 304.75 395.6 18.625 20
+          span 325.375 395.6 18.625 20
+        div 15 416.6 330 22
+          span 16 417.6 18.625 20
+          span 36.625 417.6 18.625 20
+          span 57.25 417.6 18.625 20
+          span 77.875 417.6 18.625 20
+          span 98.5 417.6 18.625 20
+          span 119.125 417.6 18.625 20
+          span 139.75 417.6 18.625 20
+          span 160.375 417.6 18.625 20
+          span 181 417.6 18.625 20
+          span 201.625 417.6 18.625 20
+          span 222.25 417.6 18.625 20
+          span 242.875 417.6 18.625 20
+          span 263.5 417.6 18.625 20
+          span 284.125 417.6 18.625 20
+          span 304.75 417.6 18.625 20
+          span 325.375 417.6 18.625 20
+      div 15 442.6 330 11.7
+        span 15 442.6 41.25 11.7
+        span 56.25 442.6 41.25 11.7
+        span 97.5 442.6 41.25 11.7
+        span 138.75 442.6 41.25 11.7
+        span 180 442.6 41.25 11.7
+        span 221.25 442.6 41.25 11.7
+        span 262.5 442.6 41.25 11.7
+        span 303.75 442.6 41.25 11.7
+      div 15 462.3 330 28.6
+        i 241.471 471.6 6.76471 10
+        i 302.235 471.6 6.76471 10
+
+== paint
+root 360x503.9 items=261
+  solid-fill bounds=(0,0,360,504) layer=(border=(0,0,360,504),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,504),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,504) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,504) root=0
+  solid-fill bounds=(15,65,330,56) layer=(border=(15,65,330,56),radius=(12,12,12,12,12,12,12,12),clip=(15,65,330,56),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4a6cf7ff
+  solid-fill bounds=(16,132,19,20) layer=(border=(16,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f8dedeff
+  solid-fill bounds=(37,132,18,20) layer=(border=(37,132,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,132,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f8e8deff
+  solid-fill bounds=(57,132,19,20) layer=(border=(57,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f8f1deff
+  solid-fill bounds=(78,132,19,20) layer=(border=(78,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f8deff
+  solid-fill bounds=(99,132,18,20) layer=(border=(99,132,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,132,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ebf8deff
+  solid-fill bounds=(119,132,19,20) layer=(border=(119,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e1f8deff
+  solid-fill bounds=(140,132,18,20) layer=(border=(140,132,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,132,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#def8e4ff
+  solid-fill bounds=(160,132,19,20) layer=(border=(160,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#def8eeff
+  solid-fill bounds=(181,132,19,20) layer=(border=(181,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#def8f8ff
+  solid-fill bounds=(202,132,18,20) layer=(border=(202,132,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,132,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#deeef8ff
+  solid-fill bounds=(222,132,19,20) layer=(border=(222,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dee4f8ff
+  solid-fill bounds=(243,132,19,20) layer=(border=(243,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e1def8ff
+  solid-fill bounds=(264,132,18,20) layer=(border=(264,132,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,132,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ebdef8ff
+  solid-fill bounds=(284,132,19,20) layer=(border=(284,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f5def8ff
+  solid-fill bounds=(305,132,18,20) layer=(border=(305,132,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,132,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f8def1ff
+  solid-fill bounds=(325,132,19,20) layer=(border=(325,132,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,132,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f8dee7ff
+  solid-fill bounds=(16,154,19,20) layer=(border=(16,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4c3c3ff
+  solid-fill bounds=(37,154,18,20) layer=(border=(37,154,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,154,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4d6c3ff
+  solid-fill bounds=(57,154,19,20) layer=(border=(57,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4e8c3ff
+  solid-fill bounds=(78,154,19,20) layer=(border=(78,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#edf4c3ff
+  solid-fill bounds=(99,154,18,20) layer=(border=(99,154,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,154,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbf4c3ff
+  solid-fill bounds=(119,154,19,20) layer=(border=(119,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c8f4c3ff
+  solid-fill bounds=(140,154,18,20) layer=(border=(140,154,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,154,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c3f4cfff
+  solid-fill bounds=(160,154,19,20) layer=(border=(160,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c3f4e2ff
+  solid-fill bounds=(181,154,19,20) layer=(border=(181,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c3f4f4ff
+  solid-fill bounds=(202,154,18,20) layer=(border=(202,154,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,154,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c3e1f4ff
+  solid-fill bounds=(222,154,19,20) layer=(border=(222,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c3cff4ff
+  solid-fill bounds=(243,154,19,20) layer=(border=(243,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#c9c3f4ff
+  solid-fill bounds=(264,154,18,20) layer=(border=(264,154,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,154,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbc3f4ff
+  solid-fill bounds=(284,154,19,20) layer=(border=(284,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eec3f4ff
+  solid-fill bounds=(305,154,18,20) layer=(border=(305,154,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,154,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4c3e8ff
+  solid-fill bounds=(325,154,19,20) layer=(border=(325,154,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,154,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4c3d5ff
+  solid-fill bounds=(16,176,19,20) layer=(border=(16,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1a7a7ff
+  solid-fill bounds=(37,176,18,20) layer=(border=(37,176,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,176,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1c3a7ff
+  solid-fill bounds=(57,176,19,20) layer=(border=(57,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1dfa7ff
+  solid-fill bounds=(78,176,19,20) layer=(border=(78,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e7f1a7ff
+  solid-fill bounds=(99,176,18,20) layer=(border=(99,176,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,176,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ccf1a7ff
+  solid-fill bounds=(119,176,19,20) layer=(border=(119,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#aff1a7ff
+  solid-fill bounds=(140,176,18,20) layer=(border=(140,176,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,176,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a7f1b9ff
+  solid-fill bounds=(160,176,19,20) layer=(border=(160,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a7f1d6ff
+  solid-fill bounds=(181,176,19,20) layer=(border=(181,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a7f1f1ff
+  solid-fill bounds=(202,176,18,20) layer=(border=(202,176,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,176,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a7d5f1ff
+  solid-fill bounds=(222,176,19,20) layer=(border=(222,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a7b9f1ff
+  solid-fill bounds=(243,176,19,20) layer=(border=(243,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b1a7f1ff
+  solid-fill bounds=(264,176,18,20) layer=(border=(264,176,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,176,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cca7f1ff
+  solid-fill bounds=(284,176,19,20) layer=(border=(284,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e9a7f1ff
+  solid-fill bounds=(305,176,18,20) layer=(border=(305,176,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,176,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1a7dfff
+  solid-fill bounds=(325,176,19,20) layer=(border=(325,176,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,176,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1a7c2ff
+  solid-fill bounds=(16,198,19,20) layer=(border=(16,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f08a8aff
+  solid-fill bounds=(37,198,18,20) layer=(border=(37,198,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,198,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0b18aff
+  solid-fill bounds=(57,198,19,20) layer=(border=(57,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f0d68aff
+  solid-fill bounds=(78,198,19,20) layer=(border=(78,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e2f08aff
+  solid-fill bounds=(99,198,18,20) layer=(border=(99,198,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,198,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#bdf08aff
+  solid-fill bounds=(119,198,19,20) layer=(border=(119,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#96f08aff
+  solid-fill bounds=(140,198,18,20) layer=(border=(140,198,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,198,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8af0a3ff
+  solid-fill bounds=(160,198,19,20) layer=(border=(160,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8af0caff
+  solid-fill bounds=(181,198,19,20) layer=(border=(181,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8af0f0ff
+  solid-fill bounds=(202,198,18,20) layer=(border=(202,198,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,198,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8ac9f0ff
+  solid-fill bounds=(222,198,19,20) layer=(border=(222,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8aa3f0ff
+  solid-fill bounds=(243,198,19,20) layer=(border=(243,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#978af0ff
+  solid-fill bounds=(264,198,18,20) layer=(border=(264,198,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,198,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#bd8af0ff
+  solid-fill bounds=(284,198,19,20) layer=(border=(284,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e48af0ff
+  solid-fill bounds=(305,198,18,20) layer=(border=(305,198,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,198,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f08ad6ff
+  solid-fill bounds=(325,198,19,20) layer=(border=(325,198,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,198,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f08aafff
+  solid-fill bounds=(16,220,19,20) layer=(border=(16,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef6b6bff
+  solid-fill bounds=(37,220,18,20) layer=(border=(37,220,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,220,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef9e6bff
+  solid-fill bounds=(57,220,19,20) layer=(border=(57,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#efce6bff
+  solid-fill bounds=(78,220,19,20) layer=(border=(78,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#deef6bff
+  solid-fill bounds=(99,220,18,20) layer=(border=(99,220,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,220,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#adef6bff
+  solid-fill bounds=(119,220,19,20) layer=(border=(119,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7bef6bff
+  solid-fill bounds=(140,220,18,20) layer=(border=(140,220,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,220,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6bef8cff
+  solid-fill bounds=(160,220,19,20) layer=(border=(160,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6befbfff
+  solid-fill bounds=(181,220,19,20) layer=(border=(181,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6befefff
+  solid-fill bounds=(202,220,18,20) layer=(border=(202,220,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,220,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6bbdefff
+  solid-fill bounds=(222,220,19,20) layer=(border=(222,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6b8cefff
+  solid-fill bounds=(243,220,19,20) layer=(border=(243,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7d6befff
+  solid-fill bounds=(264,220,18,20) layer=(border=(264,220,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,220,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ad6befff
+  solid-fill bounds=(284,220,19,20) layer=(border=(284,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e06befff
+  solid-fill bounds=(305,220,18,20) layer=(border=(305,220,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,220,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef6bceff
+  solid-fill bounds=(325,220,19,20) layer=(border=(325,220,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,220,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef6b9cff
+  solid-fill bounds=(16,242,19,20) layer=(border=(16,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f14b4bff
+  solid-fill bounds=(37,242,18,20) layer=(border=(37,242,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,242,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f18b4bff
+  solid-fill bounds=(57,242,19,20) layer=(border=(57,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f1c84bff
+  solid-fill bounds=(78,242,19,20) layer=(border=(78,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbf14bff
+  solid-fill bounds=(99,242,18,20) layer=(border=(99,242,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,242,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#9ef14bff
+  solid-fill bounds=(119,242,19,20) layer=(border=(119,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5ef14bff
+  solid-fill bounds=(140,242,18,20) layer=(border=(140,242,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,242,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4bf174ff
+  solid-fill bounds=(160,242,19,20) layer=(border=(160,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4bf1b4ff
+  solid-fill bounds=(181,242,19,20) layer=(border=(181,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4bf1f1ff
+  solid-fill bounds=(202,242,18,20) layer=(border=(202,242,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,242,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4bb2f1ff
+  solid-fill bounds=(222,242,19,20) layer=(border=(222,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4b74f1ff
+  solid-fill bounds=(243,242,19,20) layer=(border=(243,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#614bf1ff
+  solid-fill bounds=(264,242,18,20) layer=(border=(264,242,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,242,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#9e4bf1ff
+  solid-fill bounds=(284,242,19,20) layer=(border=(284,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#de4bf1ff
+  solid-fill bounds=(305,242,18,20) layer=(border=(305,242,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,242,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f14bc8ff
+  solid-fill bounds=(325,242,19,20) layer=(border=(325,242,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,242,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f14b88ff
+  solid-fill bounds=(16,264,19,20) layer=(border=(16,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f42a2aff
+  solid-fill bounds=(37,264,18,20) layer=(border=(37,264,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,264,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4772aff
+  solid-fill bounds=(57,264,19,20) layer=(border=(57,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4c12aff
+  solid-fill bounds=(78,264,19,20) layer=(border=(78,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d9f42aff
+  solid-fill bounds=(99,264,18,20) layer=(border=(99,264,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,264,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8ff42aff
+  solid-fill bounds=(119,264,19,20) layer=(border=(119,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#41f42aff
+  solid-fill bounds=(140,264,18,20) layer=(border=(140,264,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,264,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2af45cff
+  solid-fill bounds=(160,264,19,20) layer=(border=(160,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2af4aaff
+  solid-fill bounds=(181,264,19,20) layer=(border=(181,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2af4f4ff
+  solid-fill bounds=(202,264,18,20) layer=(border=(202,264,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,264,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2aa6f4ff
+  solid-fill bounds=(222,264,19,20) layer=(border=(222,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2a5cf4ff
+  solid-fill bounds=(243,264,19,20) layer=(border=(243,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#452af4ff
+  solid-fill bounds=(264,264,18,20) layer=(border=(264,264,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,264,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8f2af4ff
+  solid-fill bounds=(284,264,19,20) layer=(border=(284,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dc2af4ff
+  solid-fill bounds=(305,264,18,20) layer=(border=(305,264,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,264,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f42ac1ff
+  solid-fill bounds=(325,264,19,20) layer=(border=(325,264,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,264,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f42a74ff
+  solid-fill bounds=(16,286,19,20) layer=(border=(16,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ed1212ff
+  solid-fill bounds=(37,286,18,20) layer=(border=(37,286,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,286,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ed6612ff
+  solid-fill bounds=(57,286,19,20) layer=(border=(57,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#edb612ff
+  solid-fill bounds=(78,286,19,20) layer=(border=(78,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d0ed12ff
+  solid-fill bounds=(99,286,18,20) layer=(border=(99,286,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,286,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#80ed12ff
+  solid-fill bounds=(119,286,19,20) layer=(border=(119,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2bed12ff
+  solid-fill bounds=(140,286,18,20) layer=(border=(140,286,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,286,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#12ed49ff
+  solid-fill bounds=(160,286,19,20) layer=(border=(160,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#12ed9dff
+  solid-fill bounds=(181,286,19,20) layer=(border=(181,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#12ededff
+  solid-fill bounds=(202,286,18,20) layer=(border=(202,286,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,286,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1299edff
+  solid-fill bounds=(222,286,19,20) layer=(border=(222,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1249edff
+  solid-fill bounds=(243,286,19,20) layer=(border=(243,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2f12edff
+  solid-fill bounds=(264,286,18,20) layer=(border=(264,286,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,286,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8012edff
+  solid-fill bounds=(284,286,19,20) layer=(border=(284,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d412edff
+  solid-fill bounds=(305,286,18,20) layer=(border=(305,286,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,286,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ed12b6ff
+  solid-fill bounds=(325,286,19,20) layer=(border=(325,286,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,286,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ed1262ff
+  solid-fill bounds=(16,308,19,20) layer=(border=(16,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cb1515ff
+  solid-fill bounds=(37,308,18,20) layer=(border=(37,308,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,308,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cb5b15ff
+  solid-fill bounds=(57,308,19,20) layer=(border=(57,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cb9e15ff
+  solid-fill bounds=(78,308,19,20) layer=(border=(78,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b3cb15ff
+  solid-fill bounds=(99,308,18,20) layer=(border=(99,308,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,308,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#70cb15ff
+  solid-fill bounds=(119,308,19,20) layer=(border=(119,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2bcb15ff
+  solid-fill bounds=(140,308,18,20) layer=(border=(140,308,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,308,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#15cb43ff
+  solid-fill bounds=(160,308,19,20) layer=(border=(160,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#15cb88ff
+  solid-fill bounds=(181,308,19,20) layer=(border=(181,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#15cbcbff
+  solid-fill bounds=(202,308,18,20) layer=(border=(202,308,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,308,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1585cbff
+  solid-fill bounds=(222,308,19,20) layer=(border=(222,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1543cbff
+  solid-fill bounds=(243,308,19,20) layer=(border=(243,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2e15cbff
+  solid-fill bounds=(264,308,18,20) layer=(border=(264,308,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,308,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7015cbff
+  solid-fill bounds=(284,308,19,20) layer=(border=(284,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#b615cbff
+  solid-fill bounds=(305,308,18,20) layer=(border=(305,308,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,308,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cb159eff
+  solid-fill bounds=(325,308,19,20) layer=(border=(325,308,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,308,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cb1558ff
+  solid-fill bounds=(16,330,19,20) layer=(border=(16,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ac1616ff
+  solid-fill bounds=(37,330,18,20) layer=(border=(37,330,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,330,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ac4f16ff
+  solid-fill bounds=(57,330,19,20) layer=(border=(57,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ac8616ff
+  solid-fill bounds=(78,330,19,20) layer=(border=(78,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#98ac16ff
+  solid-fill bounds=(99,330,18,20) layer=(border=(99,330,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,330,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#61ac16ff
+  solid-fill bounds=(119,330,19,20) layer=(border=(119,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#28ac16ff
+  solid-fill bounds=(140,330,18,20) layer=(border=(140,330,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,330,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#16ac3cff
+  solid-fill bounds=(160,330,19,20) layer=(border=(160,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#16ac75ff
+  solid-fill bounds=(181,330,19,20) layer=(border=(181,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#16acacff
+  solid-fill bounds=(202,330,18,20) layer=(border=(202,330,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,330,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1672acff
+  solid-fill bounds=(222,330,19,20) layer=(border=(222,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#163cacff
+  solid-fill bounds=(243,330,19,20) layer=(border=(243,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2a16acff
+  solid-fill bounds=(264,330,18,20) layer=(border=(264,330,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,330,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6116acff
+  solid-fill bounds=(284,330,19,20) layer=(border=(284,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#9a16acff
+  solid-fill bounds=(305,330,18,20) layer=(border=(305,330,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,330,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ac1686ff
+  solid-fill bounds=(325,330,19,20) layer=(border=(325,330,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,330,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ac164dff
+  solid-fill bounds=(16,352,19,20) layer=(border=(16,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8d1616ff
+  solid-fill bounds=(37,352,18,20) layer=(border=(37,352,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,352,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8d4416ff
+  solid-fill bounds=(57,352,19,20) layer=(border=(57,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8d6f16ff
+  solid-fill bounds=(78,352,19,20) layer=(border=(78,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7d8d16ff
+  solid-fill bounds=(99,352,18,20) layer=(border=(99,352,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,352,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#528d16ff
+  solid-fill bounds=(119,352,19,20) layer=(border=(119,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#248d16ff
+  solid-fill bounds=(140,352,18,20) layer=(border=(140,352,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,352,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#168d34ff
+  solid-fill bounds=(160,352,19,20) layer=(border=(160,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#168d61ff
+  solid-fill bounds=(181,352,19,20) layer=(border=(181,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#168d8dff
+  solid-fill bounds=(202,352,18,20) layer=(border=(202,352,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,352,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#165f8dff
+  solid-fill bounds=(222,352,19,20) layer=(border=(222,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#16348dff
+  solid-fill bounds=(243,352,19,20) layer=(border=(243,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#26168dff
+  solid-fill bounds=(264,352,18,20) layer=(border=(264,352,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,352,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#52168dff
+  solid-fill bounds=(284,352,19,20) layer=(border=(284,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f168dff
+  solid-fill bounds=(305,352,18,20) layer=(border=(305,352,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,352,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8d166fff
+  solid-fill bounds=(325,352,19,20) layer=(border=(325,352,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,352,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8d1642ff
+  solid-fill bounds=(16,374,19,20) layer=(border=(16,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#701515ff
+  solid-fill bounds=(37,374,18,20) layer=(border=(37,374,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,374,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#703815ff
+  solid-fill bounds=(57,374,19,20) layer=(border=(57,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#705915ff
+  solid-fill bounds=(78,374,19,20) layer=(border=(78,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#647015ff
+  solid-fill bounds=(99,374,18,20) layer=(border=(99,374,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,374,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#427015ff
+  solid-fill bounds=(119,374,19,20) layer=(border=(119,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1f7015ff
+  solid-fill bounds=(140,374,18,20) layer=(border=(140,374,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,374,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#15702bff
+  solid-fill bounds=(160,374,19,20) layer=(border=(160,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#15704eff
+  solid-fill bounds=(181,374,19,20) layer=(border=(181,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#157070ff
+  solid-fill bounds=(202,374,18,20) layer=(border=(202,374,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,374,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#154d70ff
+  solid-fill bounds=(222,374,19,20) layer=(border=(222,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#152b70ff
+  solid-fill bounds=(243,374,19,20) layer=(border=(243,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#211570ff
+  solid-fill bounds=(264,374,18,20) layer=(border=(264,374,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,374,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#421570ff
+  solid-fill bounds=(284,374,19,20) layer=(border=(284,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#651570ff
+  solid-fill bounds=(305,374,18,20) layer=(border=(305,374,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,374,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#701559ff
+  solid-fill bounds=(325,374,19,20) layer=(border=(325,374,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,374,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#701536ff
+  solid-fill bounds=(16,396,19,20) layer=(border=(16,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#541212ff
+  solid-fill bounds=(37,396,18,20) layer=(border=(37,396,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,396,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#542b12ff
+  solid-fill bounds=(57,396,19,20) layer=(border=(57,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#544312ff
+  solid-fill bounds=(78,396,19,20) layer=(border=(78,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4b5412ff
+  solid-fill bounds=(99,396,18,20) layer=(border=(99,396,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,396,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#335412ff
+  solid-fill bounds=(119,396,19,20) layer=(border=(119,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1a5412ff
+  solid-fill bounds=(140,396,18,20) layer=(border=(140,396,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,396,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#125423ff
+  solid-fill bounds=(160,396,19,20) layer=(border=(160,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#12543cff
+  solid-fill bounds=(181,396,19,20) layer=(border=(181,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#125454ff
+  solid-fill bounds=(202,396,18,20) layer=(border=(202,396,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,396,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#123b54ff
+  solid-fill bounds=(222,396,19,20) layer=(border=(222,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#122354ff
+  solid-fill bounds=(243,396,19,20) layer=(border=(243,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1b1254ff
+  solid-fill bounds=(264,396,18,20) layer=(border=(264,396,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,396,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#331254ff
+  solid-fill bounds=(284,396,19,20) layer=(border=(284,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4c1254ff
+  solid-fill bounds=(305,396,18,20) layer=(border=(305,396,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,396,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#541243ff
+  solid-fill bounds=(325,396,19,20) layer=(border=(325,396,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,396,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#54122aff
+  solid-fill bounds=(16,418,19,20) layer=(border=(16,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(16,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#390e0eff
+  solid-fill bounds=(37,418,18,20) layer=(border=(37,418,18,20),radius=(3,3,3,3,3,3,3,3),clip=(37,418,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#391f0eff
+  solid-fill bounds=(57,418,19,20) layer=(border=(57,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(57,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#392e0eff
+  solid-fill bounds=(78,418,19,20) layer=(border=(78,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(78,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#33390eff
+  solid-fill bounds=(99,418,18,20) layer=(border=(99,418,18,20),radius=(3,3,3,3,3,3,3,3),clip=(99,418,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#24390eff
+  solid-fill bounds=(119,418,19,20) layer=(border=(119,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(119,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#13390eff
+  solid-fill bounds=(140,418,18,20) layer=(border=(140,418,18,20),radius=(3,3,3,3,3,3,3,3),clip=(140,418,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0e3919ff
+  solid-fill bounds=(160,418,19,20) layer=(border=(160,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(160,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0e3929ff
+  solid-fill bounds=(181,418,19,20) layer=(border=(181,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(181,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0e3939ff
+  solid-fill bounds=(202,418,18,20) layer=(border=(202,418,18,20),radius=(3,3,3,3,3,3,3,3),clip=(202,418,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0e2939ff
+  solid-fill bounds=(222,418,19,20) layer=(border=(222,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(222,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0e1939ff
+  solid-fill bounds=(243,418,19,20) layer=(border=(243,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(243,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#140e39ff
+  solid-fill bounds=(264,418,18,20) layer=(border=(264,418,18,20),radius=(3,3,3,3,3,3,3,3),clip=(264,418,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#240e39ff
+  solid-fill bounds=(284,418,19,20) layer=(border=(284,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(284,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#340e39ff
+  solid-fill bounds=(305,418,18,20) layer=(border=(305,418,18,20),radius=(3,3,3,3,3,3,3,3),clip=(305,418,18,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#390e2eff
+  solid-fill bounds=(325,418,19,20) layer=(border=(325,418,19,20),radius=(3,3,3,3,3,3,3,3),clip=(325,418,19,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#390e1eff
+  solid-fill bounds=(241,472,7,10) layer=(border=(241,472,7,10),radius=(3,3,3,3,3,3,3,3),clip=(241,472,7,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d8e0fdff
+  solid-fill bounds=(302,472,7,10) layer=(border=(302,472,7,10),radius=(3,3,3,3,3,3,3,3),clip=(302,472,7,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#041044ff
+  text bounds=(7,7,72,32) pos=(15,15,56,16) color=#000000ff text="Palette" font=f1 glyphs=7 advance=56
+  text bounds=(7,28,80,32) pos=(15,36,64,16) color=#000000ff text="explorer" font=f1 glyphs=8 advance=64
+  text bounds=(117,12,40,32) pos=(125,20,24,16) color=#6e6e73ff text="224" font=f2 glyphs=3 advance=24
+  text bounds=(149,12,80,32) pos=(157,20,64,16) color=#6e6e73ff text="swatches" font=f2 glyphs=8 advance=64
+  text bounds=(221,12,32,32) pos=(229,20,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(245,12,40,32) pos=(253,20,24,16) color=#6e6e73ff text="hue" font=f2 glyphs=3 advance=24
+  text bounds=(277,12,32,32) pos=(285,20,16,16) color=#6e6e73ff text="×" font=f2 glyphs=2 advance=16
+  text bounds=(117,26,88,32) pos=(125,34,72,16) color=#6e6e73ff text="lightness" font=f2 glyphs=9 advance=72
+  text bounds=(100,77,80,32) pos=(108,85,64,16) color=#ffffffff text="hsl(228," font=f3 glyphs=8 advance=64
+  text bounds=(172,77,48,32) pos=(180,85,32,16) color=#ffffffff text="90%," font=f3 glyphs=4 advance=32
+  text bounds=(212,77,48,32) pos=(220,85,32,16) color=#ffffffff text="63%)" font=f3 glyphs=4 advance=32
+  text bounds=(15.625,433,40,32) pos=(23.625,441,24,16) color=#6e6e73ff text="0°" font=f4 glyphs=3 advance=24
+  text bounds=(52.875,433,48,32) pos=(60.875,441,32,16) color=#6e6e73ff text="45°" font=f4 glyphs=4 advance=32
+  text bounds=(94.125,433,48,32) pos=(102.125,441,32,16) color=#6e6e73ff text="90°" font=f4 glyphs=4 advance=32
+  text bounds=(131.375,433,56,32) pos=(139.375,441,40,16) color=#6e6e73ff text="135°" font=f4 glyphs=5 advance=40
+  text bounds=(172.625,433,56,32) pos=(180.625,441,40,16) color=#6e6e73ff text="180°" font=f4 glyphs=5 advance=40
+  text bounds=(213.875,433,56,32) pos=(221.875,441,40,16) color=#6e6e73ff text="225°" font=f4 glyphs=5 advance=40
+  text bounds=(255.125,433,56,32) pos=(263.125,441,40,16) color=#6e6e73ff text="270°" font=f4 glyphs=5 advance=40
+  text bounds=(296.375,433,56,32) pos=(304.375,441,40,16) color=#6e6e73ff text="315°" font=f4 glyphs=5 advance=40
+  text bounds=(7,454,56,32) pos=(15,462,40,16) color=#6e6e73ff text="rows:" font=f2 glyphs=5 advance=40
+  text bounds=(55,454,88,32) pos=(63,462,72,16) color=#6e6e73ff text="lightness" font=f2 glyphs=9 advance=72
+  text bounds=(135,454,40,32) pos=(143,462,24,16) color=#6e6e73ff text="92%" font=f2 glyphs=3 advance=24
+  text bounds=(167,454,32,32) pos=(175,462,16,16) color=#6e6e73ff text="at" font=f2 glyphs=2 advance=16
+  text bounds=(191,454,40,32) pos=(199,462,24,16) color=#6e6e73ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(7,469,40,32) pos=(15,477,24,16) color=#6e6e73ff text="top" font=f2 glyphs=3 advance=24
+  text bounds=(39,469,32,32) pos=(47,477,16,16) color=#6e6e73ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(63,469,40,32) pos=(71,477,24,16) color=#6e6e73ff text="14%" font=f2 glyphs=3 advance=24
+  text bounds=(95,469,32,32) pos=(103,477,16,16) color=#6e6e73ff text="at" font=f2 glyphs=2 advance=16
+  text bounds=(119,469,40,32) pos=(127,477,24,16) color=#6e6e73ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(151,469,64,32) pos=(159,477,48,16) color=#6e6e73ff text="bottom" font=f2 glyphs=6 advance=48
+  text bounds=(244.235,461,56,32) pos=(252.235,469,40,16) color=#6e6e73ff text="light" font=f2 glyphs=5 advance=40
+  text bounds=(305,461,48,32) pos=(313,469,32,16) color=#6e6e73ff text="dark" font=f2 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=9,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

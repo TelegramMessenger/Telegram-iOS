@@ -1,0 +1,108 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad cf" id="w">
+  <div class="row between" style="margin-bottom: 8px"><b>🚀 Release party</b>
+    <span><button data-action="cheer"><span class="hand" id="hand">🙌</span> <span id="cheers">0</span></button> <button class="primary" data-action="burst">🎉 Again</button></span></div>
+  <div class="stage">
+    <div class="title pop" id="title">v2.0 shipped!</div>
+    <div class="sub" id="sub">42 PRs · 9 contributors · 0 regressions</div>
+    <canvas id="fx" width="352" height="200"></canvas>
+  </div>
+  <div class="modes"><span id="modes"><span class="m on" data-action="mode" data-value="cannons">🎊 Cannons</span><span class="m " data-action="mode" data-value="rain">🌧 Rain</span><span class="m " data-action="mode" data-value="fireworks">🎆 Fireworks</span></span><a class="lnk" href="#" data-action="notes" id="noteslnk">What's new ▾</a></div>
+  <div id="notes" hidden="" style="margin-top: 6px"><div class="note" style="transition-delay: 60ms, 170ms"><span class="ic">✨</span><span class="tx" style="transition-delay: 60ms, 170ms">Scripted bubbles now animate at 60 fps</span></div><div class="note" style="transition-delay: 140ms, 250ms"><span class="ic">🧭</span><span class="tx" style="transition-delay: 140ms, 250ms">Native transitions between states</span></div><div class="note" style="transition-delay: 220ms, 330ms"><span class="ic">🎨</span><span class="tx" style="transition-delay: 220ms, 330ms">tween(), mix() and alpha() helpers</span></div><div class="note" style="transition-delay: 300ms, 410ms"><span class="ic">🐛</span><span class="tx" style="transition-delay: 300ms, 410ms">42 fixes, 0 regressions</span></div></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 338.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 338.8
+    div 15 13 330 312.8
+      div 15 13 330 53.6
+        b 15 21.6 143.133 36.4
+        span 158.133 13 186.867 53.6
+          button 171.133 18 48 16.8
+            span 171.133 18 32 16.8
+            span 171.133 18 0 0
+          button 171.133 44.8 80 16.8
+      div 15 74.6 330 200
+        div 15 136.6 330 52
+        div 15 188.6 330 16.9
+        canvas 15 74.6 352 200
+      div 15 282.6 330 43.2
+        span 15 282.6 212 43.2
+          span 24 285.6 96 15.6
+          span 142 285.6 72 15.6
+          span 24 307.2 112 15.6
+        a 233 296.4 112 15.6
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+
+== paint
+root 360x338.8 items=41
+  solid-fill bounds=(0,0,360,339) layer=(border=(0,0,360,339),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,339),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,339) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,339) root=0
+  text bounds=(7,15,48,32) pos=(15,23,32,16) color=#000000ff text="🚀" font=f1 glyphs=4 advance=32
+  text bounds=(47,15,72,32) pos=(55,23,56,16) color=#000000ff text="Release" font=f1 glyphs=7 advance=56
+  text bounds=(7,33,56,32) pos=(15,41,40,16) color=#000000ff text="party" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(158,13,74,27) layer=(border=(158,13,74,27),radius=(8,8,8,8,8,8,8,8),clip=(158,13,74,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(163.133,10,48,32) pos=(171.133,18,32,16) color=#000000ff text="🙌" font=f1 glyphs=4 advance=32
+  text bounds=(203.133,10,24,32) pos=(211.133,18,8,16) color=#000000ff text="0" font=f1 glyphs=1 advance=8
+  solid-fill bounds=(158,40,106,27) layer=(border=(158,40,106,27),radius=(8,8,8,8,8,8,8,8),clip=(158,40,106,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(163.133,37,48,32) pos=(171.133,45,32,16) color=#ffffffff text="🎉" font=f1 glyphs=4 advance=32
+  text bounds=(203.133,37,56,32) pos=(211.133,45,40,16) color=#ffffffff text="Again" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(15,283,114,21) layer=(border=(15,283,114,21),radius=(8,8,8,8,8,8,8,8),clip=(15,283,114,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5e5ce6ff
+  text bounds=(16,278,48,32) pos=(24,286,32,16) color=#ffffffff text="🎊" font=f2 glyphs=4 advance=32
+  text bounds=(56,278,72,32) pos=(64,286,56,16) color=#ffffffff text="Cannons" font=f2 glyphs=7 advance=56
+  solid-fill bounds=(133,283,90,21) layer=(border=(133,283,90,21),radius=(8,8,8,8,8,8,8,8),clip=(133,283,90,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(134,278,48,32) pos=(142,286,32,16) color=#000000ff text="🌧" font=f2 glyphs=4 advance=32
+  text bounds=(174,278,48,32) pos=(182,286,32,16) color=#000000ff text="Rain" font=f2 glyphs=4 advance=32
+  solid-fill bounds=(15,304,130,22) layer=(border=(15,304,130,22),radius=(8,8,8,8,8,8,8,8),clip=(15,304,130,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(16,299,48,32) pos=(24,307,32,16) color=#000000ff text="🎆" font=f2 glyphs=4 advance=32
+  text bounds=(56,299,88,32) pos=(64,307,72,16) color=#000000ff text="Fireworks" font=f2 glyphs=9 advance=72
+  text bounds=(225,288,64,32) pos=(233,296,48,16) color=#007affff text="What's" font=f3 glyphs=6 advance=48
+  text bounds=(281,288,40,32) pos=(289,296,24,16) color=#007affff text="new" font=f3 glyphs=3 advance=24
+  text bounds=(313,288,40,32) pos=(321,296,24,16) color=#007affff text="▾" font=f3 glyphs=3 advance=24
+  linear-gradient bounds=(15,75,330,200) layer=(border=(15,75,330,200),radius=(12,12,12,12,12,12,12,12),clip=(15,75,330,200),origin=(15,75,330,200),attachment=0,repeat=0,root=0) points=((0,#1d1b4bff,-),(0.55,#3b1d5eff,-),(1,#6b2a63ff,-)) space=0 hue=0 start=(128.559,33.6678) end=(231.441,316.332)
+  set-clip bounds=(15,74.6,330,200) pos=(15,74.6,330,200) radius=(12,12,12,12,12,12,12,12)
+  group opacity=1 matrix=(1.0048,0,0,1.0048,-0.863998,-0.631668) backface=0 bounds=(15,74.6,330,114) exact=0
+    text bounds=(120,147,48,32) pos=(128,155,32,16) color=#ffffffff text="v2.0" font=f4 glyphs=4 advance=32
+    text bounds=(160,147,80,32) pos=(168,155,64,16) color=#ffffffff text="shipped!" font=f4 glyphs=8 advance=64
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,74.6,330,200) pos=(15,74.6,330,200) radius=(12,12,12,12,12,12,12,12)
+  text bounds=(8,181,32,32) pos=(16,189,16,16) color=#ffffffbf text="42" font=f5 glyphs=2 advance=16
+  text bounds=(32,181,40,32) pos=(40,189,24,16) color=#ffffffbf text="PRs" font=f5 glyphs=3 advance=24
+  text bounds=(64,181,32,32) pos=(72,189,16,16) color=#ffffffbf text="·" font=f5 glyphs=2 advance=16
+  text bounds=(88,181,24,32) pos=(96,189,8,16) color=#ffffffbf text="9" font=f5 glyphs=1 advance=8
+  text bounds=(104,181,112,32) pos=(112,189,96,16) color=#ffffffbf text="contributors" font=f5 glyphs=12 advance=96
+  text bounds=(208,181,32,32) pos=(216,189,16,16) color=#ffffffbf text="·" font=f5 glyphs=2 advance=16
+  text bounds=(232,181,24,32) pos=(240,189,8,16) color=#ffffffbf text="0" font=f5 glyphs=1 advance=8
+  text bounds=(248,181,104,32) pos=(256,189,88,16) color=#ffffffbf text="regressions" font=f5 glyphs=11 advance=88
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,74.6,330,200) pos=(15,74.6,330,200) radius=(12,12,12,12,12,12,12,12)
+  image bounds=(15,75,352,200) layer=(border=(15,75,352,200),radius=(0,0,0,0,0,0,0,0),clip=(15,75,352,200),origin=(15,75,352,200),attachment=0,repeat=3,root=0) size=(352,200)
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(-2147483648,predef0,0,#007affff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=30,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

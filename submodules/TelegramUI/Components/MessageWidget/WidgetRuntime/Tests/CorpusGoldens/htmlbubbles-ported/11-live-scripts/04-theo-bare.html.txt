@@ -1,0 +1,138 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad poll" id="root">
+  <div class="row between"><b>📍 Offsite location</b>
+    <span><span class="small muted"><span id="total">15</span> votes</span> <span class="badge red" id="live">● live</span></span></div>
+  <div class="ticker" id="ticker">Votes are coming in…</div>
+  <div class="bar2"><span id="tabs"><span class="tab on" data-tab="results">Results</span><span class="tab" data-tab="voters">Voters</span></span><a class="lnk" href="#" id="sort">⇅ Top first</a></div>
+  <div class="list" id="list" style="height: 162px"><div class="opt open" data-id="lis" style="top: 42px; background: linear-gradient(90deg, rgba(0,122,255,0.160) 26.7%, rgba(127,127,127,0.10) 26.7%); transition-duration: 800ms;">
+  <span class="lbl">🇵🇹 Lisbon</span><span class="plus"></span><span class="small muted cnt">4</span><span class="pc">27%</span></div><div class="opt open" data-id="kyo" style="top: 0px; background: linear-gradient(90deg, rgba(0,122,255,0.160) 40.0%, rgba(127,127,127,0.10) 40.0%); transition-duration: 800ms;">
+  <span class="lbl">🇯🇵 Kyoto</span><span class="plus"></span><span class="small muted cnt">6</span><span class="pc">40%</span></div><div class="opt open" data-id="mex" style="top: 84px; background: linear-gradient(90deg, rgba(0,122,255,0.160) 20.0%, rgba(127,127,127,0.10) 20.0%); transition-duration: 800ms;">
+  <span class="lbl">🇲🇽 Mexico City</span><span class="plus"></span><span class="small muted cnt">3</span><span class="pc">20%</span></div><div class="opt open" data-id="rey" style="top: 126px; background: linear-gradient(90deg, rgba(0,122,255,0.160) 13.3%, rgba(127,127,127,0.10) 13.3%); transition-duration: 800ms;">
+  <span class="lbl">🇮🇸 Reykjavík</span><span class="plus"></span><span class="small muted cnt">2</span><span class="pc">13%</span></div></div>
+  <div class="win" id="win" hidden=""><b id="winT"></b><div class="small muted" id="winS"></div></div>
+  <div id="voters" style="margin-top: 6px" hidden=""></div>
+  <div class="foot"><span class="tiny muted" id="hintText">Tap an option to vote</span>
+    <span><a class="lnk" href="#" id="reset">↻ Reset</a>&nbsp; <button class="primary" id="close">Close poll</button></span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 313.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 313.75
+    div 15 13 360 287.75
+      div 15 13 360 18.2
+        b 15 13 168 18.2
+        span 223 13 152 18.2
+          span 223 13 0 0
+            span 223 13 0 0
+          span 303 14 64 14.3
+      div 15 33.2 360 14.95
+      div 15 56.15 360 19.6
+        span 15 56.15 152 19.6
+          span 25 58.15 56 15.6
+          span 105 58.15 48 15.6
+        a 271 58.15 104 15.6
+      div 15 83.75 360 162
+        div 27 125.75 328 36
+          span 27 125.75 250 36
+          span 277 143.75 26 0
+          span 303 125.75 8 36
+          span 311 125.75 44 36
+        div 27 83.75 328 36
+          span 27 83.75 250 36
+          span 277 101.75 26 0
+          span 303 83.75 8 36
+          span 311 83.75 44 36
+        div 27 167.75 328 36
+          span 27 167.75 250 36
+          span 277 185.75 26 0
+          span 303 167.75 8 36
+          span 311 167.75 44 36
+        div 27 209.75 328 36
+          span 27 209.75 250 36
+          span 277 227.75 26 0
+          span 303 209.75 8 36
+          span 311 209.75 44 36
+      div 0 0 0 0
+        b 0 0 0 0
+        div 0 0 0 0
+      div 0 0 0 0
+      div 15 255.75 360 45
+        span 15 263.95 163.459 28.6
+        span 178.459 255.75 196.541 45
+          a 178.459 255.75 0 0
+          button 191.459 278.95 80 16.8
+
+== paint
+root 390x313.75 items=52
+  solid-fill bounds=(0,0,390,314) layer=(border=(0,0,390,314),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,314),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,314) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,314) root=0
+  text bounds=(7,6,48,32) pos=(15,14,32,16) color=#000000ff text="📍" font=f1 glyphs=4 advance=32
+  text bounds=(47,6,72,32) pos=(55,14,56,16) color=#000000ff text="Offsite" font=f1 glyphs=7 advance=56
+  text bounds=(111,6,80,32) pos=(119,14,64,16) color=#000000ff text="location" font=f1 glyphs=8 advance=64
+  text bounds=(215,6,32,32) pos=(223,14,16,16) color=#6e6e73ff text="15" font=f2 glyphs=2 advance=16
+  text bounds=(239,6,56,32) pos=(247,14,40,16) color=#6e6e73ff text="votes" font=f2 glyphs=5 advance=40
+  solid-fill bounds=(295,13,80,16) layer=(border=(295,13,80,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(295,13,80,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3029
+  text bounds=(295,6,40,32) pos=(303,14,24,16) color=#ff3b30ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(327,6,48,32) pos=(335,14,32,16) color=#ff3b30ff text="live" font=f3 glyphs=4 advance=32
+  text bounds=(7,25,56,32) pos=(15,33,40,16) color=#8e8e93ff text="Votes" font=f4 glyphs=5 advance=40
+  text bounds=(55,25,40,32) pos=(63,33,24,16) color=#8e8e93ff text="are" font=f4 glyphs=3 advance=24
+  text bounds=(87,25,64,32) pos=(95,33,48,16) color=#8e8e93ff text="coming" font=f4 glyphs=6 advance=48
+  text bounds=(143,25,56,32) pos=(151,33,40,16) color=#8e8e93ff text="in…" font=f4 glyphs=5 advance=40
+  solid-fill bounds=(15,56,76,20) layer=(border=(15,56,76,20),radius=(8,8,8,8,8,8,8,8),clip=(15,56,76,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  text bounds=(17,50,72,32) pos=(25,58,56,16) color=#007affff text="Results" font=f5 glyphs=7 advance=56
+  text bounds=(97,50,64,32) pos=(105,58,48,16) color=#000000ff text="Voters" font=f5 glyphs=6 advance=48
+  text bounds=(263,50,40,32) pos=(271,58,24,16) color=#007affff text="⇅" font=f6 glyphs=3 advance=24
+  text bounds=(295,50,40,32) pos=(303,58,24,16) color=#007affff text="Top" font=f6 glyphs=3 advance=24
+  text bounds=(327,50,56,32) pos=(335,58,40,16) color=#007affff text="first" font=f6 glyphs=5 advance=40
+  text bounds=(7,256,40,32) pos=(15,264,24,16) color=#6e6e73ff text="Tap" font=f7 glyphs=3 advance=24
+  text bounds=(39,256,32,32) pos=(47,264,16,16) color=#6e6e73ff text="an" font=f7 glyphs=2 advance=16
+  text bounds=(63,256,64,32) pos=(71,264,48,16) color=#6e6e73ff text="option" font=f7 glyphs=6 advance=48
+  text bounds=(119,256,32,32) pos=(127,264,16,16) color=#6e6e73ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(7,270,48,32) pos=(15,278,32,16) color=#6e6e73ff text="vote" font=f7 glyphs=4 advance=32
+  text bounds=(170.459,249,40,32) pos=(178.459,257,24,16) color=#007affff text="↻" font=f6 glyphs=3 advance=24
+  text bounds=(202.459,249,56,32) pos=(210.459,257,40,16) color=#007affff text="Reset" font=f6 glyphs=5 advance=40
+  text bounds=(242.459,249,32,32) pos=(250.459,257,16,16) color=#000000ff text=" " font=f8 glyphs=2 advance=16
+  solid-fill bounds=(178,274,106,27) layer=(border=(178,274,106,27),radius=(8,8,8,8,8,8,8,8),clip=(178,274,106,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(183.459,271,56,32) pos=(191.459,279,40,16) color=#ffffffff text="Close" font=f1 glyphs=5 advance=40
+  text bounds=(231.459,271,48,32) pos=(239.459,279,32,16) color=#ffffffff text="poll" font=f1 glyphs=4 advance=32
+  linear-gradient bounds=(15,126,352,36) layer=(border=(15,126,352,36),radius=(10,10,10,10,10,10,10,10),clip=(15,126,352,36),origin=(15,126,352,36),attachment=0,repeat=0,root=0) points=((0,#007aff29,-),(0.267,#007aff29,-),(0.267,#7f7f7f1a,-),(1,#7f7f7f1a,-)) space=0 hue=0 start=(15,126) end=(367,126)
+  text bounds=(19,128,80,32) pos=(27,136,64,16) color=#000000ff text="🇵🇹" font=f1 glyphs=8 advance=64
+  text bounds=(91,128,64,32) pos=(99,136,48,16) color=#000000ff text="Lisbon" font=f1 glyphs=6 advance=48
+  text bounds=(295,128,24,32) pos=(303,136,8,16) color=#6e6e73ff text="4" font=f2 glyphs=1 advance=8
+  text bounds=(323,128,40,32) pos=(331,136,24,16) color=#000000ff text="27%" font=f9 glyphs=3 advance=24
+  linear-gradient bounds=(15,84,352,36) layer=(border=(15,84,352,36),radius=(10,10,10,10,10,10,10,10),clip=(15,84,352,36),origin=(15,84,352,36),attachment=0,repeat=0,root=0) points=((0,#007aff29,-),(0.4,#007aff29,-),(0.4,#7f7f7f1a,-),(1,#7f7f7f1a,-)) space=0 hue=0 start=(15,84) end=(367,84)
+  text bounds=(19,86,80,32) pos=(27,94,64,16) color=#000000ff text="🇯🇵" font=f1 glyphs=8 advance=64
+  text bounds=(91,86,56,32) pos=(99,94,40,16) color=#000000ff text="Kyoto" font=f1 glyphs=5 advance=40
+  text bounds=(295,86,24,32) pos=(303,94,8,16) color=#6e6e73ff text="6" font=f2 glyphs=1 advance=8
+  text bounds=(323,86,40,32) pos=(331,94,24,16) color=#000000ff text="40%" font=f9 glyphs=3 advance=24
+  linear-gradient bounds=(15,168,352,36) layer=(border=(15,168,352,36),radius=(10,10,10,10,10,10,10,10),clip=(15,168,352,36),origin=(15,168,352,36),attachment=0,repeat=0,root=0) points=((0,#007aff29,-),(0.2,#007aff29,-),(0.2,#7f7f7f1a,-),(1,#7f7f7f1a,-)) space=0 hue=0 start=(15,168) end=(367,168)
+  text bounds=(19,170,80,32) pos=(27,178,64,16) color=#000000ff text="🇲🇽" font=f1 glyphs=8 advance=64
+  text bounds=(91,170,64,32) pos=(99,178,48,16) color=#000000ff text="Mexico" font=f1 glyphs=6 advance=48
+  text bounds=(147,170,48,32) pos=(155,178,32,16) color=#000000ff text="City" font=f1 glyphs=4 advance=32
+  text bounds=(295,170,24,32) pos=(303,178,8,16) color=#6e6e73ff text="3" font=f2 glyphs=1 advance=8
+  text bounds=(323,170,40,32) pos=(331,178,24,16) color=#000000ff text="20%" font=f9 glyphs=3 advance=24
+  linear-gradient bounds=(15,210,352,36) layer=(border=(15,210,352,36),radius=(10,10,10,10,10,10,10,10),clip=(15,210,352,36),origin=(15,210,352,36),attachment=0,repeat=0,root=0) points=((0,#007aff29,-),(0.133,#007aff29,-),(0.133,#7f7f7f1a,-),(1,#7f7f7f1a,-)) space=0 hue=0 start=(15,210) end=(367,210)
+  text bounds=(19,212,80,32) pos=(27,220,64,16) color=#000000ff text="🇮🇸" font=f1 glyphs=8 advance=64
+  text bounds=(91,212,96,32) pos=(99,220,80,16) color=#000000ff text="Reykjavík" font=f1 glyphs=10 advance=80
+  text bounds=(295,212,24,32) pos=(303,220,8,16) color=#6e6e73ff text="2" font=f2 glyphs=1 advance=8
+  text bounds=(323,212,40,32) pos=(331,220,24,16) color=#000000ff text="13%" font=f9 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(-2147483648,predef0,0,#007affff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,5 @@
+module COgg {
+    header "ogg/ogg.h"
+    header "ogg/os_types.h"
+    export *
+}

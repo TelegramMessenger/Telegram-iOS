@@ -1,0 +1,16 @@
+<!-- Holds (widget-sandbox v0.1.2): touch-action: none on the whole document, so every hold over the widget is the
+     widget's (its contextmenu) and opens no menu, while a hold on the bubble's caption, outside the widget, still opens
+     it. Each contextmenu is logged into <html data-log> (the readout's `log` line) as contextmenu:<element>. -->
+<style>
+  html { touch-action: none; }
+  body { margin: 0; }
+  #surface { height: 120px; background: #c8f; }
+</style>
+<div id="surface">none</div>
+<script>
+  const log = [];
+  document.addEventListener('contextmenu', e => {
+    log.push('contextmenu:' + e.target.id);
+    document.documentElement.setAttribute('data-log', log.join(' '));
+  });
+</script>

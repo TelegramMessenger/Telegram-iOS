@@ -1,0 +1,114 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To-Do List</title>
+<style></style>
+</head>
+<body>
+<div class="app">
+  <h2>✅ To-Do</h2>
+  <div class="quick" id="quick"><button>+ Water the plants</button><button>+ Pay the bills</button><button>+ Go for a run</button></div>
+  <ul id="list"><li class=""><button class="check" aria-label="Done"></button><span>Buy groceries</span><button class="del" title="Delete">×</button></li><li class="done"><button class="check" aria-label="Done">✓</button><span>Call the dentist</span><button class="del" title="Delete">×</button></li><li class=""><button class="check" aria-label="Done"></button><span>Finish the report</span><button class="del" title="Delete">×</button></li></ul>
+  <div class="footer"><span id="count">2 items left</span><a id="clear">Clear completed</a></div>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 329.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 297.7
+    div 32 32 296 265.7
+      h2 32 32 296 22.5
+      div 32 66.5 296 65.2
+        button 43 73.5 144 15.6
+        button 43 109.1 120 15.6
+        button 191 109.1 112 15.6
+      ul 32 143.7 296 127.8
+        li 38 153.7 284 21.6
+          button 40 156.5 16 16
+          span 68 154.375 220 20.25
+          button 302 153.7 16 21.6
+        li 38 196.3 284 21.6
+          button 40 199.1 16 16
+          span 68 196.975 220 20.25
+          button 302 196.3 16 21.6
+        li 38 238.9 284 21.6
+          button 40 241.7 16 16
+          span 68 239.575 220 20.25
+          button 302 238.9 16 21.6
+      div 32 281.5 296 16.2
+        span 32 281.5 96 16.2
+        a 208 281.5 120 16.2
+
+== paint
+root 360x329.7 items=48
+  solid-fill bounds=(0,0,360,330) layer=(border=(0,0,360,330),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,330),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#fffbebff
+  box-shadow bounds=(4,4,352,322) box=(16,16,328,298) radius=(12,12,12,12,12,12,12,12) shadow=(0,2,8,0,#00000014,0)
+  solid-fill bounds=(16,16,328,298) layer=(border=(16,16,328,298),radius=(12,12,12,12,12,12,12,12),clip=(16,16,328,298),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(32,67,166,29) layer=(border=(32,67,166,29),radius=(8,8,8,8,8,8,8,8),clip=(32,67,166,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  solid-fill bounds=(32,102,142,30) layer=(border=(32,102,142,30),radius=(8,8,8,8,8,8,8,8),clip=(32,102,142,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  solid-fill bounds=(180,102,134,30) layer=(border=(180,102,134,30),radius=(8,8,8,8,8,8,8,8),clip=(180,102,134,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  borders bounds=(32,144,296,42) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#f3f4f6ff),radius=(0,0,0,0,0,0,0,0)) pos=(32,144,296,42) root=0
+  solid-fill bounds=(38,155,20,20) layer=(border=(38,155,20,20),radius=(8,8,8,8,8,8,8,8),clip=(38,155,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(38,155,20,20) borders=(left=(2,4,#d1d5dbff),top=(2,4,#d1d5dbff),right=(2,4,#d1d5dbff),bottom=(2,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(38,155,20,20) root=0
+  group opacity=0.6 matrix=(1,0,0,1,0,0) backface=0 bounds=(292,145.7,36,36) exact=1
+    text bounds=(294,148,32,32) pos=(302,156,16,16) color=#ef4444ff text="×" font=f1 glyphs=2 advance=16
+  borders bounds=(32,186,296,43) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#f3f4f6ff),radius=(0,0,0,0,0,0,0,0)) pos=(32,186,296,43) root=0
+  solid-fill bounds=(38,197,20,20) layer=(border=(38,197,20,20),radius=(8,8,8,8,8,8,8,8),clip=(38,197,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  borders bounds=(38,197,20,20) borders=(left=(2,4,#f59e0bff),top=(2,4,#f59e0bff),right=(2,4,#f59e0bff),bottom=(2,4,#f59e0bff),radius=(8,8,8,8,8,8,8,8)) pos=(38,197,20,20) root=0
+  group opacity=0.6 matrix=(1,0,0,1,0,0) backface=0 bounds=(292,188.3,36,36) exact=1
+    text bounds=(294,190,32,32) pos=(302,198,16,16) color=#ef4444ff text="×" font=f1 glyphs=2 advance=16
+  borders bounds=(32,229,296,43) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#f3f4f6ff),radius=(0,0,0,0,0,0,0,0)) pos=(32,229,296,43) root=0
+  solid-fill bounds=(38,240,20,20) layer=(border=(38,240,20,20),radius=(8,8,8,8,8,8,8,8),clip=(38,240,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(38,240,20,20) borders=(left=(2,4,#d1d5dbff),top=(2,4,#d1d5dbff),right=(2,4,#d1d5dbff),bottom=(2,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(38,240,20,20) root=0
+  group opacity=0.6 matrix=(1,0,0,1,0,0) backface=0 bounds=(292,230.9,36,36) exact=1
+    text bounds=(294,233,32,32) pos=(302,241,16,16) color=#ef4444ff text="×" font=f1 glyphs=2 advance=16
+  text bounds=(24,27,40,32) pos=(32,35,24,16) color=#000000ff text="✅" font=f2 glyphs=3 advance=24
+  text bounds=(56,27,40,32) pos=(64,35,24,16) color=#000000ff text="To-" font=f2 glyphs=3 advance=24
+  text bounds=(80,27,32,32) pos=(88,35,16,16) color=#000000ff text="Do" font=f2 glyphs=2 advance=16
+  text bounds=(35,66,24,32) pos=(43,74,8,16) color=#ffffffff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(51,66,56,32) pos=(59,74,40,16) color=#ffffffff text="Water" font=f3 glyphs=5 advance=40
+  text bounds=(99,66,40,32) pos=(107,74,24,16) color=#ffffffff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(131,66,64,32) pos=(139,74,48,16) color=#ffffffff text="plants" font=f3 glyphs=6 advance=48
+  text bounds=(35,101,24,32) pos=(43,109,8,16) color=#ffffffff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(51,101,40,32) pos=(59,109,24,16) color=#ffffffff text="Pay" font=f3 glyphs=3 advance=24
+  text bounds=(83,101,40,32) pos=(91,109,24,16) color=#ffffffff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(115,101,56,32) pos=(123,109,40,16) color=#ffffffff text="bills" font=f3 glyphs=5 advance=40
+  text bounds=(183,101,24,32) pos=(191,109,8,16) color=#ffffffff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(199,101,32,32) pos=(207,109,16,16) color=#ffffffff text="Go" font=f3 glyphs=2 advance=16
+  text bounds=(223,101,40,32) pos=(231,109,24,16) color=#ffffffff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(255,101,24,32) pos=(263,109,8,16) color=#ffffffff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(271,101,40,32) pos=(279,109,24,16) color=#ffffffff text="run" font=f3 glyphs=3 advance=24
+  text bounds=(60,148,40,32) pos=(68,156,24,16) color=#000000ff text="Buy" font=f4 glyphs=3 advance=24
+  text bounds=(92,148,88,32) pos=(100,156,72,16) color=#000000ff text="groceries" font=f4 glyphs=9 advance=72
+  text bounds=(32,191,40,32) pos=(40,199,24,16) color=#ffffffff text="✓" font=f5 glyphs=3 advance=24
+  text bounds=(60,191,48,32) pos=(68,199,32,16) color=#9ca3afff text="Call" font=f6 glyphs=4 advance=32
+  text bounds=(100,191,40,32) pos=(108,199,24,16) color=#9ca3afff text="the" font=f6 glyphs=3 advance=24
+  text bounds=(132,191,72,32) pos=(140,199,56,16) color=#9ca3afff text="dentist" font=f6 glyphs=7 advance=56
+  text bounds=(60,234,64,32) pos=(68,242,48,16) color=#000000ff text="Finish" font=f4 glyphs=6 advance=48
+  text bounds=(116,234,40,32) pos=(124,242,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(148,234,64,32) pos=(156,242,48,16) color=#000000ff text="report" font=f4 glyphs=6 advance=48
+  text bounds=(24,274,24,32) pos=(32,282,8,16) color=#6b7280ff text="2" font=f7 glyphs=1 advance=8
+  text bounds=(40,274,56,32) pos=(48,282,40,16) color=#6b7280ff text="items" font=f7 glyphs=5 advance=40
+  text bounds=(88,274,48,32) pos=(96,282,32,16) color=#6b7280ff text="left" font=f7 glyphs=4 advance=32
+  text bounds=(200,274,56,32) pos=(208,282,40,16) color=#6b7280ff text="Clear" font=f8 glyphs=5 advance=40
+  text bounds=(248,274,88,32) pos=(256,282,72,16) color=#6b7280ff text="completed" font=f8 glyphs=9 advance=72
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(4,predef0,0,#9ca3afff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(1,predef0,0,#6b7280ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,49 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8">
+<style></style>
+</head><body>
+<div class="wrap" id="wrap"><canvas id="c" width="340" height="220" style="width: 340px; height: 220px;"></canvas></div>
+<p id="note" style="font-size:12px;color:#666;margin:6px 0 0">Tap the chart for the values of a day. <button id="add">Add point</button> <span id="n">7 points</span></p>
+<p id="readout" style="font-size:12px;color:#444;margin:4px 0 0;min-height:16px"></p>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 315
+  head 0 0 0 0
+    style 0 0 0 0
+  body 10 10 340 295
+    div 10 10 340 220
+      canvas 10 10 340 220
+    p 10 236 340 49
+      button 24 260.2 72 16.8
+      span 10 236 0 0
+    p 10 289 340 16
+
+== paint
+root 360x315 items=16
+  solid-fill bounds=(0,0,360,315) layer=(border=(0,0,360,315),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,315),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(2,228,40,32) pos=(10,236,24,16) color=#666666ff text="Tap" font=f1 glyphs=3 advance=24
+  text bounds=(34,228,40,32) pos=(42,236,24,16) color=#666666ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(66,228,56,32) pos=(74,236,40,16) color=#666666ff text="chart" font=f1 glyphs=5 advance=40
+  text bounds=(114,228,40,32) pos=(122,236,24,16) color=#666666ff text="for" font=f1 glyphs=3 advance=24
+  text bounds=(146,228,40,32) pos=(154,236,24,16) color=#666666ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(178,228,64,32) pos=(186,236,48,16) color=#666666ff text="values" font=f1 glyphs=6 advance=48
+  text bounds=(234,228,32,32) pos=(242,236,16,16) color=#666666ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(258,228,24,32) pos=(266,236,8,16) color=#666666ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(274,228,48,32) pos=(282,236,32,16) color=#666666ff text="day." font=f1 glyphs=4 advance=32
+  solid-fill bounds=(10,252,100,33) layer=(border=(10,252,100,33),radius=(8,8,8,8,8,8,8,8),clip=(10,252,100,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(16,252,40,32) pos=(24,260,24,16) color=#666666ff text="Add" font=f2 glyphs=3 advance=24
+  text bounds=(48,252,56,32) pos=(56,260,40,16) color=#666666ff text="point" font=f2 glyphs=5 advance=40
+  text bounds=(110,252,24,32) pos=(118,260,8,16) color=#666666ff text="7" font=f1 glyphs=1 advance=8
+  text bounds=(126,252,64,32) pos=(134,260,48,16) color=#666666ff text="points" font=f1 glyphs=6 advance=48
+  image bounds=(10,10,340,220) layer=(border=(10,10,340,220),radius=(0,0,0,0,0,0,0,0),clip=(10,10,340,220),origin=(10,10,340,220),attachment=0,repeat=3,root=0) size=(340,220)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

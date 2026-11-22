@@ -1,0 +1,14 @@
+--- a/xctestrunner/test_runner/xctestrun.py
++++ b/xctestrunner/test_runner/xctestrun.py
+@@ -183,7 +183,10 @@
+       command.extend(['-resultBundlePath', result_bundle_path])
+ 
+     if xcode_version >= 1410:
+-      command.extend(['-collect-test-diagnostics=never'])
++      # Two arguments: xcodebuild takes the `=` spelling for a build setting and
++      # ignores it, so diagnostics stay on-failure and every failing run waits
++      # up to 600 s in `simctl diagnose` (telegram-ios patch).
++      command.extend(['-collect-test-diagnostics', 'never'])
+ 
+     if destination_timeout_sec:
+       command.extend(['-destination-timeout', str(destination_timeout_sec)])

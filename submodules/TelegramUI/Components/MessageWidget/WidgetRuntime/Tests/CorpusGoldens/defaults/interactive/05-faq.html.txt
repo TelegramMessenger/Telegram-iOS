@@ -1,0 +1,62 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>FAQ</title>
+<style></style>
+</head><body><h3>Questions</h3>
+<div id="faq">
+  <p><button data-q="What is a widget?">▸ What is a widget?</button></p>
+  <p hidden="">A small interactive page inside a message. It runs in a sandbox with no network, so it cannot track you.</p>
+  <p><button data-q="Who can see my answers?">▸ Who can see my answers?</button></p>
+  <p hidden="">Nobody: what a widget remembers stays on your device, for this message only.</p>
+  <p><button data-q="Does it work offline?">▸ Does it work offline?</button></p>
+  <p hidden="">Yes. Everything it needs comes with the message.</p>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 164.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 147.9
+    h3 12 8 336 22.5
+    div 12 39.5 336 116.4
+      p 12 39.5 336 32.8
+        button 26 47.5 308 16.8
+      p 0 0 0 0
+      p 12 81.3 336 32.8
+        button 26 89.3 308 16.8
+      p 0 0 0 0
+      p 12 123.1 336 32.8
+        button 26 131.1 308 16.8
+      p 0 0 0 0
+
+== paint
+root 360x164.9 items=20
+  text bounds=(4,3,88,32) pos=(12,11,72,16) color=#000000ff text="Questions" font=f1 glyphs=9 advance=72
+  solid-fill bounds=(12,40,336,32) layer=(border=(12,40,336,32),radius=(8,8,8,8,8,8,8,8),clip=(12,40,336,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(18,40,40,32) pos=(26,48,24,16) color=#000000ff text="▸" font=f2 glyphs=3 advance=24
+  text bounds=(50,40,48,32) pos=(58,48,32,16) color=#000000ff text="What" font=f2 glyphs=4 advance=32
+  text bounds=(90,40,32,32) pos=(98,48,16,16) color=#000000ff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(114,40,24,32) pos=(122,48,8,16) color=#000000ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(130,40,72,32) pos=(138,48,56,16) color=#000000ff text="widget?" font=f2 glyphs=7 advance=56
+  solid-fill bounds=(12,81,336,33) layer=(border=(12,81,336,33),radius=(8,8,8,8,8,8,8,8),clip=(12,81,336,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(18,81,40,32) pos=(26,89,24,16) color=#000000ff text="▸" font=f2 glyphs=3 advance=24
+  text bounds=(50,81,40,32) pos=(58,89,24,16) color=#000000ff text="Who" font=f2 glyphs=3 advance=24
+  text bounds=(82,81,40,32) pos=(90,89,24,16) color=#000000ff text="can" font=f2 glyphs=3 advance=24
+  text bounds=(114,81,40,32) pos=(122,89,24,16) color=#000000ff text="see" font=f2 glyphs=3 advance=24
+  text bounds=(146,81,32,32) pos=(154,89,16,16) color=#000000ff text="my" font=f2 glyphs=2 advance=16
+  text bounds=(170,81,80,32) pos=(178,89,64,16) color=#000000ff text="answers?" font=f2 glyphs=8 advance=64
+  solid-fill bounds=(12,123,336,33) layer=(border=(12,123,336,33),radius=(8,8,8,8,8,8,8,8),clip=(12,123,336,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(18,123,40,32) pos=(26,131,24,16) color=#000000ff text="▸" font=f2 glyphs=3 advance=24
+  text bounds=(50,123,48,32) pos=(58,131,32,16) color=#000000ff text="Does" font=f2 glyphs=4 advance=32
+  text bounds=(90,123,32,32) pos=(98,131,16,16) color=#000000ff text="it" font=f2 glyphs=2 advance=16
+  text bounds=(114,123,48,32) pos=(122,131,32,16) color=#000000ff text="work" font=f2 glyphs=4 advance=32
+  text bounds=(154,123,80,32) pos=(162,131,64,16) color=#000000ff text="offline?" font=f2 glyphs=8 advance=64
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

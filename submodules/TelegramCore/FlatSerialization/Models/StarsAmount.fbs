@@ -1,0 +1,6 @@
+namespace TelegramCore;
+
+table StarsAmount {
+    value:int64 (id: 0);
+    nanos:int32 (id: 1);
+}

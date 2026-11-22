@@ -1,0 +1,88 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Budget</title>
+<style></style>
+</head>
+<body>
+<h2>💰 Weekly Budget</h2>
+<svg class="chart" id="chart" viewBox="0 0 200 200" role="img" aria-label="Doughnut chart of the weekly budget"><path d="M100.00 8.00 A92 92 0 0 1 105.89 191.81 L103.59 155.88 A56 56 0 0 0 100.00 44.00Z" fill="#6366f1" data-i="0"></path><path d="M105.89 191.81 A92 92 0 0 1 18.43 142.55 L50.35 125.90 A56 56 0 0 0 103.59 155.88Z" fill="#22c55e" data-i="1"></path><path d="M18.43 142.55 A92 92 0 0 1 8.02 101.77 L44.01 101.08 A56 56 0 0 0 50.35 125.90Z" fill="#f59e0b" data-i="2"></path><path d="M8.02 101.77 A92 92 0 0 1 21.33 52.31 L52.11 70.97 A56 56 0 0 0 44.01 101.08Z" fill="#ec4899" data-i="3"></path><path d="M21.33 52.31 A92 92 0 0 1 100.00 8.00 L100.00 44.00 A56 56 0 0 0 52.11 70.97Z" fill="#06b6d4" data-i="4"></path><text class="c1" x="100" y="104" text-anchor="middle">$2,450</text><text class="c2" x="100" y="121" text-anchor="middle">per week</text></svg>
+<div class="legend" id="legend"><span data-i="0"><i class="dot" style="background:#6366f1"></i>Rent</span><span data-i="1"><i class="dot" style="background:#22c55e"></i>Groceries</span><span data-i="2"><i class="dot" style="background:#f59e0b"></i>Transport</span><span data-i="3"><i class="dot" style="background:#ec4899"></i>Entertainment</span><span data-i="4"><i class="dot" style="background:#06b6d4"></i>Savings</span></div>
+<div class="total" id="total">Total: <b>$2,450</b> / week</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 341.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 313.3
+    h2 14 14 332 21.25
+    svg 80 45.25 200 200
+      path 0 0 0 0
+      path 0 0 0 0
+      path 0 0 0 0
+      path 0 0 0 0
+      path 0 0 0 0
+      text 0 0 0 0
+      text 0 0 0 0
+    div 14 255.25 332 41.1
+      span 54 255.25 48 17.55
+        i 54 257.25 10 10
+      span 116 255.25 88 17.55
+        i 116 257.25 10 10
+      span 218 255.25 88 17.55
+        i 218 257.25 10 10
+      span 77 278.8 120 17.55
+        i 77 280.8 10 10
+      span 211 278.8 72 17.55
+        i 211 280.8 10 10
+    div 14 304.35 332 22.95
+      b 14 304.35 0 0
+
+== paint
+root 360x341.3 items=28
+  solid-fill bounds=(0,0,360,341) layer=(border=(0,0,360,341),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,341),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  set-clip bounds=(80,45.25,200,200) pos=(80,45.25,200,200) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(80,45.25,200,200)
+    group opacity=1 matrix=(1,0,0,1,80,45.25) backface=0 bounds=(0,0,200,200) exact=0
+      path bounds=(95,3,101.981,193.81) ops=(0,3,3,1,3,3,4) points=(100,8,149.655,8.01055,190.343,47.4234,191.933,97.0535,193.524,146.683,155.443,188.62,105.89,191.81,103.59,155.88,133.726,153.904,156.866,128.389,155.898,98.204,154.929,68.0192,130.2,44.0395,100,44) fill=1 fill-color=#6366f1ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(13.43,120.9,97.46,76.0997) ops=(0,3,1,3,4) points=(105.89,191.81,69.558,194.141,35.2686,174.829,18.43,142.55,50.35,125.9,60.6013,145.547,81.4746,157.301,103.59,155.88) fill=1 fill-color=#22c55eff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(3.02,96.08,52.33,51.47) ops=(0,3,1,3,4) points=(18.43,142.55,11.8555,129.944,8.29231,115.985,8.02,101.77,44.01,101.08,44.1772,109.732,46.3473,118.228,50.35,125.9) fill=1 fill-color=#f59e0bff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(3.00301,47.31,54.107,59.46) ops=(0,3,1,3,4) points=(8.02,101.77,7.68534,84.3558,12.3009,67.2044,21.33,52.31,52.11,70.97,46.6139,80.0374,43.805,90.4789,44.01,101.08) fill=1 fill-color=#ec4899ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(16.33,3,88.67,72.97) ops=(0,3,1,3,4) points=(21.33,52.31,38.004,24.8028,67.8337,8.00155,100,8,100,44,80.4194,43.9993,62.2605,54.2258,52.11,70.97) fill=1 fill-color=#06b6d4ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(68,84,64,32) pos=(76,92,48,16) color=#111111ff text="$2,450" font=f1 glyphs=6 advance=48
+      text bounds=(60,101,40,32) pos=(68,109,24,16) color=#555555ff text="per" font=f2 glyphs=3 advance=24
+      text bounds=(84,101,56,32) pos=(92,109,40,16) color=#555555ff text=" week" font=f2 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(6,8,48,32) pos=(14,16,32,16) color=#111111ff text="💰" font=f3 glyphs=4 advance=32
+  text bounds=(46,8,64,32) pos=(54,16,48,16) color=#111111ff text="Weekly" font=f3 glyphs=6 advance=48
+  text bounds=(102,8,64,32) pos=(110,16,48,16) color=#111111ff text="Budget" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(54,257,10,10) layer=(border=(54,257,10,10),radius=(5,5,5,5,5,5,5,5),clip=(54,257,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6366f1ff
+  text bounds=(62,247,48,32) pos=(70,255,32,16) color=#111111ff text="Rent" font=f4 glyphs=4 advance=32
+  solid-fill bounds=(116,257,10,10) layer=(border=(116,257,10,10),radius=(5,5,5,5,5,5,5,5),clip=(116,257,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#22c55eff
+  text bounds=(124,247,88,32) pos=(132,255,72,16) color=#111111ff text="Groceries" font=f4 glyphs=9 advance=72
+  solid-fill bounds=(218,257,10,10) layer=(border=(218,257,10,10),radius=(5,5,5,5,5,5,5,5),clip=(218,257,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  text bounds=(226,247,88,32) pos=(234,255,72,16) color=#111111ff text="Transport" font=f4 glyphs=9 advance=72
+  solid-fill bounds=(77,281,10,10) layer=(border=(77,281,10,10),radius=(5,5,5,5,5,5,5,5),clip=(77,281,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ec4899ff
+  text bounds=(85,271,120,32) pos=(93,279,104,16) color=#111111ff text="Entertainment" font=f4 glyphs=13 advance=104
+  solid-fill bounds=(211,281,10,10) layer=(border=(211,281,10,10),radius=(5,5,5,5,5,5,5,5),clip=(211,281,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#06b6d4ff
+  text bounds=(219,271,72,32) pos=(227,279,56,16) color=#111111ff text="Savings" font=f4 glyphs=7 advance=56
+  text bounds=(92,299,64,32) pos=(100,307,48,16) color=#555555ff text="Total:" font=f5 glyphs=6 advance=48
+  text bounds=(148,299,64,32) pos=(156,307,48,16) color=#111111ff text="$2,450" font=f3 glyphs=6 advance=48
+  text bounds=(204,299,24,32) pos=(212,307,8,16) color=#555555ff text="/" font=f5 glyphs=1 advance=8
+  text bounds=(220,299,48,32) pos=(228,307,32,16) color=#555555ff text="week" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=20,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

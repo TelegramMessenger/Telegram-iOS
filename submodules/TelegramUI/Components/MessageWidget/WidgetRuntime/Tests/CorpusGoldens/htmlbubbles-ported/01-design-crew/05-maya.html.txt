@@ -1,0 +1,85 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>Found the engine we're using 👇 worth a read</p>
+<a href="https://github.com/litehtml/litehtml" style="display: block; text-decoration: none; color: inherit">
+  <div style="width: 300px; border-radius: 12px; background-color: rgba(127,127,127,0.12); border: 1px solid rgba(127,127,127,0.25)">
+    <div class="sunset"><div class="sun"></div><div class="sea"></div><div class="glow"></div></div>
+    <div style="padding: 8px 10px 10px 10px">
+      <div style="font-weight: 700">litehtml — lightweight HTML/CSS rendering engine</div>
+      <div style="font-size: 12px; color: #8e8e93; margin-top: 2px">Fast HTML/CSS layout in C++. You bring the drawing (we use CoreGraphics + CoreText).</div>
+      <div style="font-size: 11px; color: #8e8e93; margin-top: 4px">🔗 github.com</div>
+    </div>
+  </div>
+</a>
+</body></html>
+
+== layout
+html 0 0 360 317.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 317.9
+    p 0 0 360 36.4
+    a 0 44.4 360 273.5
+      div 1 45.4 300 271.5
+        div 1 45.4 300 150
+          div 119 123.4 64 64
+          div 1 155.4 300 40
+          div 131 155.4 40 40
+        div 11 203.4 280 103.5
+          div 11 203.4 280 36.4
+          div 11 241.8 280 46.8
+          div 11 292.6 280 14.3
+
+== paint
+root 360x317.9 items=39
+  solid-fill bounds=(0,44,302,274) layer=(border=(0,44,302,274),radius=(12,12,12,12,12,12,12,12),clip=(0,44,302,274),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(0,44,302,274) borders=(left=(1,4,#7f7f7f40),top=(1,4,#7f7f7f40),right=(1,4,#7f7f7f40),bottom=(1,4,#7f7f7f40),radius=(12,12,12,12,12,12,12,12)) pos=(0,44,302,274) root=0
+  text bounds=(-8,-7,56,32) pos=(0,1,40,16) color=#000000ff text="Found" font=f1 glyphs=5 advance=40
+  text bounds=(40,-7,40,32) pos=(48,1,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(72,-7,64,32) pos=(80,1,48,16) color=#000000ff text="engine" font=f1 glyphs=6 advance=48
+  text bounds=(128,-7,56,32) pos=(136,1,40,16) color=#000000ff text="we're" font=f1 glyphs=5 advance=40
+  text bounds=(176,-7,56,32) pos=(184,1,40,16) color=#000000ff text="using" font=f1 glyphs=5 advance=40
+  text bounds=(224,-7,48,32) pos=(232,1,32,16) color=#000000ff text="👇" font=f1 glyphs=4 advance=32
+  text bounds=(264,-7,56,32) pos=(272,1,40,16) color=#000000ff text="worth" font=f1 glyphs=5 advance=40
+  text bounds=(312,-7,24,32) pos=(320,1,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(-8,11,48,32) pos=(0,19,32,16) color=#000000ff text="read" font=f1 glyphs=4 advance=32
+  text bounds=(3,196,80,32) pos=(11,204,64,16) color=#000000ff text="litehtml" font=f2 glyphs=8 advance=64
+  text bounds=(75,196,40,32) pos=(83,204,24,16) color=#000000ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(107,196,104,32) pos=(115,204,88,16) color=#000000ff text="lightweight" font=f2 glyphs=11 advance=88
+  text bounds=(203,196,80,32) pos=(211,204,64,16) color=#000000ff text="HTML/CSS" font=f2 glyphs=8 advance=64
+  text bounds=(3,215,88,32) pos=(11,223,72,16) color=#000000ff text="rendering" font=f2 glyphs=9 advance=72
+  text bounds=(83,215,64,32) pos=(91,223,48,16) color=#000000ff text="engine" font=f2 glyphs=6 advance=48
+  text bounds=(3,234,48,32) pos=(11,242,32,16) color=#8e8e93ff text="Fast" font=f3 glyphs=4 advance=32
+  text bounds=(43,234,80,32) pos=(51,242,64,16) color=#8e8e93ff text="HTML/CSS" font=f3 glyphs=8 advance=64
+  text bounds=(115,234,64,32) pos=(123,242,48,16) color=#8e8e93ff text="layout" font=f3 glyphs=6 advance=48
+  text bounds=(171,234,32,32) pos=(179,242,16,16) color=#8e8e93ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(195,234,48,32) pos=(203,242,32,16) color=#8e8e93ff text="C++." font=f3 glyphs=4 advance=32
+  text bounds=(235,234,40,32) pos=(243,242,24,16) color=#8e8e93ff text="You" font=f3 glyphs=3 advance=24
+  text bounds=(3,249,56,32) pos=(11,257,40,16) color=#8e8e93ff text="bring" font=f3 glyphs=5 advance=40
+  text bounds=(51,249,40,32) pos=(59,257,24,16) color=#8e8e93ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(83,249,72,32) pos=(91,257,56,16) color=#8e8e93ff text="drawing" font=f3 glyphs=7 advance=56
+  text bounds=(147,249,40,32) pos=(155,257,24,16) color=#8e8e93ff text="(we" font=f3 glyphs=3 advance=24
+  text bounds=(179,249,40,32) pos=(187,257,24,16) color=#8e8e93ff text="use" font=f3 glyphs=3 advance=24
+  text bounds=(3,265,112,32) pos=(11,273,96,16) color=#8e8e93ff text="CoreGraphics" font=f3 glyphs=12 advance=96
+  text bounds=(107,265,24,32) pos=(115,273,8,16) color=#8e8e93ff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(123,265,96,32) pos=(131,273,80,16) color=#8e8e93ff text="CoreText)." font=f3 glyphs=10 advance=80
+  text bounds=(3,285,48,32) pos=(11,293,32,16) color=#8e8e93ff text="🔗" font=f4 glyphs=4 advance=32
+  text bounds=(43,285,96,32) pos=(51,293,80,16) color=#8e8e93ff text="github.com" font=f4 glyphs=10 advance=80
+  linear-gradient bounds=(1,45,300,150) layer=(border=(1,45,300,150),radius=(11,11,11,11,0,0,0,0),clip=(1,45,300,150),origin=(1,45,300,150),attachment=0,repeat=0,root=0) points=((0,#2b1055ff,-),(0.38,#7b2d8eff,-),(0.68,#e8553fff,-),(1,#ffb347ff,-)) space=0 hue=0 start=(1,45) end=(1,195)
+  set-clip bounds=(1,45.4,300,150) pos=(1,45.4,300,150) radius=(11,11,11,11,0,0,0,0)
+  radial-gradient bounds=(119,123,64,64) layer=(border=(119,123,64,64),radius=(32,32,32,32,32,32,32,32),clip=(119,123,64,64),origin=(119,123,64,64),attachment=0,repeat=0,root=0) points=((0,#fff3b0ff,-),(0.55,#ffcf5aff,-),(0.72,#ffcf5a00,-),(0.72,#ffcf5a00,-),(1,#ffcf5a00,-)) space=0 hue=0 position=(151,155) radius=(45.2548,45.2548)
+  linear-gradient bounds=(1,155,300,40) layer=(border=(1,155,300,40),radius=(0,0,0,0,0,0,0,0),clip=(1,155,300,40),origin=(1,155,300,40),attachment=0,repeat=0,root=0) points=((0,#3c145a8c,-),(1,#140a3cd9,-)) space=0 hue=0 start=(1,155) end=(1,195)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(119,143.4,64,64) exact=0
+    filter steps=((blur,amount=0,x=0px,y=0px,radius=4px,color=#000000ff)) box=(131,155,40,40)
+      linear-gradient bounds=(131,155,40,40) layer=(border=(131,155,40,40),radius=(0,0,0,0,0,0,0,0),clip=(131,155,40,40),origin=(131,155,40,40),attachment=0,repeat=0,root=0) points=((0,#ffdc788c,-),(1,#ffdc7800,-)) space=0 hue=0 start=(131,155) end=(131,195)
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(-2147483648,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(-2147483648,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(-2147483648,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

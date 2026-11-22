@@ -1,0 +1,139 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tip Calculator</title>
+<style></style>
+</head>
+<body>
+<h2>🧾 Tip Calculator</h2>
+<div class="label">Bill amount</div>
+<div class="bill"><button id="bill-5">−5</button><button id="bill-1">−1</button><span id="bill">$84.50</span><button id="bill+1">+1</button><button id="bill+5">+5</button></div>
+<div class="label">Tip <span id="tipPct">15%</span></div>
+<div class="tips" id="tips"><button data-p="0">0%</button><button data-p="10">10%</button><button data-p="15" class="on">15%</button><button data-p="18">18%</button><button data-p="20">20%</button><button data-p="25">25%</button></div>
+<div class="label">Split between</div>
+<div class="people">
+  <button id="minus" aria-label="fewer">−</button><span id="people">2</span><button id="plus" aria-label="more">+</button>
+  <span style="font-size:14px;color:var(--muted);font-weight:400">people</span>
+</div>
+<div class="out">
+  <div><span>Tip</span><span id="tipAmt">$12.68</span></div>
+  <div><span>Total</span><span id="total">$97.17</span></div>
+  <div class="per"><span>Each pays</span><span id="each">$48.59</span></div>
+</div>
+<button class="send" id="send">Save this split</button>
+<div class="saved" id="saved" hidden=""></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 460.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 432.75
+    h2 14 14 332 21.25
+    div 14 47.25 332 18.9
+    div 18 76.15 324 32
+      button 28 76.15 32 32
+      button 86 76.15 32 32
+      span 134 81.35 124 21.6
+      button 274 76.15 16 32
+      button 316 76.15 16 32
+    div 14 122.15 332 18.9
+      span 322 122.15 24 18.9
+    div 14 147.05 332 34.8
+      button 15 156.05 48.3333 16.8
+      button 71.3333 156.05 48.3333 16.8
+      button 127.667 156.05 48.3333 16.8
+      button 184 156.05 48.3333 16.8
+      button 240.333 156.05 48.3333 16.8
+      button 296.667 156.05 48.3333 16.8
+    div 14 191.85 332 18.9
+    div 14 216.75 332 36
+      button 14 216.75 36 36
+      span 62 222.6 24 24.3
+      button 98 216.75 36 36
+      span 146 225.3 48 18.9
+    div 28 280.75 304 105.2
+      div 28 284.75 304 20.25
+        span 28 284.75 24 20.25
+        span 284 284.75 48 20.25
+      div 28 313 304 20.25
+        span 28 313 40 20.25
+        span 284 313 48 20.25
+      div 28 352.25 304 29.7
+        span 28 352.25 72 29.7
+        span 284 352.25 48 29.7
+    button 25 418.95 310 16.8
+    div 0 0 0 0
+
+== paint
+root 360x460.75 items=52
+  solid-fill bounds=(0,0,360,461) layer=(border=(0,0,360,461),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,461),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  borders bounds=(14,72,332,40) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(14,72,332,40) root=0
+  solid-fill bounds=(18,76,52,32) layer=(border=(18,76,52,32),radius=(8,8,8,8,8,8,8,8),clip=(18,76,52,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d1fae5ff
+  solid-fill bounds=(76,76,52,32) layer=(border=(76,76,52,32),radius=(8,8,8,8,8,8,8,8),clip=(76,76,52,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d1fae5ff
+  solid-fill bounds=(264,76,36,32) layer=(border=(264,76,36,32),radius=(8,8,8,8,8,8,8,8),clip=(264,76,36,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d1fae5ff
+  solid-fill bounds=(306,76,36,32) layer=(border=(306,76,36,32),radius=(8,8,8,8,8,8,8,8),clip=(306,76,36,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d1fae5ff
+  borders bounds=(14,147,50,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(14,147,50,35) root=0
+  borders bounds=(70,147,51,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(70,147,51,35) root=0
+  solid-fill bounds=(127,147,50,35) layer=(border=(127,147,50,35),radius=(8,8,8,8,8,8,8,8),clip=(127,147,50,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#059669ff
+  borders bounds=(127,147,50,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(127,147,50,35) root=0
+  borders bounds=(183,147,50,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(183,147,50,35) root=0
+  borders bounds=(239,147,51,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(239,147,51,35) root=0
+  borders bounds=(296,147,50,35) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(296,147,50,35) root=0
+  solid-fill bounds=(14,217,36,36) layer=(border=(14,217,36,36),radius=(8,8,8,8,8,8,8,8),clip=(14,217,36,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d1fae5ff
+  solid-fill bounds=(98,217,36,36) layer=(border=(98,217,36,36),radius=(8,8,8,8,8,8,8,8),clip=(98,217,36,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#d1fae5ff
+  solid-fill bounds=(14,269,332,129) layer=(border=(14,269,332,129),radius=(10,10,10,10,10,10,10,10),clip=(14,269,332,129),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#065f46ff
+  borders bounds=(28,343,304,43) borders=(left=(0,0,#ffffffff),top=(1,4,#ffffff4d),right=(0,0,#ffffffff),bottom=(0,0,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(28,343,304,43) root=0
+  text bounds=(6,8,48,32) pos=(14,16,32,16) color=#1f2937ff text="🧾" font=f1 glyphs=4 advance=32
+  text bounds=(46,8,40,32) pos=(54,16,24,16) color=#1f2937ff text="Tip" font=f1 glyphs=3 advance=24
+  text bounds=(78,8,96,32) pos=(86,16,80,16) color=#1f2937ff text="Calculator" font=f1 glyphs=10 advance=80
+  text bounds=(6,40,48,32) pos=(14,48,32,16) color=#6b7280ff text="Bill" font=f2 glyphs=4 advance=32
+  text bounds=(46,40,64,32) pos=(54,48,48,16) color=#6b7280ff text="amount" font=f2 glyphs=6 advance=48
+  text bounds=(20,76,48,32) pos=(28,84,32,16) color=#1f2937ff text="−5" font=f3 glyphs=4 advance=32
+  text bounds=(78,76,48,32) pos=(86,84,32,16) color=#1f2937ff text="−1" font=f3 glyphs=4 advance=32
+  text bounds=(164,75,64,32) pos=(172,83,48,16) color=#1f2937ff text="$84.50" font=f4 glyphs=6 advance=48
+  text bounds=(266,76,32,32) pos=(274,84,16,16) color=#1f2937ff text="+1" font=f3 glyphs=2 advance=16
+  text bounds=(308,76,32,32) pos=(316,84,16,16) color=#1f2937ff text="+5" font=f3 glyphs=2 advance=16
+  text bounds=(6,115,40,32) pos=(14,123,24,16) color=#6b7280ff text="Tip" font=f2 glyphs=3 advance=24
+  text bounds=(314,115,40,32) pos=(322,123,24,16) color=#6b7280ff text="15%" font=f2 glyphs=3 advance=24
+  text bounds=(23.1667,148,32,32) pos=(31.1667,156,16,16) color=#1f2937ff text="0%" font=f3 glyphs=2 advance=16
+  text bounds=(75.5,148,40,32) pos=(83.5,156,24,16) color=#1f2937ff text="10%" font=f3 glyphs=3 advance=24
+  text bounds=(131.833,148,40,32) pos=(139.833,156,24,16) color=#ffffffff text="15%" font=f3 glyphs=3 advance=24
+  text bounds=(188.167,148,40,32) pos=(196.167,156,24,16) color=#1f2937ff text="18%" font=f3 glyphs=3 advance=24
+  text bounds=(244.5,148,40,32) pos=(252.5,156,24,16) color=#1f2937ff text="20%" font=f3 glyphs=3 advance=24
+  text bounds=(300.833,148,40,32) pos=(308.833,156,24,16) color=#1f2937ff text="25%" font=f3 glyphs=3 advance=24
+  text bounds=(6,185,56,32) pos=(14,193,40,16) color=#6b7280ff text="Split" font=f2 glyphs=5 advance=40
+  text bounds=(54,185,72,32) pos=(62,193,56,16) color=#6b7280ff text="between" font=f2 glyphs=7 advance=56
+  text bounds=(12,219,40,32) pos=(20,227,24,16) color=#1f2937ff text="−" font=f5 glyphs=3 advance=24
+  text bounds=(62,219,24,32) pos=(70,227,8,16) color=#1f2937ff text="2" font=f6 glyphs=1 advance=8
+  text bounds=(104,219,24,32) pos=(112,227,8,16) color=#1f2937ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(138,218,64,32) pos=(146,226,48,16) color=#6b7280ff text="people" font=f2 glyphs=6 advance=48
+  text bounds=(20,279,40,32) pos=(28,287,24,16) color=#ffffffff text="Tip" font=f7 glyphs=3 advance=24
+  text bounds=(276,279,64,32) pos=(284,287,48,16) color=#ffffffff text="$12.68" font=f7 glyphs=6 advance=48
+  text bounds=(20,307,56,32) pos=(28,315,40,16) color=#ffffffff text="Total" font=f7 glyphs=5 advance=40
+  text bounds=(276,307,64,32) pos=(284,315,48,16) color=#ffffffff text="$97.17" font=f7 glyphs=6 advance=48
+  text bounds=(20,350,48,32) pos=(28,358,32,16) color=#ffffffff text="Each" font=f8 glyphs=4 advance=32
+  text bounds=(60,350,48,32) pos=(68,358,32,16) color=#ffffffff text="pays" font=f8 glyphs=4 advance=32
+  text bounds=(276,350,64,32) pos=(284,358,48,16) color=#ffffffff text="$48.59" font=f8 glyphs=6 advance=48
+  borders bounds=(14,408,332,39) borders=(left=(1,4,#059669ff),top=(1,4,#059669ff),right=(1,4,#059669ff),bottom=(1,4,#059669ff),radius=(8,8,8,8,8,8,8,8)) pos=(14,408,332,39) root=0
+  text bounds=(112,411,48,32) pos=(120,419,32,16) color=#059669ff text="Save" font=f3 glyphs=4 advance=32
+  text bounds=(152,411,48,32) pos=(160,419,32,16) color=#059669ff text="this" font=f3 glyphs=4 advance=32
+  text bounds=(192,411,56,32) pos=(200,419,40,16) color=#059669ff text="split" font=f3 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=20,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=22,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

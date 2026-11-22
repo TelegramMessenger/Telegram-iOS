@@ -1,0 +1,135 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8">
+<style></style>
+</head><body>
+<div id="chart"><svg viewBox="0 0 380 220" width="100%"><g transform="translate(0,190)" fill="none" font-size="10" font-family="sans-serif" text-anchor="middle"><path class="domain" stroke="currentColor" d="M36,6V0H370V6"></path><g class="tick" transform="translate(69.4,0)"><line stroke="currentColor" y2="6"></line><text fill="currentColor" y="9" dy="0.71em">A</text></g><g class="tick" transform="translate(122.84,0)"><line stroke="currentColor" y2="6"></line><text fill="currentColor" y="9" dy="0.71em">B</text></g><g class="tick" transform="translate(176.28,0)"><line stroke="currentColor" y2="6"></line><text fill="currentColor" y="9" dy="0.71em">C</text></g><g class="tick" transform="translate(229.72,0)"><line stroke="currentColor" y2="6"></line><text fill="currentColor" y="9" dy="0.71em">D</text></g><g class="tick" transform="translate(283.16,0)"><line stroke="currentColor" y2="6"></line><text fill="currentColor" y="9" dy="0.71em">E</text></g><g class="tick" transform="translate(336.6,0)"><line stroke="currentColor" y2="6"></line><text fill="currentColor" y="9" dy="0.71em">F</text></g></g><g transform="translate(36,0)" fill="none" font-size="10" font-family="sans-serif" text-anchor="end"><path class="domain" stroke="currentColor" d="M-6,190H0V24H-6"></path><g class="tick" transform="translate(0,190)"><line stroke="currentColor" x2="-6"></line><text fill="currentColor" x="-9" dy="0.32em">0</text></g><g class="tick" transform="translate(0,156.8)"><line stroke="currentColor" x2="-6"></line><text fill="currentColor" x="-9" dy="0.32em">20</text></g><g class="tick" transform="translate(0,123.6)"><line stroke="currentColor" x2="-6"></line><text fill="currentColor" x="-9" dy="0.32em">40</text></g><g class="tick" transform="translate(0,90.4)"><line stroke="currentColor" x2="-6"></line><text fill="currentColor" x="-9" dy="0.32em">60</text></g><g class="tick" transform="translate(0,57.19999999999999)"><line stroke="currentColor" x2="-6"></line><text fill="currentColor" x="-9" dy="0.32em">80</text></g><g class="tick" transform="translate(0,24)"><line stroke="currentColor" x2="-6"></line><text fill="currentColor" x="-9" dy="0.32em">100</text></g></g><rect class="bar" id="bar-A" x="49.360000000000014" y="140.2" width="40.08" height="49.80000000000001" fill="#2481cc"></rect><rect class="bar" id="bar-B" x="102.80000000000001" y="47.24000000000001" width="40.08" height="142.76" fill="#2481cc"></rect><rect class="bar" id="bar-C" x="156.24" y="100.36" width="40.08" height="89.64" fill="#2481cc"></rect><rect class="bar" id="bar-D" x="209.68" y="70.48" width="40.08" height="119.52" fill="#2481cc"></rect><rect class="bar" id="bar-E" x="263.12" y="115.3" width="40.08" height="74.7" fill="#2481cc"></rect><rect class="bar" id="bar-F" x="316.56" y="28.97999999999999" width="40.08" height="161.02" fill="#2481cc"></rect><rect x="-6" y="-2" width="12" height="4" rx="4" fill="#f3f4f6"></rect><text x="190" y="14" text-anchor="middle" font-size="13" font-weight="600">Scores by group</text></svg></div><div id="info">Click a bar</div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 241.092
+  head 0 0 0 0
+    style 0 0 0 0
+  body 10 10 340 221.092
+    div 10 10 340 203.092
+      svg 10 10 340 196.842
+        g 0 0 0 0
+          path 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+        g 0 0 0 0
+          path 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+          g 0 0 0 0
+            line 0 0 0 0
+            text 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        text 0 0 0 0
+    div 10 213.092 340 18
+
+== paint
+root 360x241.092 items=42
+  solid-fill bounds=(0,0,360,241) layer=(border=(0,0,360,241),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,241),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  set-clip bounds=(10,10,340,196.842) pos=(10,10,340,196.842) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(10,10,340,196.842)
+    group opacity=1 matrix=(0.894737,0,0,0.894737,10,10) backface=0 bounds=(0,0,380,220) exact=0
+      group opacity=1 matrix=(1,0,0,1,0,190) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(33,-3,340,12) ops=(0,1,1,1) points=(36,6,36,0,370,0,370,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=1 matrix=(1,0,0,1,69.4,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-3,-3,6,12) ops=(0,1) points=(0,0,0,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-12,-3.9,24,32) pos=(-4,4.1,8,16) color=#000000ff text="A" font=f1 glyphs=1 advance=8
+        group opacity=1 matrix=(1,0,0,1,122.84,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-3,-3,6,12) ops=(0,1) points=(0,0,0,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-12,-3.9,24,32) pos=(-4,4.1,8,16) color=#000000ff text="B" font=f1 glyphs=1 advance=8
+        group opacity=1 matrix=(1,0,0,1,176.28,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-3,-3,6,12) ops=(0,1) points=(0,0,0,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-12,-3.9,24,32) pos=(-4,4.1,8,16) color=#000000ff text="C" font=f1 glyphs=1 advance=8
+        group opacity=1 matrix=(1,0,0,1,229.72,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-3,-3,6,12) ops=(0,1) points=(0,0,0,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-12,-3.9,24,32) pos=(-4,4.1,8,16) color=#000000ff text="D" font=f1 glyphs=1 advance=8
+        group opacity=1 matrix=(1,0,0,1,283.16,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-3,-3,6,12) ops=(0,1) points=(0,0,0,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-12,-3.9,24,32) pos=(-4,4.1,8,16) color=#000000ff text="E" font=f1 glyphs=1 advance=8
+        group opacity=1 matrix=(1,0,0,1,336.6,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-3,-3,6,12) ops=(0,1) points=(0,0,0,6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-12,-3.9,24,32) pos=(-4,4.1,8,16) color=#000000ff text="F" font=f1 glyphs=1 advance=8
+      group opacity=1 matrix=(1,0,0,1,36,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-9,21,12,172) ops=(0,1,1,1) points=(-6,190,0,190,0,24,-6,24) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        group opacity=1 matrix=(1,0,0,1,0,190) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-9,-3,12,6) ops=(0,1) points=(0,0,-6,0) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-25,-16.8,24,32) pos=(-17,-8.8,8,16) color=#000000ff text="0" font=f1 glyphs=1 advance=8
+        group opacity=1 matrix=(1,0,0,1,0,156.8) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-9,-3,12,6) ops=(0,1) points=(0,0,-6,0) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-33,-16.8,32,32) pos=(-25,-8.8,16,16) color=#000000ff text="20" font=f1 glyphs=2 advance=16
+        group opacity=1 matrix=(1,0,0,1,0,123.6) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-9,-3,12,6) ops=(0,1) points=(0,0,-6,0) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-33,-16.8,32,32) pos=(-25,-8.8,16,16) color=#000000ff text="40" font=f1 glyphs=2 advance=16
+        group opacity=1 matrix=(1,0,0,1,0,90.4) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-9,-3,12,6) ops=(0,1) points=(0,0,-6,0) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-33,-16.8,32,32) pos=(-25,-8.8,16,16) color=#000000ff text="60" font=f1 glyphs=2 advance=16
+        group opacity=1 matrix=(1,0,0,1,0,57.2) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-9,-3,12,6) ops=(0,1) points=(0,0,-6,0) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-33,-16.8,32,32) pos=(-25,-8.8,16,16) color=#000000ff text="80" font=f1 glyphs=2 advance=16
+        group opacity=1 matrix=(1,0,0,1,0,24) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+          path bounds=(-9,-3,12,6) ops=(0,1) points=(0,0,-6,0) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          text bounds=(-41,-16.8,40,32) pos=(-33,-8.8,24,16) color=#000000ff text="100" font=f1 glyphs=3 advance=24
+      path bounds=(48.36,139.2,42.08,51.8) ops=(0,1,1,1,4) points=(49.36,140.2,89.44,140.2,89.44,190,49.36,190) fill=1 fill-color=#2481ccff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(101.8,46.24,42.08,144.76) ops=(0,1,1,1,4) points=(102.8,47.24,142.88,47.24,142.88,190,102.8,190) fill=1 fill-color=#2481ccff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(155.24,99.36,42.08,91.64) ops=(0,1,1,1,4) points=(156.24,100.36,196.32,100.36,196.32,190,156.24,190) fill=1 fill-color=#2481ccff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(208.68,69.48,42.08,121.52) ops=(0,1,1,1,4) points=(209.68,70.48,249.76,70.48,249.76,190,209.68,190) fill=1 fill-color=#2481ccff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(262.12,114.3,42.08,76.7) ops=(0,1,1,1,4) points=(263.12,115.3,303.2,115.3,303.2,190,263.12,190) fill=1 fill-color=#2481ccff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(315.56,27.98,42.08,163.02) ops=(0,1,1,1,4) points=(316.56,28.98,356.64,28.98,356.64,190,316.56,190) fill=1 fill-color=#2481ccff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-7,-3,14,6) ops=(0,1,3,1,3,1,3,1,3,4) points=(-2,-2,2,-2,4.20914,-2,6,-1.10457,6,0,6,0,6,1.10457,4.20914,2,2,2,-2,2,-4.20914,2,-6,1.10457,-6,0,-6,0,-6,-1.10457,-4.20914,-2,-2,-2) fill=1 fill-color=#f3f4f6ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(122,-6,64,32) pos=(130,2,48,16) color=#000000ff text="Scores" font=f2 glyphs=6 advance=48
+      text bounds=(170,-6,40,32) pos=(178,2,24,16) color=#000000ff text=" by" font=f2 glyphs=3 advance=24
+      text bounds=(194,-6,64,32) pos=(202,2,48,16) color=#000000ff text=" group" font=f2 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(2,205,56,32) pos=(10,213,40,16) color=#444444ff text="Click" font=f3 glyphs=5 advance=40
+  text bounds=(50,205,24,32) pos=(58,213,8,16) color=#444444ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(66,205,40,32) pos=(74,213,24,16) color=#444444ff text="bar" font=f3 glyphs=3 advance=24
+
+== fonts
+f1 (family="sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

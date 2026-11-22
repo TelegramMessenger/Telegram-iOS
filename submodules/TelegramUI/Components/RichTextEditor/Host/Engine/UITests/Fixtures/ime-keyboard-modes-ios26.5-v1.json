@@ -1,0 +1,35 @@
+{
+  "inputModes": [
+    {
+      "inputModeIdentifier": "ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic",
+      "language": "japanese-romaji",
+      "primaryLanguage": "ja-JP"
+    },
+    {
+      "inputModeIdentifier": "zh_Hans-Pinyin@sw=Pinyin-Simplified;hw=Automatic",
+      "language": "simplified-chinese-pinyin",
+      "primaryLanguage": "zh-Hans"
+    }
+  ],
+  "preferenceContract": {
+    "changeNotification": "AppleKeyboardsPreferencesChangedNotification",
+    "dataShape": "array<string>",
+    "expandedPreferenceKey": "AppleKeyboardsExpanded",
+    "fixedHostFallbackIdentifier": "en_AU@sw=QWERTY;hw=Automatic",
+    "owner": "UIKeyboardInputModeController",
+    "postRebootAllowedIdentifiers": [
+      "ru_RU@sw=Russian;hw=Automatic",
+      "en_AU@sw=QWERTY;hw=Automatic"
+    ],
+    "preferenceDomain": "NSGlobalDomain",
+    "preferenceKey": "AppleKeyboards",
+    "preferencesControllerSelector": "sharedPreferencesController",
+    "readerSelector": "enabledInputModeIdentifiers:",
+    "serviceRefresh": "simulator-reboot-then-live-preference-notification-and-keyboard-service-restart"
+  },
+  "runtime": {
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "schema": 1
+}

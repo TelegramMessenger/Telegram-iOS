@@ -1,0 +1,24 @@
+name: RichTextEditorDemo
+options:
+  bundleIdPrefix: com.demo
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  RichTextEditor:
+    path: ..
+targets:
+  RichTextEditorDemo:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: RichTextEditor
+        product: RichTextEditorUIKit
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.demo.RichTextEditorDemo
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.9"

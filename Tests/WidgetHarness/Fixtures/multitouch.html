@@ -1,0 +1,38 @@
+<!-- Multitouch: #left and #right are buttons a game would have (touch-action: none, pointer listeners); #pad below handles
+     nothing. Each pointer event at a button (a finger's first move only) is logged into <html data-log> (the readout's
+     `log` line) as <kind>:<element>:<finger>:<P|S>, the finger a letter by its pointer's first appearance, P for the
+     primary pointer. -->
+<style>
+  body { margin: 0; }
+  #row { display: flex; }
+  #left, #right { width: 140px; height: 100px; touch-action: none; }
+  #left { background: #8cf; }
+  #right { background: #fc8; }
+  #pad { width: 280px; height: 100px; background: #ddd; }
+</style>
+<div id="row"><div id="left">left</div><div id="right">right</div></div>
+<div id="pad">pad</div>
+<script>
+  const letters = new Map();
+  const log = [];
+  const moved = new Set();
+  function note(kind, name, e) {
+    if (!letters.has(e.pointerId)) {
+      letters.set(e.pointerId, String.fromCharCode(97 + letters.size));
+    }
+    log.push(kind + ':' + name + ':' + letters.get(e.pointerId) + ':' + (e.isPrimary ? 'P' : 'S'));
+    document.documentElement.setAttribute('data-log', log.join(' '));
+  }
+  for (const name of ['left', 'right']) {
+    const element = document.getElementById(name);
+    element.addEventListener('pointerdown', e => note('down', name, e));
+    element.addEventListener('pointermove', e => {
+      if (!moved.has(e.pointerId)) {
+        moved.add(e.pointerId);
+        note('move', name, e);
+      }
+    });
+    element.addEventListener('pointerup', e => note('up', name, e));
+    element.addEventListener('pointercancel', e => note('cancel', name, e));
+  }
+</script>

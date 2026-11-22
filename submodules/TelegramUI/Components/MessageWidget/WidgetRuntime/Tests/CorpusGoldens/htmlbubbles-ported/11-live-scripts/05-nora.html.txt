@@ -1,0 +1,74 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body>Tic-tac-toe against Pixel. Pick Easy or Hard (Hard is a full minimax, it never loses) and who starts. The bot thinks for a moment (a <code>setTimeout</code>), pieces spring in with <code>tween()</code>, the winning line pulses, and the result card arrives with <code>transition('pop')</code>.
+</body></html>
+
+== layout
+html 0 0 360 109.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 109.2
+    code 0 0 0 0
+    code 0 0 0 0
+    code 0 0 0 0
+
+== paint
+root 360x109.2 items=50
+  text bounds=(-8,-7,48,32) pos=(0,1,32,16) color=#000000ff text="Tic-" font=f1 glyphs=4 advance=32
+  text bounds=(24,-7,48,32) pos=(32,1,32,16) color=#000000ff text="tac-" font=f1 glyphs=4 advance=32
+  text bounds=(56,-7,40,32) pos=(64,1,24,16) color=#000000ff text="toe" font=f1 glyphs=3 advance=24
+  text bounds=(88,-7,72,32) pos=(96,1,56,16) color=#000000ff text="against" font=f1 glyphs=7 advance=56
+  text bounds=(152,-7,64,32) pos=(160,1,48,16) color=#000000ff text="Pixel." font=f1 glyphs=6 advance=48
+  text bounds=(208,-7,48,32) pos=(216,1,32,16) color=#000000ff text="Pick" font=f1 glyphs=4 advance=32
+  text bounds=(248,-7,48,32) pos=(256,1,32,16) color=#000000ff text="Easy" font=f1 glyphs=4 advance=32
+  text bounds=(288,-7,32,32) pos=(296,1,16,16) color=#000000ff text="or" font=f1 glyphs=2 advance=16
+  text bounds=(312,-7,48,32) pos=(320,1,32,16) color=#000000ff text="Hard" font=f1 glyphs=4 advance=32
+  text bounds=(-8,11,56,32) pos=(0,19,40,16) color=#000000ff text="(Hard" font=f1 glyphs=5 advance=40
+  text bounds=(40,11,32,32) pos=(48,19,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(64,11,24,32) pos=(72,19,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(80,11,48,32) pos=(88,19,32,16) color=#000000ff text="full" font=f1 glyphs=4 advance=32
+  text bounds=(120,11,80,32) pos=(128,19,64,16) color=#000000ff text="minimax," font=f1 glyphs=8 advance=64
+  text bounds=(192,11,32,32) pos=(200,19,16,16) color=#000000ff text="it" font=f1 glyphs=2 advance=16
+  text bounds=(216,11,56,32) pos=(224,19,40,16) color=#000000ff text="never" font=f1 glyphs=5 advance=40
+  text bounds=(264,11,64,32) pos=(272,19,48,16) color=#000000ff text="loses)" font=f1 glyphs=6 advance=48
+  text bounds=(320,11,40,32) pos=(328,19,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(-8,29,40,32) pos=(0,37,24,16) color=#000000ff text="who" font=f1 glyphs=3 advance=24
+  text bounds=(24,29,72,32) pos=(32,37,56,16) color=#000000ff text="starts." font=f1 glyphs=7 advance=56
+  text bounds=(88,29,40,32) pos=(96,37,24,16) color=#000000ff text="The" font=f1 glyphs=3 advance=24
+  text bounds=(120,29,40,32) pos=(128,37,24,16) color=#000000ff text="bot" font=f1 glyphs=3 advance=24
+  text bounds=(152,29,64,32) pos=(160,37,48,16) color=#000000ff text="thinks" font=f1 glyphs=6 advance=48
+  text bounds=(208,29,40,32) pos=(216,37,24,16) color=#000000ff text="for" font=f1 glyphs=3 advance=24
+  text bounds=(240,29,24,32) pos=(248,37,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(256,29,64,32) pos=(264,37,48,16) color=#000000ff text="moment" font=f1 glyphs=6 advance=48
+  text bounds=(312,29,32,32) pos=(320,37,16,16) color=#000000ff text="(a" font=f1 glyphs=2 advance=16
+  solid-fill bounds=(0,55,88,18) layer=(border=(0,55,88,18),radius=(4,4,4,4,4,4,4,4),clip=(0,55,88,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(-4,48,96,32) pos=(4,56,80,16) color=#000000ff text="setTimeout" font=f2 glyphs=10 advance=80
+  text bounds=(80,48,32,32) pos=(88,56,16,16) color=#000000ff text=")," font=f1 glyphs=2 advance=16
+  text bounds=(104,48,64,32) pos=(112,56,48,16) color=#000000ff text="pieces" font=f1 glyphs=6 advance=48
+  text bounds=(160,48,64,32) pos=(168,56,48,16) color=#000000ff text="spring" font=f1 glyphs=6 advance=48
+  text bounds=(216,48,32,32) pos=(224,56,16,16) color=#000000ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(240,48,48,32) pos=(248,56,32,16) color=#000000ff text="with" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(288,55,64,18) layer=(border=(288,55,64,18),radius=(4,4,4,4,4,4,4,4),clip=(288,55,64,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(284,48,72,32) pos=(292,56,56,16) color=#000000ff text="tween()" font=f2 glyphs=7 advance=56
+  text bounds=(344,48,24,32) pos=(352,56,8,16) color=#000000ff text="," font=f1 glyphs=1 advance=8
+  text bounds=(-8,66,40,32) pos=(0,74,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(24,66,72,32) pos=(32,74,56,16) color=#000000ff text="winning" font=f1 glyphs=7 advance=56
+  text bounds=(88,66,48,32) pos=(96,74,32,16) color=#000000ff text="line" font=f1 glyphs=4 advance=32
+  text bounds=(128,66,72,32) pos=(136,74,56,16) color=#000000ff text="pulses," font=f1 glyphs=7 advance=56
+  text bounds=(192,66,40,32) pos=(200,74,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(224,66,40,32) pos=(232,74,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(256,66,64,32) pos=(264,74,48,16) color=#000000ff text="result" font=f1 glyphs=6 advance=48
+  text bounds=(312,66,48,32) pos=(320,74,32,16) color=#000000ff text="card" font=f1 glyphs=4 advance=32
+  text bounds=(-8,84,72,32) pos=(0,92,56,16) color=#000000ff text="arrives" font=f1 glyphs=7 advance=56
+  text bounds=(56,84,48,32) pos=(64,92,32,16) color=#000000ff text="with" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(104,91,144,18) layer=(border=(104,91,144,18),radius=(4,4,4,4,4,4,4,4),clip=(104,91,144,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(100,84,152,32) pos=(108,92,136,16) color=#000000ff text="transition('pop')" font=f2 glyphs=17 advance=136
+  text bounds=(240,84,24,32) pos=(248,92,8,16) color=#000000ff text="." font=f1 glyphs=1 advance=8
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,23 @@
+include "PeerId.fbs";
+include "TelegramPeerAccessHash.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+include "TelegramChatAdminRights.fbs";
+include "TelegramChatBannedRights.fbs";
+include "Optional.fbs";
+
+namespace TelegramCore;
+
+table TelegramCommunity {
+    id:PeerId (id: 0, required);
+    accessHash:TelegramPeerAccessHash (id: 1);
+    title:string (id: 2, required);
+    photo:[TelegramMediaImageRepresentation] (id: 3);
+    creationDate:int32 (id: 4);
+    participationStatus:int32 (id: 5);
+    flags:int32 (id: 6);
+    collapsedInDialogs:OptionalBool (id: 7);
+    adminRights:TelegramChatAdminRights (id: 8);
+    defaultBannedRights:TelegramChatBannedRights (id: 9);
+}
+
+root_type TelegramCommunity;

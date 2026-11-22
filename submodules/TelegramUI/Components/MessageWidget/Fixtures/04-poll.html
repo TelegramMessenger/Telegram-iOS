@@ -1,0 +1,64 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--line:light-dark(#dfe1e5,#3a3a3a);--acc:#3390ec;--tint:light-dark(rgba(51,144,236,.14),rgba(51,144,236,.30))}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+h3{margin:0 0 2px;font-size:16px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:6px}
+.opt{position:relative;display:block;width:100%;margin:6px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--fg);font:inherit;text-align:left;overflow:hidden}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--tint);transition:width .5s ease}
+.t{position:relative;display:flex;justify-content:space-between;gap:8px}
+.pct{color:var(--mut);opacity:0;transition:opacity .3s}
+.voted .pct{opacity:1}
+.opt.me{border-color:var(--acc)}
+.opt.me .name{font-weight:600}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:13px;color:var(--mut)}
+#send{border:0;border-radius:8px;padding:8px 12px;background:var(--acc);color:#fff;font:inherit;font-size:14px;font-weight:600}
+#send:disabled{opacity:.4}
+</style>
+<div id="root">
+  <h3>Where should the team offsite be?</h3>
+  <div class="sub">Anonymous · tap an option to vote</div>
+  <div id="opts"></div>
+  <div class="foot"><span id="total"></span><button id="send" disabled>Send my vote</button></div>
+</div>
+<script>
+const options = [['Lisbon', 14], ['Tbilisi', 9], ['Dubai', 21], ['Bali', 11]];
+let mine = -1;
+const root = document.getElementById('root');
+const box = document.getElementById('opts');
+const send = document.getElementById('send');
+const rows = options.map(([name], i) => {
+  const b = document.createElement('button');
+  b.className = 'opt';
+  b.innerHTML = '<div class="fill"></div><div class="t"><span class="name"></span><span class="pct"></span></div>';
+  b.querySelector('.name').textContent = name;
+  b.onclick = () => vote(i);
+  box.appendChild(b);
+  return b;
+});
+function render() {
+  const total = options.reduce((s, o) => s + o[1], 0);
+  document.getElementById('total').textContent = total + ' votes';
+  if (mine < 0) return;
+  rows.forEach((b, i) => {
+    const p = Math.round(options[i][1] * 100 / total);
+    b.querySelector('.fill').style.width = p + '%';
+    b.querySelector('.pct').textContent = p + '%';
+    b.classList.toggle('me', i === mine);
+  });
+}
+function vote(i) {
+  if (mine >= 0) return;
+  mine = i;
+  options[i][1] += 1;
+  root.classList.add('voted');
+  send.disabled = false;
+  render();
+}
+send.onclick = () => {
+  if (typeof TelegramWidget !== 'undefined') TelegramWidget.sendMessage('My vote: ' + options[mine][0]);
+  send.textContent = 'Sent ✓';
+  send.disabled = true;
+};
+render();
+</script>

@@ -1,0 +1,47 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+<style></style>
+</head><body><p>This bubble contains &lt;style&gt;p { color: red }&lt;/style&gt; …</p>
+<div class="note">…but every bubble is a separate litehtml document, so it can't leak.</div>
+</body></html>
+
+== layout
+html 0 0 360 80.8
+  head 0 0 0 0
+    style 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 80.8
+    p 0 0 360 36.4
+    div 0 44.4 360 36.4
+
+== paint
+root 360x80.8 items=21
+  text bounds=(-8,-7,48,32) pos=(0,1,32,16) color=#ff3b30ff text="This" font=f1 glyphs=4 advance=32
+  text bounds=(32,-7,64,32) pos=(40,1,48,16) color=#ff3b30ff text="bubble" font=f1 glyphs=6 advance=48
+  text bounds=(88,-7,80,32) pos=(96,1,64,16) color=#ff3b30ff text="contains" font=f1 glyphs=8 advance=64
+  text bounds=(160,-7,80,32) pos=(168,1,64,16) color=#ff3b30ff text="<style>p" font=f1 glyphs=8 advance=64
+  text bounds=(232,-7,24,32) pos=(240,1,8,16) color=#ff3b30ff text="{" font=f1 glyphs=1 advance=8
+  text bounds=(248,-7,64,32) pos=(256,1,48,16) color=#ff3b30ff text="color:" font=f1 glyphs=6 advance=48
+  text bounds=(304,-7,40,32) pos=(312,1,24,16) color=#ff3b30ff text="red" font=f1 glyphs=3 advance=24
+  text bounds=(-8,11,88,32) pos=(0,19,72,16) color=#ff3b30ff text="}</style>" font=f1 glyphs=9 advance=72
+  text bounds=(72,11,40,32) pos=(80,19,24,16) color=#ff3b30ff text="…" font=f1 glyphs=3 advance=24
+  text bounds=(-8,37,64,32) pos=(0,45,48,16) color=#af52deff text="…but" font=f2 glyphs=6 advance=48
+  text bounds=(48,37,56,32) pos=(56,45,40,16) color=#af52deff text="every" font=f2 glyphs=5 advance=40
+  text bounds=(96,37,64,32) pos=(104,45,48,16) color=#af52deff text="bubble" font=f2 glyphs=6 advance=48
+  text bounds=(152,37,32,32) pos=(160,45,16,16) color=#af52deff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(176,37,24,32) pos=(184,45,8,16) color=#af52deff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(192,37,80,32) pos=(200,45,64,16) color=#af52deff text="separate" font=f2 glyphs=8 advance=64
+  text bounds=(264,37,80,32) pos=(272,45,64,16) color=#af52deff text="litehtml" font=f2 glyphs=8 advance=64
+  text bounds=(-8,56,88,32) pos=(0,64,72,16) color=#af52deff text="document," font=f2 glyphs=9 advance=72
+  text bounds=(72,56,32,32) pos=(80,64,16,16) color=#af52deff text="so" font=f2 glyphs=2 advance=16
+  text bounds=(96,56,32,32) pos=(104,64,16,16) color=#af52deff text="it" font=f2 glyphs=2 advance=16
+  text bounds=(120,56,56,32) pos=(128,64,40,16) color=#af52deff text="can't" font=f2 glyphs=5 advance=40
+  text bounds=(168,56,56,32) pos=(176,64,40,16) color=#af52deff text="leak." font=f2 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="ui-rounded,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

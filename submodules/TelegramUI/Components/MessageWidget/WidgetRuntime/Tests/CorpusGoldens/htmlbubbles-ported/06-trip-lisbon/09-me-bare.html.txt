@@ -1,0 +1,472 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad ex" id="root">
+  <div class="row"><b class="grow" style="font-size: 16px">💶 Trip expenses</b><span class="badge blue" id="badge">8 items · €{"kind":"number","locale":"en-US","opts":{},"value":1395}</span></div>
+  <table style="margin-top: 8px">
+    <thead><tr><th>What</th><th>Paid by</th><th style="text-align: right">Amount</th><th>&nbsp;</th></tr></thead>
+    <tbody id="rows"><tr><td>🏨 Casa do Largo (3 nights)</td><td class="nowrap"><span class="av mini" style="background-color: #ff9500">AS</span> Ana</td><td class="amt">852.00</td><td class="x" data-remove="1">×</td></tr><tr><td>✈️ Seat selection</td><td class="nowrap"><span class="av mini" style="background-color: #30b0c7">TB</span> Tom</td><td class="amt">87.00</td><td class="x" data-remove="2">×</td></tr><tr><td>🏰 Castle tickets</td><td class="nowrap"><span class="av mini" style="background-color: #007aff">ME</span> You</td><td class="amt">45.00</td><td class="x" data-remove="3">×</td></tr><tr><td>🚆 Sintra train + bus</td><td class="nowrap"><span class="av mini" style="background-color: #007aff">ME</span> You</td><td class="amt">38.40</td><td class="x" data-remove="4">×</td></tr><tr><td>🎸 Fado night</td><td class="nowrap"><span class="av mini" style="background-color: #30b0c7">TB</span> Tom</td><td class="amt">96.00</td><td class="x" data-remove="5">×</td></tr><tr><td>🍤 Cervejaria Ramiro</td><td class="nowrap"><span class="av mini" style="background-color: #ff9500">AS</span> Ana</td><td class="amt">171.60</td><td class="x" data-remove="6">×</td></tr><tr><td>🥐 Pastéis (×18, no regrets)</td><td class="nowrap"><span class="av mini" style="background-color: #007aff">ME</span> You</td><td class="amt">23.40</td><td class="x" data-remove="7">×</td></tr><tr><td>🚕 Taxi to the airport</td><td class="nowrap"><span class="av mini" style="background-color: #30b0c7">TB</span> Tom</td><td class="amt">90.60</td><td class="x" data-remove="8">×</td></tr></tbody>
+    <tfoot><tr><td colspan="2"><b>Total</b> <span class="muted small">· split 3 ways, €<span id="t-each">{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":465.0278920896205}</span> each</span></td><td class="amt"><b id="t-total">{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":1395.0836762688614}</b></td><td>&nbsp;</td></tr></tfoot>
+  </table>
+  <div class="presets" id="presets"><span class="chip" data-add="11">+ 🍷 Wine at the miradouro · €24.00</span><span class="chip" data-add="12">+ 🚋 Tram 28 day passes · €19.20</span><span class="chip" data-add="13">+ 🍦 Gelato at Santini · €13.50</span><span class="chip" data-add="14">+ ⛱ Cascais beach chairs · €30.00</span></div>
+  <div class="tiny muted" id="undo" style="margin-top: 4px" hidden="">Removed <span id="undo-what"></span> · <span class="lnk" id="restore">Undo</span></div>
+  <div class="caps" style="margin: 12px 0 4px 0">Balances</div>
+  <div id="balances"><div class="bal"><span class="who">Ana</span><div class="track"><div class="mid"></div><div class="fill" id="fill-ana" style="border-radius: 0 5px 5px 0; background-color: #34c759; width: 46.01%; left: 50%;"></div></div><span class="amt2 t-green" id="amt-ana">+€{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":552.0715744551136}</span></div><div class="bal"><span class="who">Tom</span><div class="track"><div class="mid"></div><div class="fill" id="fill-tom" style="right: 50%; border-radius: 5px 0 0 5px; background-color: #ff3b30; width: 16.10%;"></div></div><span class="amt2 t-red" id="amt-tom">−€{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":193.16543209876545}</span></div><div class="bal"><span class="who">You</span><div class="track"><div class="mid"></div><div class="fill" id="fill-me" style="right: 50%; border-radius: 5px 0 0 5px; background-color: #ff3b30; width: 29.91%;"></div></div><span class="amt2 t-red" id="amt-me">−€{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":358.90614235634814}</span></div></div>
+  <div class="row" style="margin: 12px 0 2px 0"><span class="caps grow">Who owes whom</span><span class="lnk small" id="settleall">Settle all</span></div>
+  <div id="owes"><div class="owe"><span class="av mini" style="background-color: #007aff">ME</span><span class="nm">You</span><div class="path"><div class="dots"></div></div><span class="av mini" style="background-color: #ff9500">AS</span><span class="nm">Ana</span>
+      <b class="amt3">€{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":358.90614235634814}</b><button class="primary" data-settle="me:ana">Settle</button></div><div class="owe"><span class="av mini" style="background-color: #30b0c7">TB</span><span class="nm">Tom</span><div class="path"><div class="dots"></div></div><span class="av mini" style="background-color: #ff9500">AS</span><span class="nm">Ana</span>
+      <b class="amt3">€{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":193.16543209876545}</b><button class="primary" data-settle="tom:ana">Settle</button></div></div>
+  <div class="square row" id="square" hidden=""><span class="party" id="party">🎉</span><div><b class="t-green">All square!</b><div class="tiny muted">Nobody owes anybody. Obrigado, team.</div></div></div>
+  <div style="margin-top: 8px" id="log" hidden=""></div>
+  <div class="toast" id="toast" hidden=""><span class="av mini" style="background-color: #ff9500">AS</span><span class="small" style="margin-left: 8px"><b>Ana:</b> Recebido! 💸 Obrigada — see you at the gate 🛫</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 1953
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 1953
+    div 15 13 360 1927
+      div 15 13 360 44.9
+        b 15 14.65 80 41.6
+        span 103 14 264 42.9
+      table 15 65.9 1504.02 331.7
+        thead 0 0 0 0
+          tr 0 0 0 0
+            th 19 71.9 554.891 13
+            th 581.891 71.9 165.125 13
+            th 755.016 71.9 736 13
+            th 1499.02 71.9 16 13
+        tbody 0 0 0 0
+          tr 0 0 0 0
+            td 19 96.9 554.891 19.5
+            td 581.891 96.9 165.125 19.5
+              span 581.891 96.9 18 18
+            td 755.016 96.9 736 19.5
+            td 1499.02 96.9 16 19.5
+          tr 0 0 0 0
+            td 19 127.4 554.891 19.5
+            td 581.891 127.4 165.125 19.5
+              span 581.891 127.4 18 18
+            td 755.016 127.4 736 19.5
+            td 1499.02 127.4 16 19.5
+          tr 0 0 0 0
+            td 19 157.9 554.891 19.5
+            td 581.891 157.9 165.125 19.5
+              span 581.891 157.9 18 18
+            td 755.016 157.9 736 19.5
+            td 1499.02 157.9 16 19.5
+          tr 0 0 0 0
+            td 19 188.4 554.891 19.5
+            td 581.891 188.4 165.125 19.5
+              span 581.891 188.4 18 18
+            td 755.016 188.4 736 19.5
+            td 1499.02 188.4 16 19.5
+          tr 0 0 0 0
+            td 19 218.9 554.891 19.5
+            td 581.891 218.9 165.125 19.5
+              span 581.891 218.9 18 18
+            td 755.016 218.9 736 19.5
+            td 1499.02 218.9 16 19.5
+          tr 0 0 0 0
+            td 19 249.4 554.891 19.5
+            td 581.891 249.4 165.125 19.5
+              span 581.891 249.4 18 18
+            td 755.016 249.4 736 19.5
+            td 1499.02 249.4 16 19.5
+          tr 0 0 0 0
+            td 19 279.9 554.891 19.5
+            td 581.891 279.9 165.125 19.5
+              span 581.891 279.9 18 18
+            td 755.016 279.9 736 19.5
+            td 1499.02 279.9 16 19.5
+          tr 0 0 0 0
+            td 19 310.4 554.891 19.5
+            td 581.891 310.4 165.125 19.5
+              span 581.891 310.4 18 18
+            td 755.016 310.4 736 19.5
+            td 1499.02 310.4 16 19.5
+        tfoot 0 0 0 0
+          tr 0 0 0 0
+            td 19 340.9 728.016 50.7
+              b 19 340.9 0 0
+              span 19 340.9 0 0
+                span 19 340.9 0 0
+            td 755.016 340.9 736 50.7
+              b 755.016 340.9 0 0
+            td 1499.02 340.9 16 50.7
+      div 15 405.6 360 102.4
+        span 26 410.6 320 15.6
+        span 26 436.2 296 15.6
+        span 26 461.8 288 15.6
+        span 26 487.4 304 15.6
+      div 0 0 0 0
+        span 0 0 0 0
+        span 0 0 0 0
+      div 15 520 360 14.3
+      div 15 539.3 360 770.5
+        div 15 539.3 360 253.5
+          span 15 657.6 44 16.9
+          div 69 661.05 218 10
+            div 179 658.05 0 16
+            div 178 661.05 100.302 10
+          span 297 539.3 78 253.5
+        div 15 797.8 360 253.5
+          span 15 916.1 44 16.9
+          div 69 919.55 218 10
+            div 179 916.55 0 16
+            div 142.902 919.55 35.098 10
+          span 297 797.8 78 253.5
+        div 15 1056.3 360 253.5
+          span 15 1174.6 44 16.9
+          div 69 1178.05 218 10
+            div 179 1175.05 0 16
+            div 112.796 1178.05 65.2038 10
+          span 297 1056.3 78 253.5
+      div 15 1321.8 360 15.6
+        span 15 1322.45 280 14.3
+        span 295 1321.8 80 15.6
+      div 15 1339.4 360 600.6
+        div 15 1346.4 360 287.3
+          span 15 1481.05 18 18
+          span 37 1481.6 32 16.9
+          div 77 1480.05 84 20
+            div 77 1491.05 84 0
+          span 169 1481.05 18 18
+          span 191 1481.6 32 16.9
+          b 223 1346.4 70 287.3
+          button 314 1481.65 48 16.8
+        div 15 1646.7 360 287.3
+          span 15 1781.35 18 18
+          span 37 1781.9 32 16.9
+          div 77 1780.35 84 20
+            div 77 1791.35 84 0
+          span 169 1781.35 18 18
+          span 191 1781.9 32 16.9
+          b 223 1646.7 70 287.3
+          button 314 1781.95 48 16.8
+      div 0 0 0 0
+        span 0 0 0 0
+        div 0 0 0 0
+          b 0 0 0 0
+          div 0 0 0 0
+      div 0 0 0 0
+      div 0 0 0 0
+        span 0 0 0 0
+        span 0 0 0 0
+          b 0 0 0 0
+
+== paint
+root 1519.02x1953 items=291
+  solid-fill bounds=(0,0,390,1953) layer=(border=(0,0,390,1953),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,1953),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,1953) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,1953) root=0
+  solid-fill bounds=(95,13,280,45) layer=(border=(95,13,280,45),radius=(9,9,9,9,9,9,9,9),clip=(95,13,280,45),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  borders bounds=(15,66,563,26) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f4d),radius=(0,0,0,0,0,0,0,0)) pos=(15,66,563,26) root=0
+  borders bounds=(578,66,173,26) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f4d),radius=(0,0,0,0,0,0,0,0)) pos=(578,66,173,26) root=0
+  borders bounds=(751,66,744,26) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f4d),radius=(0,0,0,0,0,0,0,0)) pos=(751,66,744,26) root=0
+  borders bounds=(1495,66,24,26) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f4d),radius=(0,0,0,0,0,0,0,0)) pos=(1495,66,24,26) root=0
+  borders bounds=(15,92,563,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,92,563,30) root=0
+  borders bounds=(578,92,173,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,92,173,30) root=0
+  borders bounds=(751,92,744,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,92,744,30) root=0
+  borders bounds=(1495,92,24,30) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,92,24,30) root=0
+  borders bounds=(15,122,563,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,122,563,31) root=0
+  borders bounds=(578,122,173,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,122,173,31) root=0
+  borders bounds=(751,122,744,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,122,744,31) root=0
+  borders bounds=(1495,122,24,31) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,122,24,31) root=0
+  borders bounds=(15,153,563,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,153,563,30) root=0
+  borders bounds=(578,153,173,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,153,173,30) root=0
+  borders bounds=(751,153,744,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,153,744,30) root=0
+  borders bounds=(1495,153,24,30) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,153,24,30) root=0
+  borders bounds=(15,183,563,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,183,563,31) root=0
+  borders bounds=(578,183,173,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,183,173,31) root=0
+  borders bounds=(751,183,744,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,183,744,31) root=0
+  borders bounds=(1495,183,24,31) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,183,24,31) root=0
+  borders bounds=(15,214,563,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,214,563,30) root=0
+  borders bounds=(578,214,173,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,214,173,30) root=0
+  borders bounds=(751,214,744,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,214,744,30) root=0
+  borders bounds=(1495,214,24,30) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,214,24,30) root=0
+  borders bounds=(15,244,563,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,244,563,31) root=0
+  borders bounds=(578,244,173,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,244,173,31) root=0
+  borders bounds=(751,244,744,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,244,744,31) root=0
+  borders bounds=(1495,244,24,31) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,244,24,31) root=0
+  borders bounds=(15,275,563,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,275,563,30) root=0
+  borders bounds=(578,275,173,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,275,173,30) root=0
+  borders bounds=(751,275,744,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,275,744,30) root=0
+  borders bounds=(1495,275,24,30) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,275,24,30) root=0
+  borders bounds=(15,305,563,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,305,563,31) root=0
+  borders bounds=(578,305,173,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(578,305,173,31) root=0
+  borders bounds=(751,305,744,31) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,305,744,31) root=0
+  borders bounds=(1495,305,24,31) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f26),radius=(6,6,6,6,6,6,6,6)) pos=(1495,305,24,31) root=0
+  borders bounds=(15,336,736,62) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(15,336,736,62) root=0
+  borders bounds=(751,336,744,62) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(751,336,744,62) root=0
+  borders bounds=(1495,336,24,62) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f26),radius=(0,0,0,0,0,0,0,0)) pos=(1495,336,24,62) root=0
+  borders bounds=(15,1339,360,301) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f26),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,1339,360,301) root=0
+  solid-fill bounds=(15,1481,18,18) layer=(border=(15,1481,18,18),radius=(9,9,9,9,9,9,9,9),clip=(15,1481,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(169,1481,18,18) layer=(border=(169,1481,18,18),radius=(9,9,9,9,9,9,9,9),clip=(169,1481,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(301,1477,74,26) layer=(border=(301,1477,74,26),radius=(8,8,8,8,8,8,8,8),clip=(301,1477,74,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  borders bounds=(15,1640,360,300) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f26),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,1640,360,300) root=0
+  solid-fill bounds=(15,1781,18,18) layer=(border=(15,1781,18,18),radius=(9,9,9,9,9,9,9,9),clip=(15,1781,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  solid-fill bounds=(169,1781,18,18) layer=(border=(169,1781,18,18),radius=(9,9,9,9,9,9,9,9),clip=(169,1781,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(301,1777,74,27) layer=(border=(301,1777,74,27),radius=(8,8,8,8,8,8,8,8),clip=(301,1777,74,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(7,9,48,32) pos=(15,17,32,16) color=#000000ff text="💶" font=f1 glyphs=4 advance=32
+  text bounds=(47,9,48,32) pos=(55,17,32,16) color=#000000ff text="Trip" font=f1 glyphs=4 advance=32
+  text bounds=(7,29,80,32) pos=(15,37,64,16) color=#000000ff text="expenses" font=f1 glyphs=8 advance=64
+  text bounds=(95,6,24,32) pos=(103,14,8,16) color=#007affff text="8" font=f2 glyphs=1 advance=8
+  text bounds=(111,6,56,32) pos=(119,14,40,16) color=#007affff text="items" font=f2 glyphs=5 advance=40
+  text bounds=(159,6,32,32) pos=(167,14,16,16) color=#007affff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(95,20,280,32) pos=(103,28,264,16) color=#007affff text="€{\"kind\":\"number\",\"locale\":\"en-" font=f2 glyphs=33 advance=264
+  text bounds=(95,35,232,32) pos=(103,43,216,16) color=#007affff text="US\",\"opts\":{},\"value\":1395}" font=f2 glyphs=27 advance=216
+  text bounds=(11,63,48,32) pos=(19,71,32,16) color=#000000ff text="WHAT" font=f3 glyphs=4 advance=32
+  text bounds=(573.891,63,48,32) pos=(581.891,71,32,16) color=#000000ff text="PAID" font=f3 glyphs=4 advance=32
+  text bounds=(613.891,63,32,32) pos=(621.891,71,16,16) color=#000000ff text="BY" font=f3 glyphs=2 advance=16
+  text bounds=(1435.02,63,64,32) pos=(1443.02,71,48,16) color=#000000ff text="AMOUNT" font=f3 glyphs=6 advance=48
+  text bounds=(1491.02,63,32,32) pos=(1499.02,71,16,16) color=#000000ff text=" " font=f3 glyphs=2 advance=16
+  text bounds=(11,89,48,32) pos=(19,97,32,16) color=#000000ff text="🏨" font=f4 glyphs=4 advance=32
+  text bounds=(51,89,48,32) pos=(59,97,32,16) color=#000000ff text="Casa" font=f4 glyphs=4 advance=32
+  text bounds=(91,89,32,32) pos=(99,97,16,16) color=#000000ff text="do" font=f4 glyphs=2 advance=16
+  text bounds=(115,89,56,32) pos=(123,97,40,16) color=#000000ff text="Largo" font=f4 glyphs=5 advance=40
+  text bounds=(163,89,32,32) pos=(171,97,16,16) color=#000000ff text="(3" font=f4 glyphs=2 advance=16
+  text bounds=(187,89,72,32) pos=(195,97,56,16) color=#000000ff text="nights)" font=f4 glyphs=7 advance=56
+  solid-fill bounds=(582,97,18,18) layer=(border=(582,97,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,97,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  text bounds=(574.891,90,32,32) pos=(582.891,98,16,16) color=#ffffffff text="AS" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,90,40,32) pos=(607.891,98,24,16) color=#000000ff text="Ana" font=f4 glyphs=3 advance=24
+  text bounds=(1435.02,89,64,32) pos=(1443.02,97,48,16) color=#000000ff text="852.00" font=f6 glyphs=6 advance=48
+  text bounds=(1491.02,90,32,32) pos=(1499.02,98,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,119,64,32) pos=(19,127,48,16) color=#000000ff text="✈️" font=f4 glyphs=6 advance=48
+  text bounds=(67,119,48,32) pos=(75,127,32,16) color=#000000ff text="Seat" font=f4 glyphs=4 advance=32
+  text bounds=(107,119,88,32) pos=(115,127,72,16) color=#000000ff text="selection" font=f4 glyphs=9 advance=72
+  solid-fill bounds=(582,127,18,18) layer=(border=(582,127,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,127,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  text bounds=(574.891,120,32,32) pos=(582.891,128,16,16) color=#ffffffff text="TB" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,120,40,32) pos=(607.891,128,24,16) color=#000000ff text="Tom" font=f4 glyphs=3 advance=24
+  text bounds=(1443.02,119,56,32) pos=(1451.02,127,40,16) color=#000000ff text="87.00" font=f6 glyphs=5 advance=40
+  text bounds=(1491.02,120,32,32) pos=(1499.02,128,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,150,48,32) pos=(19,158,32,16) color=#000000ff text="🏰" font=f4 glyphs=4 advance=32
+  text bounds=(51,150,64,32) pos=(59,158,48,16) color=#000000ff text="Castle" font=f4 glyphs=6 advance=48
+  text bounds=(107,150,72,32) pos=(115,158,56,16) color=#000000ff text="tickets" font=f4 glyphs=7 advance=56
+  solid-fill bounds=(582,158,18,18) layer=(border=(582,158,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,158,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(574.891,151,32,32) pos=(582.891,159,16,16) color=#ffffffff text="ME" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,151,40,32) pos=(607.891,159,24,16) color=#000000ff text="You" font=f4 glyphs=3 advance=24
+  text bounds=(1443.02,150,56,32) pos=(1451.02,158,40,16) color=#000000ff text="45.00" font=f6 glyphs=5 advance=40
+  text bounds=(1491.02,151,32,32) pos=(1499.02,159,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,180,48,32) pos=(19,188,32,16) color=#000000ff text="🚆" font=f4 glyphs=4 advance=32
+  text bounds=(51,180,64,32) pos=(59,188,48,16) color=#000000ff text="Sintra" font=f4 glyphs=6 advance=48
+  text bounds=(107,180,56,32) pos=(115,188,40,16) color=#000000ff text="train" font=f4 glyphs=5 advance=40
+  text bounds=(155,180,24,32) pos=(163,188,8,16) color=#000000ff text="+" font=f4 glyphs=1 advance=8
+  text bounds=(171,180,40,32) pos=(179,188,24,16) color=#000000ff text="bus" font=f4 glyphs=3 advance=24
+  solid-fill bounds=(582,188,18,18) layer=(border=(582,188,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,188,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(574.891,181,32,32) pos=(582.891,189,16,16) color=#ffffffff text="ME" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,181,40,32) pos=(607.891,189,24,16) color=#000000ff text="You" font=f4 glyphs=3 advance=24
+  text bounds=(1443.02,180,56,32) pos=(1451.02,188,40,16) color=#000000ff text="38.40" font=f6 glyphs=5 advance=40
+  text bounds=(1491.02,181,32,32) pos=(1499.02,189,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,211,48,32) pos=(19,219,32,16) color=#000000ff text="🎸" font=f4 glyphs=4 advance=32
+  text bounds=(51,211,48,32) pos=(59,219,32,16) color=#000000ff text="Fado" font=f4 glyphs=4 advance=32
+  text bounds=(91,211,56,32) pos=(99,219,40,16) color=#000000ff text="night" font=f4 glyphs=5 advance=40
+  solid-fill bounds=(582,219,18,18) layer=(border=(582,219,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,219,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  text bounds=(574.891,212,32,32) pos=(582.891,220,16,16) color=#ffffffff text="TB" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,212,40,32) pos=(607.891,220,24,16) color=#000000ff text="Tom" font=f4 glyphs=3 advance=24
+  text bounds=(1443.02,211,56,32) pos=(1451.02,219,40,16) color=#000000ff text="96.00" font=f6 glyphs=5 advance=40
+  text bounds=(1491.02,212,32,32) pos=(1499.02,220,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,241,48,32) pos=(19,249,32,16) color=#000000ff text="🍤" font=f4 glyphs=4 advance=32
+  text bounds=(51,241,96,32) pos=(59,249,80,16) color=#000000ff text="Cervejaria" font=f4 glyphs=10 advance=80
+  text bounds=(139,241,64,32) pos=(147,249,48,16) color=#000000ff text="Ramiro" font=f4 glyphs=6 advance=48
+  solid-fill bounds=(582,249,18,18) layer=(border=(582,249,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,249,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  text bounds=(574.891,242,32,32) pos=(582.891,250,16,16) color=#ffffffff text="AS" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,242,40,32) pos=(607.891,250,24,16) color=#000000ff text="Ana" font=f4 glyphs=3 advance=24
+  text bounds=(1435.02,241,64,32) pos=(1443.02,249,48,16) color=#000000ff text="171.60" font=f6 glyphs=6 advance=48
+  text bounds=(1491.02,242,32,32) pos=(1499.02,250,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,272,48,32) pos=(19,280,32,16) color=#000000ff text="🥐" font=f4 glyphs=4 advance=32
+  text bounds=(51,272,80,32) pos=(59,280,64,16) color=#000000ff text="Pastéis" font=f4 glyphs=8 advance=64
+  text bounds=(123,272,64,32) pos=(131,280,48,16) color=#000000ff text="(×18," font=f4 glyphs=6 advance=48
+  text bounds=(179,272,32,32) pos=(187,280,16,16) color=#000000ff text="no" font=f4 glyphs=2 advance=16
+  text bounds=(203,272,80,32) pos=(211,280,64,16) color=#000000ff text="regrets)" font=f4 glyphs=8 advance=64
+  solid-fill bounds=(582,280,18,18) layer=(border=(582,280,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,280,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(574.891,273,32,32) pos=(582.891,281,16,16) color=#ffffffff text="ME" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,273,40,32) pos=(607.891,281,24,16) color=#000000ff text="You" font=f4 glyphs=3 advance=24
+  text bounds=(1443.02,272,56,32) pos=(1451.02,280,40,16) color=#000000ff text="23.40" font=f6 glyphs=5 advance=40
+  text bounds=(1491.02,273,32,32) pos=(1499.02,281,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,302,48,32) pos=(19,310,32,16) color=#000000ff text="🚕" font=f4 glyphs=4 advance=32
+  text bounds=(51,302,48,32) pos=(59,310,32,16) color=#000000ff text="Taxi" font=f4 glyphs=4 advance=32
+  text bounds=(91,302,32,32) pos=(99,310,16,16) color=#000000ff text="to" font=f4 glyphs=2 advance=16
+  text bounds=(115,302,40,32) pos=(123,310,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(147,302,72,32) pos=(155,310,56,16) color=#000000ff text="airport" font=f4 glyphs=7 advance=56
+  solid-fill bounds=(582,310,18,18) layer=(border=(582,310,18,18),radius=(9,9,9,9,9,9,9,9),clip=(582,310,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  text bounds=(574.891,303,32,32) pos=(582.891,311,16,16) color=#ffffffff text="TB" font=f5 glyphs=2 advance=16
+  text bounds=(599.891,303,40,32) pos=(607.891,311,24,16) color=#000000ff text="Tom" font=f4 glyphs=3 advance=24
+  text bounds=(1443.02,302,56,32) pos=(1451.02,310,40,16) color=#000000ff text="90.60" font=f6 glyphs=5 advance=40
+  text bounds=(1491.02,303,32,32) pos=(1499.02,311,16,16) color=#8e8e93ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(11,333,56,32) pos=(19,341,40,16) color=#000000ff text="Total" font=f8 glyphs=5 advance=40
+  text bounds=(59,333,32,32) pos=(67,341,16,16) color=#6e6e73ff text="·" font=f9 glyphs=2 advance=16
+  text bounds=(83,333,56,32) pos=(91,341,40,16) color=#6e6e73ff text="split" font=f9 glyphs=5 advance=40
+  text bounds=(131,333,24,32) pos=(139,341,8,16) color=#6e6e73ff text="3" font=f9 glyphs=1 advance=8
+  text bounds=(147,333,56,32) pos=(155,341,40,16) color=#6e6e73ff text="ways," font=f9 glyphs=5 advance=40
+  text bounds=(195,333,40,32) pos=(203,341,24,16) color=#6e6e73ff text="€" font=f9 glyphs=3 advance=24
+  text bounds=(219,333,256,32) pos=(227,341,240,16) color=#6e6e73ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f9 glyphs=30 advance=240
+  text bounds=(11,350,744,32) pos=(19,358,728,16) color=#6e6e73ff text="US\",\"opts\":{\"minimumFractionDigits\":2,\"maximumFractionDigits\":2},\"value\":465.0278920896205}" font=f9 glyphs=91 advance=728
+  text bounds=(11,367,48,32) pos=(19,375,32,16) color=#6e6e73ff text="each" font=f9 glyphs=4 advance=32
+  text bounds=(1243.02,333,256,32) pos=(1251.02,341,240,16) color=#000000ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f10 glyphs=30 advance=240
+  text bounds=(747.016,349,752,32) pos=(755.016,357,736,16) color=#000000ff text="US\",\"opts\":{\"minimumFractionDigits\":2,\"maximumFractionDigits\":2},\"value\":1395.0836762688614}" font=f10 glyphs=92 advance=736
+  text bounds=(1491.02,333,32,32) pos=(1499.02,341,16,16) color=#000000ff text=" " font=f4 glyphs=2 advance=16
+  borders bounds=(15,408,342,21) borders=(left=(1,4,#007affff),top=(1,4,#007affff),right=(1,4,#007affff),bottom=(1,4,#007affff),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(15,408,342,21) root=0
+  text bounds=(18,403,24,32) pos=(26,411,8,16) color=#007affff text="+" font=f11 glyphs=1 advance=8
+  text bounds=(34,403,48,32) pos=(42,411,32,16) color=#007affff text="🍷" font=f11 glyphs=4 advance=32
+  text bounds=(74,403,48,32) pos=(82,411,32,16) color=#007affff text="Wine" font=f11 glyphs=4 advance=32
+  text bounds=(114,403,32,32) pos=(122,411,16,16) color=#007affff text="at" font=f11 glyphs=2 advance=16
+  text bounds=(138,403,40,32) pos=(146,411,24,16) color=#007affff text="the" font=f11 glyphs=3 advance=24
+  text bounds=(170,403,88,32) pos=(178,411,72,16) color=#007affff text="miradouro" font=f11 glyphs=9 advance=72
+  text bounds=(250,403,32,32) pos=(258,411,16,16) color=#007affff text="·" font=f11 glyphs=2 advance=16
+  text bounds=(274,403,80,32) pos=(282,411,64,16) color=#007affff text="€24.00" font=f11 glyphs=8 advance=64
+  borders bounds=(15,433,318,22) borders=(left=(1,4,#007affff),top=(1,4,#007affff),right=(1,4,#007affff),bottom=(1,4,#007affff),radius=(11,11,11,11,11,11,11,11)) pos=(15,433,318,22) root=0
+  text bounds=(18,428,24,32) pos=(26,436,8,16) color=#007affff text="+" font=f11 glyphs=1 advance=8
+  text bounds=(34,428,48,32) pos=(42,436,32,16) color=#007affff text="🚋" font=f11 glyphs=4 advance=32
+  text bounds=(74,428,48,32) pos=(82,436,32,16) color=#007affff text="Tram" font=f11 glyphs=4 advance=32
+  text bounds=(114,428,32,32) pos=(122,436,16,16) color=#007affff text="28" font=f11 glyphs=2 advance=16
+  text bounds=(138,428,40,32) pos=(146,436,24,16) color=#007affff text="day" font=f11 glyphs=3 advance=24
+  text bounds=(170,428,64,32) pos=(178,436,48,16) color=#007affff text="passes" font=f11 glyphs=6 advance=48
+  text bounds=(226,428,32,32) pos=(234,436,16,16) color=#007affff text="·" font=f11 glyphs=2 advance=16
+  text bounds=(250,428,80,32) pos=(258,436,64,16) color=#007affff text="€19.20" font=f11 glyphs=8 advance=64
+  borders bounds=(15,459,310,21) borders=(left=(1,4,#007affff),top=(1,4,#007affff),right=(1,4,#007affff),bottom=(1,4,#007affff),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(15,459,310,21) root=0
+  text bounds=(18,454,24,32) pos=(26,462,8,16) color=#007affff text="+" font=f11 glyphs=1 advance=8
+  text bounds=(34,454,48,32) pos=(42,462,32,16) color=#007affff text="🍦" font=f11 glyphs=4 advance=32
+  text bounds=(74,454,64,32) pos=(82,462,48,16) color=#007affff text="Gelato" font=f11 glyphs=6 advance=48
+  text bounds=(130,454,32,32) pos=(138,462,16,16) color=#007affff text="at" font=f11 glyphs=2 advance=16
+  text bounds=(154,454,72,32) pos=(162,462,56,16) color=#007affff text="Santini" font=f11 glyphs=7 advance=56
+  text bounds=(218,454,32,32) pos=(226,462,16,16) color=#007affff text="·" font=f11 glyphs=2 advance=16
+  text bounds=(242,454,80,32) pos=(250,462,64,16) color=#007affff text="€13.50" font=f11 glyphs=8 advance=64
+  borders bounds=(15,484,326,22) borders=(left=(1,4,#007affff),top=(1,4,#007affff),right=(1,4,#007affff),bottom=(1,4,#007affff),radius=(11,11,11,11,11,11,11,11)) pos=(15,484,326,22) root=0
+  text bounds=(18,479,24,32) pos=(26,487,8,16) color=#007affff text="+" font=f11 glyphs=1 advance=8
+  text bounds=(34,479,40,32) pos=(42,487,24,16) color=#007affff text="⛱" font=f11 glyphs=3 advance=24
+  text bounds=(66,479,72,32) pos=(74,487,56,16) color=#007affff text="Cascais" font=f11 glyphs=7 advance=56
+  text bounds=(130,479,56,32) pos=(138,487,40,16) color=#007affff text="beach" font=f11 glyphs=5 advance=40
+  text bounds=(178,479,64,32) pos=(186,487,48,16) color=#007affff text="chairs" font=f11 glyphs=6 advance=48
+  text bounds=(234,479,32,32) pos=(242,487,16,16) color=#007affff text="·" font=f11 glyphs=2 advance=16
+  text bounds=(258,479,80,32) pos=(266,487,64,16) color=#007affff text="€30.00" font=f11 glyphs=8 advance=64
+  text bounds=(7,512,80,32) pos=(15,520,64,16) color=#6e6e73ff text="BALANCES" font=f2 glyphs=8 advance=64
+  text bounds=(7,650,40,32) pos=(15,658,24,16) color=#000000ff text="Ana" font=f4 glyphs=3 advance=24
+  text bounds=(295,531,88,32) pos=(303,539,72,16) color=#34c759ff text="+€{\"kin" font=f12 glyphs=9 advance=72
+  text bounds=(295,548,88,32) pos=(303,556,72,16) color=#34c759ff text="d\":\"numbe" font=f12 glyphs=9 advance=72
+  text bounds=(295,565,88,32) pos=(303,573,72,16) color=#34c759ff text="r\",\"local" font=f12 glyphs=9 advance=72
+  text bounds=(311,582,72,32) pos=(319,590,56,16) color=#34c759ff text="e\":\"en-" font=f12 glyphs=7 advance=56
+  text bounds=(295,599,88,32) pos=(303,607,72,16) color=#34c759ff text="US\",\"opts" font=f12 glyphs=9 advance=72
+  text bounds=(295,616,88,32) pos=(303,624,72,16) color=#34c759ff text="\":{\"minim" font=f12 glyphs=9 advance=72
+  text bounds=(295,633,88,32) pos=(303,641,72,16) color=#34c759ff text="umFractio" font=f12 glyphs=9 advance=72
+  text bounds=(295,650,88,32) pos=(303,658,72,16) color=#34c759ff text="nDigits\":" font=f12 glyphs=9 advance=72
+  text bounds=(295,667,88,32) pos=(303,675,72,16) color=#34c759ff text="2,\"maximu" font=f12 glyphs=9 advance=72
+  text bounds=(295,683,88,32) pos=(303,691,72,16) color=#34c759ff text="mFraction" font=f12 glyphs=9 advance=72
+  text bounds=(295,700,88,32) pos=(303,708,72,16) color=#34c759ff text="Digits\":2" font=f12 glyphs=9 advance=72
+  text bounds=(295,717,88,32) pos=(303,725,72,16) color=#34c759ff text="},\"value\"" font=f12 glyphs=9 advance=72
+  text bounds=(295,734,88,32) pos=(303,742,72,16) color=#34c759ff text=":552.0715" font=f12 glyphs=9 advance=72
+  text bounds=(295,751,88,32) pos=(303,759,72,16) color=#34c759ff text="744551136" font=f12 glyphs=9 advance=72
+  text bounds=(359,768,24,32) pos=(367,776,8,16) color=#34c759ff text="}" font=f12 glyphs=1 advance=8
+  text bounds=(7,908,40,32) pos=(15,916,24,16) color=#000000ff text="Tom" font=f4 glyphs=3 advance=24
+  text bounds=(295,790,88,32) pos=(303,798,72,16) color=#ff3b30ff text="−€{\"k" font=f12 glyphs=9 advance=72
+  text bounds=(295,807,88,32) pos=(303,815,72,16) color=#ff3b30ff text="ind\":\"num" font=f12 glyphs=9 advance=72
+  text bounds=(295,824,88,32) pos=(303,832,72,16) color=#ff3b30ff text="ber\",\"loc" font=f12 glyphs=9 advance=72
+  text bounds=(295,841,88,32) pos=(303,849,72,16) color=#ff3b30ff text="ale\":\"en-" font=f12 glyphs=9 advance=72
+  text bounds=(295,857,88,32) pos=(303,865,72,16) color=#ff3b30ff text="US\",\"opts" font=f12 glyphs=9 advance=72
+  text bounds=(295,874,88,32) pos=(303,882,72,16) color=#ff3b30ff text="\":{\"minim" font=f12 glyphs=9 advance=72
+  text bounds=(295,891,88,32) pos=(303,899,72,16) color=#ff3b30ff text="umFractio" font=f12 glyphs=9 advance=72
+  text bounds=(295,908,88,32) pos=(303,916,72,16) color=#ff3b30ff text="nDigits\":" font=f12 glyphs=9 advance=72
+  text bounds=(295,925,88,32) pos=(303,933,72,16) color=#ff3b30ff text="2,\"maximu" font=f12 glyphs=9 advance=72
+  text bounds=(295,942,88,32) pos=(303,950,72,16) color=#ff3b30ff text="mFraction" font=f12 glyphs=9 advance=72
+  text bounds=(295,959,88,32) pos=(303,967,72,16) color=#ff3b30ff text="Digits\":2" font=f12 glyphs=9 advance=72
+  text bounds=(295,976,88,32) pos=(303,984,72,16) color=#ff3b30ff text="},\"value\"" font=f12 glyphs=9 advance=72
+  text bounds=(295,993,88,32) pos=(303,1001,72,16) color=#ff3b30ff text=":193.1654" font=f12 glyphs=9 advance=72
+  text bounds=(295,1009,88,32) pos=(303,1017,72,16) color=#ff3b30ff text="320987654" font=f12 glyphs=9 advance=72
+  text bounds=(351,1026,32,32) pos=(359,1034,16,16) color=#ff3b30ff text="5}" font=f12 glyphs=2 advance=16
+  text bounds=(7,1167,40,32) pos=(15,1175,24,16) color=#000000ff text="You" font=f4 glyphs=3 advance=24
+  text bounds=(295,1048,88,32) pos=(303,1056,72,16) color=#ff3b30ff text="−€{\"k" font=f12 glyphs=9 advance=72
+  text bounds=(295,1065,88,32) pos=(303,1073,72,16) color=#ff3b30ff text="ind\":\"num" font=f12 glyphs=9 advance=72
+  text bounds=(295,1082,88,32) pos=(303,1090,72,16) color=#ff3b30ff text="ber\",\"loc" font=f12 glyphs=9 advance=72
+  text bounds=(295,1099,88,32) pos=(303,1107,72,16) color=#ff3b30ff text="ale\":\"en-" font=f12 glyphs=9 advance=72
+  text bounds=(295,1116,88,32) pos=(303,1124,72,16) color=#ff3b30ff text="US\",\"opts" font=f12 glyphs=9 advance=72
+  text bounds=(295,1133,88,32) pos=(303,1141,72,16) color=#ff3b30ff text="\":{\"minim" font=f12 glyphs=9 advance=72
+  text bounds=(295,1150,88,32) pos=(303,1158,72,16) color=#ff3b30ff text="umFractio" font=f12 glyphs=9 advance=72
+  text bounds=(295,1167,88,32) pos=(303,1175,72,16) color=#ff3b30ff text="nDigits\":" font=f12 glyphs=9 advance=72
+  text bounds=(295,1183,88,32) pos=(303,1191,72,16) color=#ff3b30ff text="2,\"maximu" font=f12 glyphs=9 advance=72
+  text bounds=(295,1200,88,32) pos=(303,1208,72,16) color=#ff3b30ff text="mFraction" font=f12 glyphs=9 advance=72
+  text bounds=(295,1217,88,32) pos=(303,1225,72,16) color=#ff3b30ff text="Digits\":2" font=f12 glyphs=9 advance=72
+  text bounds=(295,1234,88,32) pos=(303,1242,72,16) color=#ff3b30ff text="},\"value\"" font=f12 glyphs=9 advance=72
+  text bounds=(295,1251,88,32) pos=(303,1259,72,16) color=#ff3b30ff text=":358.9061" font=f12 glyphs=9 advance=72
+  text bounds=(295,1268,88,32) pos=(303,1276,72,16) color=#ff3b30ff text="423563481" font=f12 glyphs=9 advance=72
+  text bounds=(351,1285,32,32) pos=(359,1293,16,16) color=#ff3b30ff text="4}" font=f12 glyphs=2 advance=16
+  text bounds=(7,1314,40,32) pos=(15,1322,24,16) color=#6e6e73ff text="WHO" font=f2 glyphs=3 advance=24
+  text bounds=(39,1314,48,32) pos=(47,1322,32,16) color=#6e6e73ff text="OWES" font=f2 glyphs=4 advance=32
+  text bounds=(79,1314,48,32) pos=(87,1322,32,16) color=#6e6e73ff text="WHOM" font=f2 glyphs=4 advance=32
+  text bounds=(287,1314,64,32) pos=(295,1322,48,16) color=#0a84ffff text="Settle" font=f13 glyphs=6 advance=48
+  text bounds=(343,1314,40,32) pos=(351,1322,24,16) color=#0a84ffff text="all" font=f13 glyphs=3 advance=24
+  text bounds=(8,1474,32,32) pos=(16,1482,16,16) color=#ffffffff text="ME" font=f5 glyphs=2 advance=16
+  text bounds=(29,1474,40,32) pos=(37,1482,24,16) color=#000000ff text="You" font=f4 glyphs=3 advance=24
+  text bounds=(162,1474,32,32) pos=(170,1482,16,16) color=#ffffffff text="AS" font=f5 glyphs=2 advance=16
+  text bounds=(183,1474,40,32) pos=(191,1482,24,16) color=#000000ff text="Ana" font=f4 glyphs=3 advance=24
+  text bounds=(221,1338,80,32) pos=(229,1346,64,16) color=#000000ff text="€{\"kin" font=f8 glyphs=8 advance=64
+  text bounds=(221,1355,80,32) pos=(229,1363,64,16) color=#000000ff text="d\":\"numb" font=f8 glyphs=8 advance=64
+  text bounds=(221,1372,80,32) pos=(229,1380,64,16) color=#000000ff text="er\",\"loc" font=f8 glyphs=8 advance=64
+  text bounds=(221,1389,80,32) pos=(229,1397,64,16) color=#000000ff text="ale\":\"en" font=f8 glyphs=8 advance=64
+  text bounds=(277,1406,24,32) pos=(285,1414,8,16) color=#000000ff text="-" font=f8 glyphs=1 advance=8
+  text bounds=(221,1423,80,32) pos=(229,1431,64,16) color=#000000ff text="US\",\"opt" font=f8 glyphs=8 advance=64
+  text bounds=(221,1440,80,32) pos=(229,1448,64,16) color=#000000ff text="s\":{\"min" font=f8 glyphs=8 advance=64
+  text bounds=(221,1457,80,32) pos=(229,1465,64,16) color=#000000ff text="imumFrac" font=f8 glyphs=8 advance=64
+  text bounds=(221,1474,80,32) pos=(229,1482,64,16) color=#000000ff text="tionDigi" font=f8 glyphs=8 advance=64
+  text bounds=(221,1490,80,32) pos=(229,1498,64,16) color=#000000ff text="ts\":2,\"m" font=f8 glyphs=8 advance=64
+  text bounds=(221,1507,80,32) pos=(229,1515,64,16) color=#000000ff text="aximumFr" font=f8 glyphs=8 advance=64
+  text bounds=(221,1524,80,32) pos=(229,1532,64,16) color=#000000ff text="actionDi" font=f8 glyphs=8 advance=64
+  text bounds=(221,1541,80,32) pos=(229,1549,64,16) color=#000000ff text="gits\":2}" font=f8 glyphs=8 advance=64
+  text bounds=(221,1558,80,32) pos=(229,1566,64,16) color=#000000ff text=",\"value\"" font=f8 glyphs=8 advance=64
+  text bounds=(221,1575,80,32) pos=(229,1583,64,16) color=#000000ff text=":358.906" font=f8 glyphs=8 advance=64
+  text bounds=(221,1592,80,32) pos=(229,1600,64,16) color=#000000ff text="14235634" font=f8 glyphs=8 advance=64
+  text bounds=(253,1609,48,32) pos=(261,1617,32,16) color=#000000ff text="814}" font=f8 glyphs=4 advance=32
+  text bounds=(306,1474,64,32) pos=(314,1482,48,16) color=#ffffffff text="Settle" font=f14 glyphs=6 advance=48
+  text bounds=(8,1774,32,32) pos=(16,1782,16,16) color=#ffffffff text="TB" font=f5 glyphs=2 advance=16
+  text bounds=(29,1774,40,32) pos=(37,1782,24,16) color=#000000ff text="Tom" font=f4 glyphs=3 advance=24
+  text bounds=(162,1774,32,32) pos=(170,1782,16,16) color=#ffffffff text="AS" font=f5 glyphs=2 advance=16
+  text bounds=(183,1774,40,32) pos=(191,1782,24,16) color=#000000ff text="Ana" font=f4 glyphs=3 advance=24
+  text bounds=(221,1639,80,32) pos=(229,1647,64,16) color=#000000ff text="€{\"kin" font=f8 glyphs=8 advance=64
+  text bounds=(221,1656,80,32) pos=(229,1664,64,16) color=#000000ff text="d\":\"numb" font=f8 glyphs=8 advance=64
+  text bounds=(221,1672,80,32) pos=(229,1680,64,16) color=#000000ff text="er\",\"loc" font=f8 glyphs=8 advance=64
+  text bounds=(221,1689,80,32) pos=(229,1697,64,16) color=#000000ff text="ale\":\"en" font=f8 glyphs=8 advance=64
+  text bounds=(277,1706,24,32) pos=(285,1714,8,16) color=#000000ff text="-" font=f8 glyphs=1 advance=8
+  text bounds=(221,1723,80,32) pos=(229,1731,64,16) color=#000000ff text="US\",\"opt" font=f8 glyphs=8 advance=64
+  text bounds=(221,1740,80,32) pos=(229,1748,64,16) color=#000000ff text="s\":{\"min" font=f8 glyphs=8 advance=64
+  text bounds=(221,1757,80,32) pos=(229,1765,64,16) color=#000000ff text="imumFrac" font=f8 glyphs=8 advance=64
+  text bounds=(221,1774,80,32) pos=(229,1782,64,16) color=#000000ff text="tionDigi" font=f8 glyphs=8 advance=64
+  text bounds=(221,1791,80,32) pos=(229,1799,64,16) color=#000000ff text="ts\":2,\"m" font=f8 glyphs=8 advance=64
+  text bounds=(221,1808,80,32) pos=(229,1816,64,16) color=#000000ff text="aximumFr" font=f8 glyphs=8 advance=64
+  text bounds=(221,1825,80,32) pos=(229,1833,64,16) color=#000000ff text="actionDi" font=f8 glyphs=8 advance=64
+  text bounds=(221,1841,80,32) pos=(229,1849,64,16) color=#000000ff text="gits\":2}" font=f8 glyphs=8 advance=64
+  text bounds=(221,1858,80,32) pos=(229,1866,64,16) color=#000000ff text=",\"value\"" font=f8 glyphs=8 advance=64
+  text bounds=(221,1875,80,32) pos=(229,1883,64,16) color=#000000ff text=":193.165" font=f8 glyphs=8 advance=64
+  text bounds=(221,1892,80,32) pos=(229,1900,64,16) color=#000000ff text="43209876" font=f8 glyphs=8 advance=64
+  text bounds=(253,1909,48,32) pos=(261,1917,32,16) color=#000000ff text="545}" font=f8 glyphs=4 advance=32
+  text bounds=(306,1774,64,32) pos=(314,1782,48,16) color=#ffffffff text="Settle" font=f14 glyphs=6 advance=48
+  solid-fill bounds=(69,661,218,10) layer=(border=(69,661,218,10),radius=(5,5,5,5,5,5,5,5),clip=(69,661,218,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  borders bounds=(178,658,1,16) borders=(left=(1,4,#7f7f7f99),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(178,658,1,16) root=0
+  solid-fill bounds=(178,661,100,10) layer=(border=(178,661,100,10),radius=(0,0,5,5,5,5,0,0),clip=(178,661,100,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(69,920,218,10) layer=(border=(69,920,218,10),radius=(5,5,5,5,5,5,5,5),clip=(69,920,218,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  borders bounds=(178,917,1,16) borders=(left=(1,4,#7f7f7f99),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(178,917,1,16) root=0
+  solid-fill bounds=(143,920,35,10) layer=(border=(143,920,35,10),radius=(5,5,0,0,0,0,5,5),clip=(143,920,35,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b30ff
+  solid-fill bounds=(69,1178,218,10) layer=(border=(69,1178,218,10),radius=(5,5,5,5,5,5,5,5),clip=(69,1178,218,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  borders bounds=(178,1175,1,16) borders=(left=(1,4,#7f7f7f99),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(178,1175,1,16) root=0
+  solid-fill bounds=(113,1178,65,10) layer=(border=(113,1178,65,10),radius=(5,5,0,0,0,0,5,5),clip=(113,1178,65,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b30ff
+  borders bounds=(77,1489,84,2) borders=(left=(0,0,#000000ff),top=(2,2,#7f7f7f73),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(77,1489,84,2) root=0
+  borders bounds=(77,1789,84,2) borders=(left=(0,0,#000000ff),top=(2,2,#7f7f7f73),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(77,1789,84,2) root=0
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=10,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=8,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="ui-monospace,monospace",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(-2147483648,predef0,0,#007affff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f13 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f14 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

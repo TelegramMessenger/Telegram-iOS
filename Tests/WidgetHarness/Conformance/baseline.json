@@ -1,0 +1,948 @@
+{
+  "runs" : {
+    "auto\/01-html-elements-a\/light" : {
+      "html.el.headings · h1 > h2 > … > h6 font sizes" : "pass",
+      "html.el.headings · headings are bold" : "pass",
+      "html.el.inline-text · b, strong are bold" : "pass",
+      "html.el.inline-text · code, kbd, samp are monospace" : "pass",
+      "html.el.inline-text · i, em, cite, dfn, var are italic" : "pass",
+      "html.el.inline-text · mark has a highlight" : "pass",
+      "html.el.inline-text · q adds quotation marks" : "pass",
+      "html.el.inline-text · small is smaller" : "pass",
+      "html.el.inline-text · u, ins underline; s, del strike" : "pass",
+      "html.el.sections · address is italic" : "pass",
+      "html.el.sections · sectioning elements are blocks" : "pass",
+      "html.el.structure · br starts a new line" : "pass",
+      "html.el.structure · hr draws a rule" : "pass",
+      "html.el.structure · p has 1em block margins" : "pass",
+      "html.el.structure · wbr is a break opportunity" : "pass"
+    },
+    "auto\/01-html-elements-b\/light" : {
+      "html.el.blockquote · blockquote is set off by the UA layer: a 3px bar and 0.75em before the text" : "pass",
+      "html.el.blockquote · figure has no indent" : "pass",
+      "html.el.lists · dd is indented 1.5em" : "pass",
+      "html.el.lists · menu is a padded list" : "pass",
+      "html.el.lists · ol items are numbered" : "pass",
+      "html.el.lists · ul is padded 1.5em" : "pass",
+      "html.el.lists · ul items have discs" : "pass",
+      "html.el.pre · pre is monospace" : "pass",
+      "html.el.pre · pre keeps the line break" : "pass",
+      "html.el.ruby · rt keeps the text size (a plain span)" : "pass",
+      "html.el.ruby · ruby renders as a span: rt stays inline, not above the base (profile 1: out)" : "pass",
+      "html.el.table · caption sits above the rows" : "pass",
+      "html.el.table · cells sit side by side" : "pass",
+      "html.el.table · colspan=2 spans both columns" : "pass",
+      "html.el.table · rowspan=2 spans two rows" : "pass",
+      "html.el.table · th is bold and start-aligned" : "pass"
+    },
+    "auto\/01-html-elements-c\/light" : {
+      "html.el.a-external · an external href never reaches the renderer (a[href^=https] does not match)" : "pass",
+      "html.el.a-external · it is still drawn as a link (not the text colour, no underline)" : "pass",
+      "html.el.a-fragment · a[href=#…] is a link (the link colour, no underline)" : "pass",
+      "html.el.button · button has a box with padding" : "pass",
+      "html.el.button · button has a visible background or border" : "pass",
+      "html.el.details · closed details is only as tall as its summary" : "pass",
+      "html.el.details · open details shows its content" : "pass",
+      "html.el.details · summary is a list item (disclosure marker)" : "pass",
+      "html.el.legacy · big becomes a span: normal size" : "pass",
+      "html.el.legacy · center becomes a div: no centring" : "pass",
+      "html.el.legacy · font becomes a span: color=red is dropped" : "pass",
+      "html.el.legacy · nobr becomes a span: the text wraps" : "pass",
+      "html.el.legacy · strike becomes a span: not struck" : "pass",
+      "html.el.legacy · tt becomes a span: not monospace" : "pass",
+      "html.el.progress-meter · meter is dropped (no box)" : "pass",
+      "html.el.progress-meter · progress is dropped (no box)" : "pass",
+      "html.el.sub-sup · sub and sup are smaller" : "pass",
+      "html.el.sub-sup · sub sits lower, sup higher" : "pass",
+      "html.el.unknown · an unknown element renders inline" : "pass",
+      "html.el.unknown · it renders as an inert span: its type selector does not match" : "pass"
+    },
+    "auto\/02-attributes-images-a\/light" : {
+      "html.attr.contenteditable · contenteditable does not reach the renderer" : "pass",
+      "html.attr.data-aria · aria-* reaches attribute selectors" : "pass",
+      "html.attr.data-aria · data-* reaches attribute selectors" : "pass",
+      "html.attr.dir · dir=auto with Hebrew text resolves to rtl" : "pass",
+      "html.attr.dir · dir=rtl lays out inline boxes right to left" : "pass",
+      "html.attr.dir · dir=rtl sets direction" : "pass",
+      "html.attr.draggable · draggable does not reach the renderer" : "pass",
+      "html.attr.event-handlers · an inline onclick handler runs" : "pass",
+      "html.attr.global · hidden hides" : "pass",
+      "html.attr.global · lang reaches the renderer (:lang(ru))" : "pass",
+      "html.attr.global · style attribute applies" : "pass",
+      "html.attr.legacy-presentational · align is dropped: no centring" : "pass",
+      "html.attr.legacy-presentational · bgcolor is dropped" : "pass",
+      "html.attr.legacy-presentational · border=1 is dropped" : "pass",
+      "html.attr.legacy-presentational · cellpadding is dropped" : "pass",
+      "html.attr.tabindex · tabindex does not reach the renderer" : "pass",
+      "html.el.img · img inside picture is drawn" : "pass",
+      "html.el.img · width\/height attributes size the image" : "pass"
+    },
+    "auto\/02-attributes-images-b\/light" : {
+      "html.el.img · GIF decodes (naturalWidth 1)" : "pass",
+      "html.el.img · PNG decodes (naturalWidth 2)" : "pass",
+      "html.el.img · a broken image fires error and is complete, with no natural size" : "pass",
+      "html.el.img · img.width is the rendered width (12, not the attribute's 30)" : "pass",
+      "html.el.img · new Image() loads before it is inserted: naturalWidth, complete, width" : "pass",
+      "html.el.img-other-formats · BMP is refused (placeholder, not the 2px image)" : "pass",
+      "html.el.img-other-formats · ICO is refused (placeholder, not the 2px image)" : "pass",
+      "html.el.img-remote · a remote image becomes the 48px placeholder" : "pass",
+      "html.el.img-svg · an SVG image is refused: the 48px placeholder (profile 1: out)" : "pass"
+    },
+    "auto\/03-layout-a\/light" : {
+      "css.display.basic · a block fills the container width" : "pass",
+      "css.display.basic · display:none has no box" : "pass",
+      "css.display.basic · inline boxes share a line" : "pass",
+      "css.display.basic · inline-block keeps its width on the line" : "pass",
+      "css.display.flex · align-items: center" : "pass",
+      "css.display.flex · flex-direction: column stacks" : "pass",
+      "css.display.flex · flex-grow takes the free space" : "pass",
+      "css.display.flex · flex-wrap moves the third item to a new line" : "pass",
+      "css.display.flex · justify-content: space-between" : "pass",
+      "css.display.flex · order: -1 comes first" : "pass",
+      "css.display.flex · row places children side by side" : "pass",
+      "css.display.grid · auto-placement wraps to the next row" : "pass",
+      "css.display.grid · grid-column: 2 \/ span 2 on row 2" : "pass",
+      "css.display.grid · grid-template-columns: 50px 1fr" : "pass",
+      "css.display.grid · repeat(4, 1fr) gives equal tracks" : "pass",
+      "css.gap.flex · gap between flex items" : "pass",
+      "css.gap.flex · row-gap between wrapped lines" : "pass"
+    },
+    "auto\/03-layout-b\/light" : {
+      "css.box.aspect-ratio · aspect-ratio: 2 makes a 60px wide box 30px high" : "pass",
+      "css.box.border · a 5px border adds 10px" : "pass",
+      "css.box.columns · column-count is dropped: one column (profile 1: out)" : "pass",
+      "css.box.float · float:left pushes inline text right" : "pass",
+      "css.box.float · float:right sits at the right edge" : "pass",
+      "css.box.logical · inline-size is dropped: the block keeps its full width" : "pass",
+      "css.box.logical · margin-inline-start is dropped (profile 1: out)" : "pass",
+      "css.box.logical · margin-inline-start is dropped in RTL too" : "pass",
+      "css.box.logical · padding-block is dropped" : "pass",
+      "css.box.outline · computed outline is 4px solid" : "pass",
+      "css.box.outline · outline does not change the box" : "pass",
+      "css.box.size · max-width caps width" : "pass",
+      "css.box.size · min-width wins over width" : "pass",
+      "css.box.size · width: 50%" : "pass",
+      "css.box.size · width: fit-content shrinks to the text" : "pass",
+      "css.box.sizing · border-box keeps the declared width" : "pass",
+      "css.box.sizing · content-box adds the padding" : "pass",
+      "css.box.spacing · margin-left offsets the box" : "pass",
+      "css.box.spacing · margin: 0 auto centres" : "pass",
+      "css.box.spacing · negative margin pulls the box up" : "pass",
+      "css.box.spacing · padding adds to the box" : "pass"
+    },
+    "auto\/03-layout-c\/light" : {
+      "css.display.other · display: contents is dropped: the span stays one flex item" : "pass",
+      "css.display.other · display: flow-root is dropped: the float is not contained (profile 1: out)" : "pass",
+      "css.display.table · table cells side by side, the second takes the rest" : "pass",
+      "css.opacity · computed opacity" : "pass",
+      "css.overflow.clip · overflow: clip is computed" : "pass",
+      "css.overflow.clip · overflow: hidden clips hit testing" : "pass",
+      "css.overflow.clip · overflow: hidden is computed" : "pass",
+      "css.overflow.scroll · overflow: auto is neutralised to hidden" : "pass",
+      "css.position.fixed · fixed is placed against the bubble" : "pass",
+      "css.position.relative-absolute · absolute: left\/top inside a relative parent" : "pass",
+      "css.position.relative-absolute · inset: 0 fills the parent" : "pass",
+      "css.position.relative-absolute · relative: left\/top shift the box" : "pass",
+      "css.position.relative-absolute · right\/bottom anchor to the far edges" : "pass",
+      "css.position.sticky · sticky is neutralised to relative" : "pass",
+      "css.position.z-index · the higher z-index is on top" : "pass",
+      "css.visibility · a hidden box keeps its size" : "pass",
+      "css.visibility · visibility: hidden is skipped by hit testing" : "pass"
+    },
+    "auto\/04-values-units\/light" : {
+      "css.value.content · ::before content takes space" : "pass",
+      "css.value.content · content: attr(data-label)" : "pass",
+      "css.value.content · counters: counter-reset \/ increment \/ counter()" : "pass",
+      "css.value.content · quotes" : "pass",
+      "css.value.custom-properties · custom properties inherit" : "pass",
+      "css.value.custom-properties · getPropertyValue reads a custom property" : "pass",
+      "css.value.custom-properties · style.setProperty(--x) from script" : "pass",
+      "css.value.custom-properties · var() fallback" : "pass",
+      "css.value.custom-properties · var() from :root" : "pass",
+      "css.value.env · env(safe-area-inset-left, 31px) is the client's" : "pass",
+      "css.value.keywords · !important beats the style attribute" : "pass",
+      "css.value.keywords · color: unset inherits" : "pass",
+      "css.value.keywords · display: initial is inline" : "pass",
+      "css.value.keywords · display: revert is the UA block" : "pass",
+      "css.value.keywords · width: inherit" : "pass",
+      "css.value.math · calc() with var()" : "pass",
+      "css.value.math · calc(50% - 10px)" : "pass",
+      "css.value.math · clamp(20px, 50%, 60px)" : "pass",
+      "css.value.math · max(10px, 20%)" : "pass",
+      "css.value.math · min(50px, 30%)" : "pass",
+      "css.value.units · %" : "pass",
+      "css.value.units · ch is the width of \"0\"" : "pass",
+      "css.value.units · cm (2.54cm = 96px)" : "pass",
+      "css.value.units · em" : "pass",
+      "css.value.units · ex is positive" : "pass",
+      "css.value.units · in (1in = 96px)" : "pass",
+      "css.value.units · mm (25.4mm = 96px)" : "pass",
+      "css.value.units · pt (12pt = 16px)" : "pass",
+      "css.value.units · rem" : "pass",
+      "css.value.vh · height: 10vh is dropped: the empty box has no height (profile 1: out)" : "pass",
+      "css.value.vw · 50vw is half the bubble width (innerWidth)" : "pass",
+      "css.value.vw · 50vw is half the root width" : "pass"
+    },
+    "auto\/05-colour-backgrounds-a\/dark" : {
+      "css.color.basic · #rgba hex" : "pass",
+      "css.color.basic · currentColor" : "pass",
+      "css.color.basic · hsl()" : "pass",
+      "css.color.basic · named colour" : "pass",
+      "css.color.basic · transparent" : "pass",
+      "css.color.light-dark · light-dark() picks the chat theme" : "pass",
+      "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "pass"
+    },
+    "auto\/05-colour-backgrounds-a\/light" : {
+      "css.color.basic · #rgba hex" : "pass",
+      "css.color.basic · currentColor" : "pass",
+      "css.color.basic · hsl()" : "pass",
+      "css.color.basic · named colour" : "pass",
+      "css.color.basic · transparent" : "pass",
+      "css.color.light-dark · light-dark() picks the chat theme" : "pass",
+      "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "pass"
+    },
+    "auto\/05-colour-backgrounds-b\/light" : {
+      "css.background.basic · background-image keeps the data: image" : "pass",
+      "css.background.basic · background-position" : "pass",
+      "css.background.basic · background-repeat" : "pass",
+      "css.background.basic · background-size" : "pass",
+      "css.url.remote · a remote url() never reaches the renderer" : "pass"
+    },
+    "auto\/06-text-fonts-a\/light" : {
+      "css.font.basic · font shorthand" : "pass",
+      "css.font.basic · font-size: 20px gives a taller line" : "pass",
+      "css.font.basic · font-style: italic" : "pass",
+      "css.font.basic · font-weight: 700 is wider than 400" : "pass",
+      "css.font.basic · line-height: 30px" : "pass",
+      "css.font.face · @font-face is dropped: the fallback monospace is used" : "pass",
+      "css.font.generic · computed font-family keeps the generic name" : "pass",
+      "css.font.generic · monospace: i and M have the same advance" : "pass",
+      "css.font.generic · serif and sans-serif are different faces" : "pass",
+      "css.font.generic · system-ui renders" : "pass",
+      "css.font.named · a named family is dropped from the list (\"Times New Roman\", sans-serif → sans-serif)" : "pass",
+      "css.font.named · a named family is dropped: \"Courier New\" alone is not monospace" : "pass",
+      "css.font.ui-families · the validator adds a generic fallback (ui-monospace → …, monospace)" : "pass",
+      "css.font.ui-families · ui-monospace: i and M have the same advance" : "pass",
+      "css.font.ui-families · ui-rounded with a fallback renders" : "pass",
+      "css.font.variant-numeric · font-feature-settings \"tnum\"" : "pass",
+      "css.font.variant-numeric · tabular-nums: 1111 as wide as 0000" : "pass"
+    },
+    "auto\/06-text-fonts-b\/light" : {
+      "css.text.align · text-align: center" : "pass",
+      "css.text.align · text-align: end in RTL is the left edge" : "pass",
+      "css.text.align · text-align: right" : "pass",
+      "css.text.align · text-indent" : "pass",
+      "css.text.decoration · text-decoration: underline" : "pass",
+      "css.text.line-clamp · -webkit-line-clamp is dropped: all lines show (profile 1: out)" : "pass",
+      "css.text.list-style · list-style-position: inside moves the text right" : "pass",
+      "css.text.list-style · list-style-type: none" : "pass",
+      "css.text.transform · letter-spacing: 5px adds 5px per letter" : "pass",
+      "css.text.transform · text-transform: uppercase widens" : "pass",
+      "css.text.transform · word-spacing: 10px adds 10px per space" : "pass",
+      "css.text.vertical-align · vertical-align top and bottom" : "pass",
+      "css.text.white-space · nowrap keeps one line" : "pass",
+      "css.text.white-space · pre keeps the newline" : "pass",
+      "css.text.white-space · pre-line keeps the newline, collapses the spaces" : "pass",
+      "css.text.white-space · pre-wrap keeps the spaces" : "pass",
+      "css.text.wrap · overflow-wrap: anywhere breaks a long word" : "pass",
+      "css.text.wrap · word-break: break-all breaks a long word" : "pass",
+      "css.text.writing-mode · writing-mode is neutralised (text stays horizontal)" : "pass"
+    },
+    "auto\/06-text-fonts-c\/light" : {
+      "css.text.emoji · ZWJ sequence is one glyph" : "pass",
+      "css.text.emoji · emoji glyph has an advance" : "pass",
+      "css.text.emoji · flag sequence is one glyph" : "pass",
+      "css.text.rtl · Arabic lam-alef is shaped (ligature narrower than its letters)" : "pass",
+      "css.text.rtl · Hebrew in dir=rtl starts at the right edge" : "pass",
+      "css.text.selection · a child of user-select: text is selectable too (auto or text)" : "pass",
+      "css.text.selection · not selectable by default (none on the root); user-select: text enables it" : "pass",
+      "css.text.selection · user-select: all is outside the profile (dropped)" : "pass"
+    },
+    "auto\/07-selectors-a\/light" : {
+      "sel.basic · [attr$=v]" : "pass",
+      "sel.basic · [attr*=v]" : "pass",
+      "sel.basic · [attr=v]" : "pass",
+      "sel.basic · [attr]" : "pass",
+      "sel.basic · [attr^=v]" : "pass",
+      "sel.basic · [attr|=v]" : "pass",
+      "sel.basic · [attr~=v]" : "pass",
+      "sel.basic · adjacent sibling +" : "pass",
+      "sel.basic · child combinator" : "pass",
+      "sel.basic · class selector" : "pass",
+      "sel.basic · descendant combinator" : "pass",
+      "sel.basic · general sibling ~" : "pass",
+      "sel.basic · id selector" : "pass",
+      "sel.basic · selector list" : "pass",
+      "sel.basic · type selector" : "pass",
+      "sel.basic · universal selector" : "pass"
+    },
+    "auto\/07-selectors-b\/light" : {
+      "sel.basic · a class added from script restyles" : "pass",
+      "sel.before-after · ::after computed style" : "pass",
+      "sel.before-after · ::before box takes space" : "pass",
+      "sel.first-letter-line · ::first-letter never matches" : "pass",
+      "sel.first-letter-line · ::first-line never matches" : "pass",
+      "sel.first-letter-line · ::marker never matches" : "pass",
+      "sel.focus · :focus never matches (no keyboard focus in v1)" : "pass",
+      "sel.has · :has() never matches (profile 1: out)" : "pass",
+      "sel.host-scoped · :scope at the top level matches nothing" : "pass",
+      "sel.hover · :hover rules are kept and do not match without a pointer" : "pass",
+      "sel.is-where · :is()" : "pass",
+      "sel.is-where · :where() has zero specificity" : "pass",
+      "sel.is-where · :where() matches" : "pass",
+      "sel.root · :root custom property reaches descendants" : "pass",
+      "sel.structural · :empty" : "pass",
+      "sel.structural · :first-child, :nth-child(3), :nth-last-child(2), :last-child" : "pass",
+      "sel.structural · :first-of-type, :nth-of-type(2), :last-of-type" : "pass",
+      "sel.structural · :not(:empty)" : "pass",
+      "sel.structural · :only-child" : "pass",
+      "sel.target · :target never matches" : "pass"
+    },
+    "auto\/08-at-rules\/dark" : {
+      "at.container · @container (min-width: 500px) does not apply either way" : "pass",
+      "at.container · @container is dropped (profile 1: out)" : "pass",
+      "at.exotic · @scope is dropped" : "pass",
+      "at.import-namespace · @import is dropped" : "pass",
+      "at.layer · @layer is dropped with its rules (profile 1: out)" : "pass",
+      "at.media.color-scheme · matchMedia(prefers-color-scheme) agrees" : "pass",
+      "at.media.color-scheme · prefers-color-scheme follows the chat theme" : "pass",
+      "at.media.hover-pointer · @media (hover) is dropped and matchMedia answers false (profile 1: out)" : "pass",
+      "at.media.hover-pointer · @media (pointer) is dropped and matchMedia answers false" : "pass",
+      "at.media.other · @media print never applies and matchMedia(print) is false" : "pass",
+      "at.media.reduced-motion · @media and matchMedia agree on reduced motion" : "pass",
+      "at.media.width · (max-width: 100px) does not" : "pass",
+      "at.media.width · (min-width: 200px) applies" : "pass",
+      "at.media.width · matchMedia agrees with @media" : "pass",
+      "at.media.width · screen and (min-width) and (max-width)" : "pass",
+      "at.nesting · a nested & .b rule is dropped" : "pass",
+      "at.nesting · a nested &.class rule is dropped" : "pass",
+      "at.nesting · a nested rule .a { .b {} } is dropped (profile 1: out)" : "pass",
+      "at.nesting · rules after nested ones survive" : "pass",
+      "at.property · @property is dropped: var(--pp) has no initial value (profile 1: out)" : "pass",
+      "at.supports · @supports (3D transform) is false: 3D is out of the profile" : "pass",
+      "at.supports · @supports (display: flex) holds" : "pass",
+      "at.supports · @supports (gap) holds" : "pass",
+      "at.supports · @supports with and\/not follows the profile" : "pass"
+    },
+    "auto\/08-at-rules\/light" : {
+      "at.container · @container (min-width: 500px) does not apply either way" : "pass",
+      "at.container · @container is dropped (profile 1: out)" : "pass",
+      "at.exotic · @scope is dropped" : "pass",
+      "at.import-namespace · @import is dropped" : "pass",
+      "at.layer · @layer is dropped with its rules (profile 1: out)" : "pass",
+      "at.media.color-scheme · matchMedia(prefers-color-scheme) agrees" : "pass",
+      "at.media.color-scheme · prefers-color-scheme follows the chat theme" : "pass",
+      "at.media.hover-pointer · @media (hover) is dropped and matchMedia answers false (profile 1: out)" : "pass",
+      "at.media.hover-pointer · @media (pointer) is dropped and matchMedia answers false" : "pass",
+      "at.media.other · @media print never applies and matchMedia(print) is false" : "pass",
+      "at.media.reduced-motion · @media and matchMedia agree on reduced motion" : "pass",
+      "at.media.width · (max-width: 100px) does not" : "pass",
+      "at.media.width · (min-width: 200px) applies" : "pass",
+      "at.media.width · matchMedia agrees with @media" : "pass",
+      "at.media.width · screen and (min-width) and (max-width)" : "pass",
+      "at.nesting · a nested & .b rule is dropped" : "pass",
+      "at.nesting · a nested &.class rule is dropped" : "pass",
+      "at.nesting · a nested rule .a { .b {} } is dropped (profile 1: out)" : "pass",
+      "at.nesting · rules after nested ones survive" : "pass",
+      "at.property · @property is dropped: var(--pp) has no initial value (profile 1: out)" : "pass",
+      "at.supports · @supports (3D transform) is false: 3D is out of the profile" : "pass",
+      "at.supports · @supports (display: flex) holds" : "pass",
+      "at.supports · @supports (gap) holds" : "pass",
+      "at.supports · @supports with and\/not follows the profile" : "pass"
+    },
+    "auto\/09-transforms-effects-a\/light" : {
+      "css.filter.blur-brightness-drop-shadow · filter functions are kept" : "pass",
+      "css.transform.2d · a transform set from script (style.transform, calc())" : "pass",
+      "css.transform.2d · rotate(90deg) swaps the bounding box" : "pass",
+      "css.transform.2d · scale(2) with transform-origin 0 0" : "pass",
+      "css.transform.2d · the translate property" : "pass",
+      "css.transform.2d · translateX(150%) is a share of the box's own width" : "pass",
+      "css.transform.2d · translateX(30px) moves the box" : "pass",
+      "css.transform.3d · rotateY(60deg) is dropped: the box keeps its width" : "pass",
+      "css.value.math · calc(% + px) inside translateX()" : "pass",
+      "css.value.math · calc() with * and nested parentheses inside translateX()" : "pass"
+    },
+    "auto\/09-transforms-effects-b\/light" : {
+      "css.cursor · cursor reaches the renderer" : "pass",
+      "css.pointer-events · pointer-events: none lets hits through" : "pass",
+      "css.touch-action · touch-action reaches the renderer" : "pass"
+    },
+    "auto\/10-css-animations\/light" : {
+      "anim.easing · ease-in at 50% lags behind linear" : "pass",
+      "anim.easing · steps(4, end) at 37.5% is the first step" : "pass",
+      "anim.events · animation events carry animationName and elapsedTime" : "pass",
+      "anim.events · animationend fires" : "pass",
+      "anim.events · animationiteration fires twice" : "pass",
+      "anim.events · animationstart fires" : "pass",
+      "anim.events · transitionend carries propertyName" : "pass",
+      "anim.events · transitionend fires" : "pass",
+      "anim.keyframes · a paused animation at -2.5s of 10s is at 25%" : "pass",
+      "anim.play-state · paused stays put" : "pass",
+      "anim.transition · a transition with a negative delay starts part-way" : "pass"
+    },
+    "auto\/11-web-animations\/light" : {
+      "anim.waapi · Element.animate returns an Animation" : "pass",
+      "anim.waapi · a seek is visible to a layout query in the same task" : "pass",
+      "anim.waapi · a seeked width animation lays out in a later task" : "pass",
+      "anim.waapi · cancel() removes the animation" : "pass",
+      "anim.waapi · currentTime reads back" : "pass",
+      "anim.waapi · document.getAnimations() lists script and CSS animations" : "pass",
+      "anim.waapi · document.timeline.currentTime is a number" : "pass",
+      "anim.waapi · element.getAnimations() lists it" : "pass",
+      "anim.waapi · finished resolves for a 100ms animation" : "pass",
+      "anim.waapi · getComputedTiming().progress" : "pass",
+      "anim.waapi · paused + currentTime: playState" : "pass",
+      "anim.waapi · the renderer applies the seeked frame (computed transform)" : "pass",
+      "anim.waapi-css-control · a CSS animation shows up in getAnimations()" : "pass",
+      "anim.waapi-css-control · pause() + currentTime seek a CSS animation" : "pass",
+      "anim.waapi-css-control · the renderer shows the seeked CSS frame" : "pass"
+    },
+    "auto\/12-canvas-a\/light" : {
+      "canvas.hidpi · the backing store keeps its width attribute" : "pass",
+      "canvas.hit-test · isPointInPath inside \/ outside" : "pass",
+      "canvas.hit-test · isPointInStroke" : "pass",
+      "canvas.image-data · getImageData returns transparent pixels (profile 1: out)" : "pass",
+      "canvas.readback · toDataURL does not hand pixels back" : "pass",
+      "canvas.text · measureText gives a width" : "pass",
+      "canvas.text · measureText gives ascent\/descent" : "pass",
+      "canvas.webgl · OffscreenCanvas is not available" : "pass",
+      "canvas.webgl · getContext(\"webgl\") is null" : "pass"
+    },
+    "auto\/12-canvas-b\/light" : {
+      "canvas.draw-image · drawImage of a loaded <img>" : "pass"
+    },
+    "auto\/13-svg-a\/light" : {
+      "svg.css · a stylesheet fill reaches SVG (computed fill)" : "pass",
+      "svg.shapes · getBBox() of a rect" : "pass",
+      "svg.shapes · getTotalLength() of a path" : "pass",
+      "svg.structure · viewBox scales content (10 user units → 20px)" : "pass",
+      "svg.text · getComputedTextLength() of a text" : "pass"
+    },
+    "auto\/13-svg-b\/light" : {
+
+    },
+    "auto\/14-dom-layout-api-a\/light" : {
+      "js.dom.core · a removed node has no box" : "pass",
+      "js.dom.core · classList and dataset" : "pass",
+      "js.dom.core · cloneNode(true) renders a deep copy" : "pass",
+      "js.dom.core · createElement + appendChild renders" : "pass",
+      "js.dom.core · innerHTML replaces the children" : "pass",
+      "js.dom.core · insertAdjacentHTML is parsed in the sandbox and rendered" : "pass",
+      "js.dom.core · insertBefore orders the nodes" : "pass",
+      "js.dom.events · capture, target, bubble order and detail" : "pass",
+      "js.dom.events · once listener runs once" : "pass",
+      "js.dom.events · preventDefault: dispatchEvent returns false, defaultPrevented" : "pass",
+      "js.dom.events · stopPropagation" : "pass",
+      "js.dom.style · element.style and setProperty" : "pass",
+      "js.dom.style · removeProperty" : "pass",
+      "js.dom.style · style.cssText replaces the declarations" : "pass"
+    },
+    "auto\/14-dom-layout-api-b\/light" : {
+      "js.dom.query · closest and matches" : "pass",
+      "js.dom.query · getElementsByClassName is live" : "pass",
+      "js.dom.query · querySelectorAll" : "pass",
+      "js.layout.box · clientWidth excludes the border" : "pass",
+      "js.layout.box · offsetParent" : "pass",
+      "js.layout.box · offsetWidth includes padding and border" : "pass",
+      "js.layout.box · scrollHeight of overflowing content" : "pass",
+      "js.layout.computed-style · camelCase property access" : "pass",
+      "js.layout.computed-style · longhand (width)" : "pass",
+      "js.layout.computed-style · shorthand margin" : "pass",
+      "js.layout.computed-style · shorthand overflow" : "pass",
+      "js.layout.computed-style · shorthand white-space" : "pass",
+      "js.layout.element-from-point · elementFromPoint finds the element" : "pass",
+      "js.layout.intersection-observer · IntersectionObserver reports the element (visible)" : "pass",
+      "js.layout.match-media · matchMedia evaluates a width query" : "pass",
+      "js.layout.match-media · matchMedia(…).media" : "pass",
+      "js.layout.measure-text · measureText agrees with DOM text width" : "pass",
+      "js.layout.rect · getBoundingClientRect has DOMRect fields" : "pass",
+      "js.layout.rect · getClientRects of a wrapped inline gives one rect per line" : "pass",
+      "js.layout.resize-observer · ResizeObserver reports the new width" : "pass"
+    },
+    "auto\/15-js-runtime-a\/light" : {
+      "js.microtasks · Promise.all \/ allSettled" : "pass",
+      "js.microtasks · async\/await" : "pass",
+      "js.raf · requestAnimationFrame: three frames with increasing timestamps" : "pass",
+      "js.storage.local · 3 KB fits" : "pass",
+      "js.storage.local · removeItem \/ missing key is null" : "pass",
+      "js.storage.local · setItem \/ getItem \/ property access \/ length \/ key" : "pass",
+      "js.storage.local · values are strings (JSON round trip)" : "pass",
+      "js.storage.session · sessionStorage works and is separate" : "pass",
+      "js.timers · setInterval repeats until cleared" : "pass",
+      "js.timers · timeouts fire in delay order, after microtasks" : "pass",
+      "limit.storage · over 4 KB per message: setItem throws QuotaExceededError" : "pass",
+      "limit.storage · sessionStorage has the same 4 KB quota" : "pass",
+      "limit.storage · the refused value is not stored" : "pass"
+    },
+    "auto\/15-js-runtime-b\/light" : {
+      "js.builtins · AbortController" : "pass",
+      "js.builtins · TextDecoder" : "pass",
+      "js.builtins · TextEncoder" : "pass",
+      "js.builtins · URL and URLSearchParams" : "pass",
+      "js.builtins · atob \/ btoa" : "pass",
+      "js.builtins · structuredClone" : "pass",
+      "js.crypto-random · Math.random in [0, 1)" : "pass",
+      "js.crypto-random · getRandomValues fills the array" : "pass",
+      "js.crypto-random · randomUUID is a v4 UUID" : "pass",
+      "js.css-supports · CSS.escape" : "pass",
+      "js.css-supports · CSS.supports rejects an invalid value" : "pass",
+      "js.css-supports · CSS.supports(\"(display: flex) and (gap: 1px)\")" : "pass",
+      "js.css-supports · CSS.supports(\"display\", \"flex\")" : "pass",
+      "js.css-supports · CSS.supports(\"transform\", \"rotateY(10deg)\") is false: 3D is out" : "pass",
+      "js.eval · eval" : "pass",
+      "js.eval · new Function" : "pass",
+      "js.intl · Collator" : "pass",
+      "js.intl · DateTimeFormat UTC" : "pass",
+      "js.intl · ListFormat" : "pass",
+      "js.intl · NumberFormat currency" : "pass",
+      "js.intl · NumberFormat ru grouping" : "pass",
+      "js.intl · PluralRules" : "pass",
+      "js.intl · RelativeTimeFormat" : "pass",
+      "js.intl · toLocaleString uses Intl" : "pass",
+      "js.intl.format-to-parts · DateTimeFormat.formatToParts" : "pass",
+      "js.intl.format-to-parts · NumberFormat.formatToParts" : "pass",
+      "js.libraries · a Chart.js CDN script is an external script and is not run (profile 1: out)" : "pass",
+      "js.libraries · a D3 CDN script is not run either" : "pass",
+      "js.locale · navigator.language is a BCP 47 tag" : "pass",
+      "js.locale · navigator.languages starts with navigator.language" : "pass",
+      "js.visibility · document is visible" : "pass"
+    },
+    "auto\/15-js-runtime-c\/light" : {
+      "anim.magic-move · no View Transitions (document.startViewTransition)" : "pass",
+      "js.blob-file · URL.createObjectURL gives no URL" : "pass",
+      "js.device · clipboard.writeText and share reject" : "pass",
+      "js.device · no geolocation or media devices; vibrate is false" : "pass",
+      "js.dialogs · confirm → false, prompt → null, alert does not block" : "pass",
+      "js.fullscreen · requestFullscreen rejects" : "pass",
+      "js.navigation · location assignment does not navigate" : "pass",
+      "js.navigation · window.open returns null" : "pass",
+      "js.network · XHR, WebSocket, EventSource, RTCPeerConnection, Worker, sendBeacon, importScripts throw NetworkDisabledError" : "pass",
+      "js.network · fetch rejects with NetworkDisabledError" : "pass",
+      "js.shadow-dom · attachShadow throws" : "pass"
+    },
+    "auto\/16-sdk-taps-a\/light" : {
+      "host · html.el.a-external · tapping an external <a href> goes to openLink" : "pass",
+      "host · input.prevent-default · preventDefault on a link tap: no openLink" : "pass",
+      "host · input.user-activation · openLink from a timer is blocked" : "pass",
+      "host · tw.open-link · openLink from a tap reaches the host once" : "pass",
+      "html.el.a-external · an external link tap reaches the widget as a click" : "pass",
+      "input.mouse-compat · mousedown → mouseup on a tap" : "pass",
+      "input.pointer · pointerdown → pointerup → click, primary pointer with an id and type" : "pass",
+      "input.prevent-default · preventDefault on a link click is honoured" : "pass",
+      "input.tap · click on the tapped element with coordinates inside it" : "pass",
+      "limit.url-length · a 256-character URL is accepted (dropped later without a press)" : "pass",
+      "limit.url-length · a 257-character URL throws TypeError" : "pass",
+      "tw.open-link · openLink is callable in the task of a tap" : "pass",
+      "tw.open-link · openLink rejects non-https, user info, javascript: and t.me hosts with TypeError" : "pass"
+    },
+    "auto\/16-sdk-taps-b\/light" : {
+      "html.el.a-fragment · tapping a #fragment link does not leave the widget" : "pass",
+      "html.el.details · tapping summary opens details (toggle event)" : "pass",
+      "input.dblclick · a double tap on touch-action: auto reaches the widget as dblclick (the reaction stays outside the widget)" : "pass",
+      "input.keyboard · no keydown reaches the widget" : "skip",
+      "input.long-press · no contextmenu reaches the widget from touch-action: auto (the hold or right click is the message menu)" : "skip",
+      "input.wheel-scroll · no wheel event reaches the widget" : "skip",
+      "sel.active · :active applies while pressed" : "pass"
+    },
+    "auto\/16-sdk-taps-c\/light" : {
+      "host · limit.haptic-rate · a burst of 20 haptics reaches the client as 5" : "pass",
+      "tw.events · onEvent and offEvent exist; unknown types and non-functions are ignored" : "pass",
+      "tw.haptic · an unknown style or type throws TypeError" : "pass",
+      "tw.haptic · haptic feedback exists" : "pass",
+      "tw.haptic · haptic methods return HapticFeedback for chaining" : "pass",
+      "tw.is-active · isActive is true while the widget is on screen" : "pass",
+      "tw.open-telegram-link · openTelegramLink accepts any t.me \/ telegram.me path" : "pass",
+      "tw.open-telegram-link · openTelegramLink exists" : "pass",
+      "tw.open-telegram-link · openTelegramLink rejects other hosts and tg: with TypeError" : "pass",
+      "tw.profile · TelegramWidget.profile is a positive integer" : "pass",
+      "tw.profile · isProfileAtLeast(1) is true, isProfileAtLeast(999) false" : "pass",
+      "tw.ready · TelegramWidget.ready()" : "pass",
+      "tw.send-message · sendMessage is not in the SDK" : "pass",
+      "tw.theme · colorScheme is \"light\" or \"dark\" and equals theme" : "pass",
+      "tw.theme · theme is \"light\" or \"dark\" and onTheme calls back at once" : "pass",
+      "tw.theme-params · --tg-theme-bg-color is defined for CSS" : "pass",
+      "tw.theme-params · themeParams carries every key as #rrggbb" : "pass",
+      "tw.theme-params · themeParams has the palette (bg_color, text_color, …)" : "pass"
+    },
+    "auto\/17-drag-hover\/light" : {
+      "css.pointer-events · a tap through a pointer-events: none overlay hits the button below" : "pass",
+      "input.drag · movementX sums to the distance" : "pass",
+      "input.drag · pointerdown → pointermove (buttons=1) → pointerup moves the knob" : "pass",
+      "input.drag · setPointerCapture keeps moves coming past the track" : "pass",
+      "input.hover-events · pointerenter, pointerover, mouseenter reach the widget" : "skip",
+      "input.touch-events · no touch events on a touch client, pointer events only" : "skip",
+      "sel.hover · :hover applies under a pointer" : "skip"
+    },
+    "auto\/18-out-of-profile\/light" : {
+      "html.el.dialog-popover · a popover stays inside the widget" : "pass",
+      "html.el.dialog-popover · a shown dialog stays where the widget put it" : "pass",
+      "html.el.dialog-popover · showModal does not put the dialog in the top layer (:modal never matches)" : "pass",
+      "html.el.dialog-popover · showPopover does not open a top-layer popover" : "pass",
+      "html.el.embedding · MathML is dropped" : "pass",
+      "html.el.embedding · embed is dropped" : "pass",
+      "html.el.embedding · iframe is dropped" : "pass",
+      "html.el.embedding · object is dropped" : "pass",
+      "html.el.forms · checkbox is not drawn" : "pass",
+      "html.el.forms · fieldset is not drawn" : "pass",
+      "html.el.forms · form submission never navigates (submit reaches the widget)" : "pass",
+      "html.el.forms · input type=text is not drawn" : "pass",
+      "html.el.forms · radio is not drawn" : "pass",
+      "html.el.forms · range is not drawn" : "pass",
+      "html.el.forms · select is not drawn" : "pass",
+      "html.el.forms · textarea is not drawn" : "pass",
+      "html.el.media · audio is dropped" : "pass",
+      "html.el.media · video is dropped" : "pass",
+      "sel.form-state · :checked does not match (the control is gone)" : "pass"
+    },
+    "auto\/19-limits\/light" : {
+      "behaviour.policy-strict · attr() of a non-text attribute (class) is dropped" : "pass",
+      "behaviour.policy-strict · attr() of a text attribute (data-*) works" : "pass",
+      "limit.attribute · a 6 K data-* attribute reaches the renderer" : "pass",
+      "limit.canvas-commands · the 10 001st command for one canvas in one task throws RangeError" : "pass",
+      "limit.image-pixels · a 1024 × 1024 data: image decodes" : "pass",
+      "limit.image-pixels · a 1025 × 1024 data: image is the 48 px placeholder" : "pass",
+      "limit.text-budget · 3000 CJK characters render" : "pass",
+      "limit.text-budget · past 8192 complex-script units in the document the text is refused" : "pass",
+      "limit.text-node · a 30 K text node renders" : "pass",
+      "limit.timers · the 65th live timer throws RangeError" : "pass"
+    },
+    "auto\/20-client-behaviour\/light" : {
+      "behaviour.offscreen-pause · no animation frames while hidden" : "pass",
+      "behaviour.offscreen-pause · timers run at most once per second while hidden" : "pass",
+      "behaviour.offscreen-pause · visibilitychange: hidden, then visible again" : "pass",
+      "behaviour.theme-switch · switching back to light: all four follow again" : "pass",
+      "behaviour.theme-switch · switching to dark: onTheme, matchMedia, @media and light-dark() follow" : "pass",
+      "host · behaviour.auto-height · the bubble grows with the widget and is clipped at the cap (600px)" : "pass",
+      "limit.event-handlers · onEvent keeps the first 16 handlers per type: of 1 checker + 20 counters, 15 counters run on a theme change" : "pass",
+      "tw.is-active · deactivated \/ activated fire and isActive follows visibility" : "pass",
+      "tw.theme-params · themeParams and --tg-theme-bg-color change with the theme, before themeChanged fires" : "pass"
+    },
+    "auto\/21-no-keyboard\/light" : {
+      "host · input.key-gesture · a key press does not unlock openLink" : "pass",
+      "host · js.focus · focus() from the widget leaves the chat input focused" : "pass",
+      "input.key-activation · Enter and Space add no clicks to a tapped button or link (one click each)" : "skip",
+      "input.keyboard · no keydown, keyup, keypress, beforeinput or input event reaches the widget" : "skip",
+      "js.focus · focus() does not make :focus match in the renderer" : "pass"
+    },
+    "auto\/22-ua-defaults\/light" : {
+      "html.el.blockquote · blockquote: 3px bar, 0.75em padding; no indent, as figure" : "pass",
+      "html.el.headings · h1–h6: 1.6, 1.35, 1.2, 1.07, 1, 0.87 em" : "pass",
+      "html.el.headings · headings: 600, line height 1.25; h2 0.75em above, 0.35em below" : "pass",
+      "html.el.inline-text · small 0.85em; b 600; code monospace 0.9em" : "pass",
+      "html.el.lists · dt 600; dd indented 1.5em" : "pass",
+      "html.el.lists · ul: 1.5em start padding, disc; nested: circle, no margin; ol: decimal" : "pass",
+      "html.el.pre · pre: wraps, monospace 0.9em, code inside keeps the size" : "pass",
+      "html.el.structure · author rules win over the layer" : "pass",
+      "html.el.structure · body: the padding token as margin, no padding" : "pass",
+      "html.el.structure · p: 0.6em margins; hr: one 1px line, no height" : "pass",
+      "html.el.structure · root: the text tokens, system-ui" : "pass",
+      "html.el.sub-sup · sup: 0.75em on the baseline, raised by position" : "pass",
+      "html.el.table · cells: 1px line under, 0.3em above, no outer padding at the ends" : "pass",
+      "html.el.table · table: collapsed, cells touch; th 600, start-aligned" : "pass",
+      "tw.theme-params · a[href]: link colour, no underline; <a> without href: text colour" : "pass",
+      "tw.theme-params · figcaption is --tg-theme-hint-color" : "pass",
+      "tw.theme-params · root: no background (the bubble is the canvas), the text colour" : "pass"
+    },
+    "auto\/23-gestures-a\/light" : {
+      "behaviour.gesture-claim · a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)" : "fail",
+      "input.dblclick · a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel" : "pass",
+      "input.dblclick · a double tap on touch-action: none: both clicks, then dblclick" : "pass",
+      "input.long-press · a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger" : "pass"
+    },
+    "auto\/23-gestures-b\/light" : {
+      "behaviour.gesture-claim · a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel" : "fail",
+      "behaviour.gesture-claim · the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel" : "pass"
+    },
+    "auto\/24-resize-anchor\/light" : {
+      "tw.resize-anchor · anything but exactly 'top' or 'bottom' throws TypeError" : "pass",
+      "tw.resize-anchor · setResizeAnchor('bottom') and ('top') return undefined and throw nothing" : "pass",
+      "tw.resize-anchor · typeof TelegramWidget.setResizeAnchor is \"function\"" : "pass",
+      "tw.resize-anchor · with 'bottom' the widget grows: three lines are 60 px" : "pass",
+      "tw.resize-anchor · with 'top' it shrinks back to 0 px" : "pass"
+    },
+    "auto\/25-state-api-a\/light" : {
+      "tw.bot-data · chatData and publicData are text of 1–1024 bytes, or null" : "pass",
+      "tw.bot-data · onEvent takes 'chatDataChanged' and 'publicDataChanged'" : "pass",
+      "tw.bot-data · the state and the context fields are read-only" : "pass",
+      "tw.context · a forward has no chatData and no chatType" : "pass",
+      "tw.context · isForward is a boolean; chatType is private, group, supergroup, channel or null" : "pass",
+      "tw.context · viewer is null or a frozen WebAppUser: id, first_name, last_name, username, is_premium" : "pass",
+      "tw.preview · isPreview is a boolean; a preview is no forward and has no chatType or viewer" : "pass"
+    },
+    "auto\/25-state-api-b\/light" : {
+      "tw.copy-text · copyText outside a tap returns undefined and throws nothing (the client drops it)" : "pass",
+      "tw.copy-text · copyText throws TypeError for anything but 1–256 characters of text" : "pass",
+      "tw.request · a request without a tap settles: { result } (frozen) or a WidgetRequestError with its code" : "pass",
+      "tw.request · request throws TypeError at once for data that is not 1–64 bytes of text" : "pass",
+      "tw.watch-public-data · watchPublicData and unwatchPublicData return undefined and may be called again" : "pass"
+    },
+    "auto\/26-context-copy\/light" : {
+      "tw.bot-data · chatData is null, publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is " : "pass",
+      "tw.context · isForward is true, isPreview false" : "pass",
+      "tw.context · viewer is null" : "pass",
+      "tw.request · a request on a tap is refused with NOT_ALLOWED too" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-group\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is group or supergroup" : "pass",
+      "tw.context · isForward is false, isPreview false" : "pass",
+      "tw.context · viewer is the user (an id)" : "pass",
+      "tw.request · a request on a tap resolves with the bot's { result }" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-live-copy\/light" : {
+      "tw.bot-data · chatData is null, publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is " : "pass",
+      "tw.context · isForward is true, isPreview false" : "pass",
+      "tw.context · viewer is the user (an id)" : "pass",
+      "tw.request · a request on a tap resolves with the bot's { result }" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-no-queries\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is private" : "pass",
+      "tw.context · isForward is false, isPreview false" : "pass",
+      "tw.context · viewer is null" : "pass",
+      "tw.request · a request on a tap is refused with NOT_ALLOWED too" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-preview\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is " : "pass",
+      "tw.context · isForward is false, isPreview true" : "pass",
+      "tw.context · viewer is null" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-private\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is private" : "pass",
+      "tw.context · isForward is false, isPreview false" : "pass",
+      "tw.context · viewer is the user (an id)" : "pass",
+      "tw.request · a request on a tap resolves with the bot's { result }" : "pass",
+      "tw.request · a request without a tap is not refused (background requests are allowed here)" : "pass"
+    },
+    "auto\/27-haptics-no-touch\/light" : {
+      "host · limit.haptic-rate · no touch: the 5 haptics of the first second reach the client, the ones at 1.2 s and 2.5 s do not" : "pass",
+      "limit.haptic-rate · haptics may be asked for without a touch: no exception (the client decides what plays)" : "pass"
+    },
+    "auto\/28-grid-percent-fill\/light" : {
+      "anim.transition · after the width transition each fill is its percentage of the bar" : "pass",
+      "css.box.size · at 100 %: every row is as wide as its container (width: 100%)" : "pass",
+      "css.box.size · at load: every row is as wide as its container (width: 100%)" : "pass",
+      "css.box.size · no fill runs past its bar's right edge" : "pass",
+      "css.display.grid · at 100 %: each count ends at the row's end (the auto column fits the count)" : "pass",
+      "css.display.grid · at load: each count ends at the row's end (the auto column fits the count)" : "pass",
+      "css.display.grid · the bar spans columns 2–3, from 52 px to the row's end (grid-column: 2\/4)" : "pass"
+    },
+    "auto\/29-grid-svg-marks\/light" : {
+      "css.box.aspect-ratio · the board is square at its max-width (aspect-ratio: 1, max-width: 264px)" : "pass",
+      "css.box.size · each mark is 58 % of its cell (width\/height: 58% of the button)" : "pass",
+      "css.display.grid · after a mark in cell 4: the cells keep equal thirds" : "pass",
+      "css.display.grid · after marks in cells 4 and 5: the cells keep equal thirds" : "pass",
+      "css.display.grid · each mark is centred in its own cell (place-items: center)" : "pass",
+      "css.display.grid · nine buttons take equal thirds of the board (grid-template: repeat(3,1fr)\/repeat(3,1fr))" : "pass"
+    },
+    "auto\/30-svg-fill-box\/light" : {
+      "css.transform.2d · after cx\/cy move: scale(3) with transform-box: fill-box, transform-origin: center: centred on the dot, 3× its size" : "pass",
+      "css.transform.2d · after cx\/cy move: the running pulse (scale 1 → 3) stays centred on the dot" : "pass",
+      "css.transform.2d · scale(3) with transform-box: fill-box, transform-origin: center: centred on the dot, 3× its size" : "pass",
+      "css.transform.2d · the running pulse (scale 1 → 3) stays centred on the dot" : "pass",
+      "svg.shapes · after cx\/cy move: the dot sits at its cx\/cy" : "pass",
+      "svg.structure · the dot sits at its cx\/cy (a viewBox the element's width, preserveAspectRatio none)" : "pass"
+    },
+    "auto\/31-stop-text\/light" : {
+      "limit.text-node · stopped with \"Text limit exceeded…\"" : "pass"
+    },
+    "auto\/32-stop-attribute\/light" : {
+      "limit.attribute · stopped with \"Attribute limit exceeded…\"" : "pass"
+    },
+    "auto\/33-stop-batch\/light" : {
+      "limit.batch · stopped with \"Ops limit exceeded…\"" : "pass"
+    },
+    "auto\/34-stop-css-rules\/light" : {
+      "limit.css-rules · stopped with \"CSS limit exceeded…\"" : "pass"
+    },
+    "auto\/35-stop-canvas-pixels\/light" : {
+      "limit.canvas-pixels · stopped with \"Canvas limit exceeded: canvases of…\"" : "pass"
+    },
+    "auto\/36-safe-area\/light" : {
+      "css.value.env · CSS.supports: true for env(safe-area-inset-bottom), false for another name" : "pass",
+      "css.value.env · another name without a fallback: the declaration is dropped (the one before it stands)" : "pass",
+      "css.value.env · another name: env(keyboard-inset-height, 13px) is its fallback" : "pass",
+      "css.value.env · calc(10px + env(safe-area-inset-bottom, 0px))" : "pass",
+      "css.value.env · env(safe-area-inset-bottom) is the band" : "pass",
+      "css.value.env · env(safe-area-inset-bottom, 77px) is the band, not the fallback" : "pass",
+      "css.value.env · env(safe-area-inset-top, 77px) is 0" : "pass",
+      "css.value.env · the corner's side: left: var(--…-corner-left); right: var(--…-corner-right) leaves it free" : "pass",
+      "css.value.env · var(--tg-content-safe-area-inset-bottom) is the band" : "pass",
+      "tw.content-safe-area · body: the band as bottom padding (the UA layer)" : "pass",
+      "tw.content-safe-area · contentSafeAreaInset: a frozen object of six numbers, the same object on every read" : "pass",
+      "tw.content-safe-area · one corner at most, on one side, and only with a band" : "pass",
+      "tw.content-safe-area · only the bottom band: top, left and right are 0; the band 0–64, a corner 0–200" : "pass",
+      "tw.content-safe-area · the root variables are its values" : "pass"
+    },
+    "visual\/01-boxes\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/02-colours-gradients\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/03-text-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/03-text-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/04-layout\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/05-transforms-effects-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/05-transforms-effects-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/06-css-animations\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/07-web-animations\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/08-canvas-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/08-canvas-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/09-svg-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/09-svg-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/10-images\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/11-interaction\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/12-theme\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/12-theme\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/13-out-of-profile\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/14-unstyled-document\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/14-unstyled-document\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/15-body-background\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/15-body-background\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/16-selection\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/17-time-corner\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/01-link-external\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/02-link-telegram\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/03-link-rejected\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/04-link-timer\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/05-haptics\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/06-haptics-rate\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/07-storage-recreate\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/08-storage-restart\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/09-storage-delete\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/10-storage-quota\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/11-crash-restart\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/12-drag-gestures\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/13-max-height\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/14-theme-palette\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/14-theme-palette\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/15-storage-forward\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/16-state-edit\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/17-size-hint\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/18-resize-anchor\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/19-request-tap\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/20-forward-requests\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/21-network-marker\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/22-copy-text\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/23-preview\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/24-watch-public-data\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/25-group-chat-state\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/26-haptics-no-touch\/light" : {
+      "load · loads" : "pass"
+    }
+  }
+}

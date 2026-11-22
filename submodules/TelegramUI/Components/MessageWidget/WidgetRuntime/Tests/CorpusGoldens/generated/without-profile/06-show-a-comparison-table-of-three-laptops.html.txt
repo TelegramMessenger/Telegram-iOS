@@ -1,0 +1,181 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laptop Comparison</title>
+<style></style>
+</head>
+<body>
+<h2>💻 Laptop Comparison</h2>
+<table id="t">
+  <thead><tr>
+    <th data-key="name">Model<span class="arrow">↕</span></th>
+    <th data-key="price" class="active">Price<span class="arrow">▲</span></th>
+    <th data-key="weight">Weight<span class="arrow">↕</span></th>
+    <th data-key="battery">Battery<span class="arrow">↕</span></th>
+    <th data-key="screen">Screen<span class="arrow">↕</span></th>
+  </tr></thead>
+  <tbody><tr>
+      <td>Dell XPS 13</td>
+      <td class="num best">${"kind":"number","locale":"en-US","opts":{},"value":999}</td>
+      <td class="num ">1.17 kg</td>
+      <td class="num ">12 h</td>
+      <td class="num ">13.4"</td>
+    </tr><tr>
+      <td>MacBook Air 13</td>
+      <td class="num ">${"kind":"number","locale":"en-US","opts":{},"value":1099}</td>
+      <td class="num ">1.24 kg</td>
+      <td class="num best">18 h</td>
+      <td class="num ">13.6"</td>
+    </tr><tr>
+      <td>ThinkPad X1 Carbon</td>
+      <td class="num ">${"kind":"number","locale":"en-US","opts":{},"value":1449}</td>
+      <td class="num best">1.12 kg</td>
+      <td class="num ">15 h</td>
+      <td class="num best">14"</td>
+    </tr></tbody>
+</table>
+<p class="hint">Tap a column header to sort. Green = best value in that column.</p>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 341.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 309.5
+    h2 16 16 328 22.5
+    table 16 50.5 632 234.2
+      thead 0 0 0 0
+        tr 0 0 0 0
+          th 24 60.5 68 18.9
+            span 24 60.5 0 0
+          th 108 60.5 248 18.9
+            span 108 60.5 0 0
+          th 372 60.5 76 18.9
+            span 372 60.5 0 0
+          th 464 60.5 84 18.9
+            span 464 60.5 0 0
+          th 564 60.5 76 18.9
+            span 564 60.5 0 0
+      tbody 0 0 0 0
+        tr 0 0 0 0
+          td 24 100.4 68 37.8
+          td 108 100.4 248 37.8
+          td 372 100.4 76 37.8
+          td 464 100.4 84 37.8
+          td 564 100.4 76 37.8
+        tr 0 0 0 0
+          td 24 159.2 68 37.8
+          td 108 159.2 248 37.8
+          td 372 159.2 76 37.8
+          td 464 159.2 84 37.8
+          td 564 159.2 76 37.8
+        tr 0 0 0 0
+          td 24 218 68 56.7
+          td 108 218 248 56.7
+          td 372 218 76 56.7
+          td 464 218 84 56.7
+          td 564 218 76 56.7
+    p 16 293.1 328 32.4
+
+== paint
+root 648x341.5 items=79
+  solid-fill bounds=(0,0,360,342) layer=(border=(0,0,360,342),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,342),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#f8fafcff
+  box-shadow bounds=(9,44,646,248) box=(16,51,632,234) radius=(10,10,10,10,10,10,10,10) shadow=(0,1,4,0,#00000014,0)
+  solid-fill bounds=(16,51,632,234) layer=(border=(16,51,632,234),radius=(10,10,10,10,10,10,10,10),clip=(16,51,632,234),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(16,51,84,39) layer=(border=(16,51,84,39),radius=(0,0,0,0,0,0,0,0),clip=(16,51,84,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e293bff
+  borders bounds=(16,51,84,39) borders=(left=(0,0,#ffffffff),top=(0,0,#ffffffff),right=(0,0,#ffffffff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(16,51,84,39) root=0
+  solid-fill bounds=(100,51,264,39) layer=(border=(100,51,264,39),radius=(0,0,0,0,0,0,0,0),clip=(100,51,264,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e293bff
+  borders bounds=(100,51,264,39) borders=(left=(0,0,#ffffffff),top=(0,0,#ffffffff),right=(0,0,#ffffffff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(100,51,264,39) root=0
+  solid-fill bounds=(364,51,92,39) layer=(border=(364,51,92,39),radius=(0,0,0,0,0,0,0,0),clip=(364,51,92,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e293bff
+  borders bounds=(364,51,92,39) borders=(left=(0,0,#ffffffff),top=(0,0,#ffffffff),right=(0,0,#ffffffff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(364,51,92,39) root=0
+  solid-fill bounds=(456,51,100,39) layer=(border=(456,51,100,39),radius=(0,0,0,0,0,0,0,0),clip=(456,51,100,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e293bff
+  borders bounds=(456,51,100,39) borders=(left=(0,0,#ffffffff),top=(0,0,#ffffffff),right=(0,0,#ffffffff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(456,51,100,39) root=0
+  solid-fill bounds=(556,51,92,39) layer=(border=(556,51,92,39),radius=(0,0,0,0,0,0,0,0),clip=(556,51,92,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e293bff
+  borders bounds=(556,51,92,39) borders=(left=(0,0,#ffffffff),top=(0,0,#ffffffff),right=(0,0,#ffffffff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(556,51,92,39) root=0
+  borders bounds=(16,90,84,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(16,90,84,59) root=0
+  borders bounds=(100,90,264,59) borders=(left=(0,0,#16a34aff),top=(0,0,#16a34aff),right=(0,0,#16a34aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(100,90,264,59) root=0
+  borders bounds=(364,90,92,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(364,90,92,59) root=0
+  borders bounds=(456,90,100,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(456,90,100,59) root=0
+  borders bounds=(556,90,92,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(556,90,92,59) root=0
+  borders bounds=(16,149,84,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(16,149,84,59) root=0
+  borders bounds=(100,149,264,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(100,149,264,59) root=0
+  borders bounds=(364,149,92,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(364,149,92,59) root=0
+  borders bounds=(456,149,100,59) borders=(left=(0,0,#16a34aff),top=(0,0,#16a34aff),right=(0,0,#16a34aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(456,149,100,59) root=0
+  borders bounds=(556,149,92,59) borders=(left=(0,0,#0f172aff),top=(0,0,#0f172aff),right=(0,0,#0f172aff),bottom=(1,4,#e2e8f0ff),radius=(0,0,0,0,0,0,0,0)) pos=(556,149,92,59) root=0
+  text bounds=(8,11,48,32) pos=(16,19,32,16) color=#0f172aff text="💻" font=f1 glyphs=4 advance=32
+  text bounds=(48,11,64,32) pos=(56,19,48,16) color=#0f172aff text="Laptop" font=f1 glyphs=6 advance=48
+  text bounds=(104,11,96,32) pos=(112,19,80,16) color=#0f172aff text="Comparison" font=f1 glyphs=10 advance=80
+  text bounds=(16,54,56,32) pos=(24,62,40,16) color=#ffffffff text="Model" font=f2 glyphs=5 advance=40
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(22,51.5,80,36) exact=1
+    text bounds=(60,54,40,32) pos=(68,62,24,16) color=#ffffffff text="↕" font=f3 glyphs=3 advance=24
+  text bounds=(100,54,56,32) pos=(108,62,40,16) color=#ffffffff text="Price" font=f2 glyphs=5 advance=40
+  text bounds=(144,54,40,32) pos=(152,62,24,16) color=#ffffffff text="▲" font=f3 glyphs=3 advance=24
+  text bounds=(364,54,64,32) pos=(372,62,48,16) color=#ffffffff text="Weight" font=f2 glyphs=6 advance=48
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(370,51.5,88,36) exact=1
+    text bounds=(416,54,40,32) pos=(424,62,24,16) color=#ffffffff text="↕" font=f3 glyphs=3 advance=24
+  text bounds=(456,54,72,32) pos=(464,62,56,16) color=#ffffffff text="Battery" font=f2 glyphs=7 advance=56
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(462,51.5,96,36) exact=1
+    text bounds=(516,54,40,32) pos=(524,62,24,16) color=#ffffffff text="↕" font=f3 glyphs=3 advance=24
+  text bounds=(556,54,64,32) pos=(564,62,48,16) color=#ffffffff text="Screen" font=f2 glyphs=6 advance=48
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(562,51.5,88,36) exact=1
+    text bounds=(608,54,40,32) pos=(616,62,24,16) color=#ffffffff text="↕" font=f3 glyphs=3 advance=24
+  text bounds=(16,93,48,32) pos=(24,101,32,16) color=#0f172aff text="Dell" font=f4 glyphs=4 advance=32
+  text bounds=(56,93,40,32) pos=(64,101,24,16) color=#0f172aff text="XPS" font=f4 glyphs=3 advance=24
+  text bounds=(16,112,32,32) pos=(24,120,16,16) color=#0f172aff text="13" font=f4 glyphs=2 advance=16
+  text bounds=(100,93,264,32) pos=(108,101,248,16) color=#16a34aff text="${\"kind\":\"number\",\"locale\":\"en-" font=f5 glyphs=31 advance=248
+  text bounds=(140,112,224,32) pos=(148,120,208,16) color=#16a34aff text="US\",\"opts\":{},\"value\":999}" font=f5 glyphs=26 advance=208
+  text bounds=(384,93,48,32) pos=(392,101,32,16) color=#0f172aff text="1.17" font=f6 glyphs=4 advance=32
+  text bounds=(424,93,32,32) pos=(432,101,16,16) color=#0f172aff text="kg" font=f6 glyphs=2 advance=16
+  text bounds=(508,93,32,32) pos=(516,101,16,16) color=#0f172aff text="12" font=f6 glyphs=2 advance=16
+  text bounds=(532,93,24,32) pos=(540,101,8,16) color=#0f172aff text="h" font=f6 glyphs=1 advance=8
+  text bounds=(592,93,56,32) pos=(600,101,40,16) color=#0f172aff text="13.4\"" font=f6 glyphs=5 advance=40
+  text bounds=(16,152,72,32) pos=(24,160,56,16) color=#0f172aff text="MacBook" font=f4 glyphs=7 advance=56
+  text bounds=(16,171,40,32) pos=(24,179,24,16) color=#0f172aff text="Air" font=f4 glyphs=3 advance=24
+  text bounds=(48,171,32,32) pos=(56,179,16,16) color=#0f172aff text="13" font=f4 glyphs=2 advance=16
+  text bounds=(100,152,264,32) pos=(108,160,248,16) color=#0f172aff text="${\"kind\":\"number\",\"locale\":\"en-" font=f6 glyphs=31 advance=248
+  text bounds=(132,171,232,32) pos=(140,179,216,16) color=#0f172aff text="US\",\"opts\":{},\"value\":1099}" font=f6 glyphs=27 advance=216
+  text bounds=(384,152,48,32) pos=(392,160,32,16) color=#0f172aff text="1.24" font=f6 glyphs=4 advance=32
+  text bounds=(424,152,32,32) pos=(432,160,16,16) color=#0f172aff text="kg" font=f6 glyphs=2 advance=16
+  text bounds=(508,152,32,32) pos=(516,160,16,16) color=#16a34aff text="18" font=f5 glyphs=2 advance=16
+  text bounds=(532,152,24,32) pos=(540,160,8,16) color=#16a34aff text="h" font=f5 glyphs=1 advance=8
+  text bounds=(592,152,56,32) pos=(600,160,40,16) color=#0f172aff text="13.6\"" font=f6 glyphs=5 advance=40
+  text bounds=(16,211,80,32) pos=(24,219,64,16) color=#0f172aff text="ThinkPad" font=f4 glyphs=8 advance=64
+  text bounds=(16,230,32,32) pos=(24,238,16,16) color=#0f172aff text="X1" font=f4 glyphs=2 advance=16
+  text bounds=(16,249,64,32) pos=(24,257,48,16) color=#0f172aff text="Carbon" font=f4 glyphs=6 advance=48
+  text bounds=(100,211,264,32) pos=(108,219,248,16) color=#0f172aff text="${\"kind\":\"number\",\"locale\":\"en-" font=f6 glyphs=31 advance=248
+  text bounds=(132,230,232,32) pos=(140,238,216,16) color=#0f172aff text="US\",\"opts\":{},\"value\":1449}" font=f6 glyphs=27 advance=216
+  text bounds=(384,211,48,32) pos=(392,219,32,16) color=#16a34aff text="1.12" font=f5 glyphs=4 advance=32
+  text bounds=(424,211,32,32) pos=(432,219,16,16) color=#16a34aff text="kg" font=f5 glyphs=2 advance=16
+  text bounds=(508,211,32,32) pos=(516,219,16,16) color=#0f172aff text="15" font=f6 glyphs=2 advance=16
+  text bounds=(532,211,24,32) pos=(540,219,8,16) color=#0f172aff text="h" font=f6 glyphs=1 advance=8
+  text bounds=(608,211,40,32) pos=(616,219,24,16) color=#16a34aff text="14\"" font=f5 glyphs=3 advance=24
+  text bounds=(8,285,40,32) pos=(16,293,24,16) color=#64748bff text="Tap" font=f7 glyphs=3 advance=24
+  text bounds=(40,285,24,32) pos=(48,293,8,16) color=#64748bff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(56,285,64,32) pos=(64,293,48,16) color=#64748bff text="column" font=f7 glyphs=6 advance=48
+  text bounds=(112,285,64,32) pos=(120,293,48,16) color=#64748bff text="header" font=f7 glyphs=6 advance=48
+  text bounds=(168,285,32,32) pos=(176,293,16,16) color=#64748bff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(192,285,56,32) pos=(200,293,40,16) color=#64748bff text="sort." font=f7 glyphs=5 advance=40
+  text bounds=(240,285,56,32) pos=(248,293,40,16) color=#64748bff text="Green" font=f7 glyphs=5 advance=40
+  text bounds=(288,285,24,32) pos=(296,293,8,16) color=#64748bff text="=" font=f7 glyphs=1 advance=8
+  text bounds=(304,285,48,32) pos=(312,293,32,16) color=#64748bff text="best" font=f7 glyphs=4 advance=32
+  text bounds=(8,301,56,32) pos=(16,309,40,16) color=#64748bff text="value" font=f7 glyphs=5 advance=40
+  text bounds=(56,301,32,32) pos=(64,309,16,16) color=#64748bff text="in" font=f7 glyphs=2 advance=16
+  text bounds=(80,301,48,32) pos=(88,309,32,16) color=#64748bff text="that" font=f7 glyphs=4 advance=32
+  text bounds=(120,301,72,32) pos=(128,309,56,16) color=#64748bff text="column." font=f7 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,133 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="cover"></div>
+  <div class="avatar">MK</div>
+  <div class="name">Maya Kowalski</div>
+  <div class="small muted">@maya · Product designer at Northwind</div>
+  <div class="bio">Designs the onboarding flow and the rich-message kit. Talks in sketches, ships in Figma.</div>
+  <div class="row stats">
+    <div class="grow"><div class="n">128</div><div class="tiny muted">Posts</div></div>
+    <div class="grow"><div class="n">4.2k</div><div class="tiny muted">Followers</div></div>
+    <div class="grow"><div class="n">311</div><div class="tiny muted">Following</div></div>
+  </div>
+  <div class="tags">
+    <span class="tag blue">Design systems</span><span class="tag purple">Motion</span><span class="tag teal">Accessibility</span><span class="tag">Berlin</span><span class="tag">UTC+1</span>
+  </div>
+  <div class="actions">
+    <span class="btn primary" role="button" data-act="portfolio">Portfolio</span>
+    <span class="btn" role="button" data-act="follow" id="follow">Follow</span>
+  </div>
+  <div class="tiny muted" style="margin-top: 8px"><span class="online"></span>Online now · last seen just now</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 423.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 423.7
+    div 15 13 330 397.7
+      div 1 1 358 72
+      div 18 44 64 64
+      div 15 117 330 23.4
+      div 15 140.4 330 15.6
+      div 15 162 330 54.6
+      div 15 237.6 330 36.4
+        div 15 237.6 110 36.4
+          div 15 237.6 110 22.1
+          div 15 259.7 110 14.3
+        div 125 237.6 110 36.4
+          div 125 237.6 110 22.1
+          div 125 259.7 110 14.3
+        div 235 237.6 110 36.4
+          div 235 237.6 110 22.1
+          div 235 259.7 110 14.3
+      div 15 293 330 55.2
+        span 24 296 112 15.6
+        span 160 296 48 15.6
+        span 24 323.6 104 15.6
+        span 152 323.6 48 15.6
+        span 224 323.6 40 15.6
+      div 15 358.2 330 30.2
+        span 29 364.2 133 18.2
+        span 198 364.2 133 18.2
+      div 15 396.4 330 14.3
+        span 15 400.4 8 8
+
+== paint
+root 360x423.7 items=59
+  solid-fill bounds=(0,0,360,424) layer=(border=(0,0,360,424),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,424),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,424) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,424) root=0
+  linear-gradient bounds=(1,1,358,72) layer=(border=(1,1,358,72),radius=(13,13,13,13,0,0,0,0),clip=(1,1,358,72),origin=(1,1,358,72),attachment=0,repeat=0,root=0) points=((0,#5b8defff,-),(0.55,#8f5bffff,-),(1,#ff6fb1ff,-)) space=0 hue=0 start=(30.1615,-49.5093) end=(329.838,123.509)
+  linear-gradient bounds=(15,41,70,70) layer=(border=(15,41,70,70),radius=(32,32,32,32,32,32,32,32),clip=(15,41,70,70),origin=(18,44,64,64),attachment=0,repeat=0,root=0) points=((0,#ffb86bff,-),(1,#ff5e62ff,-)) space=0 hue=0 start=(24.4372,39.4926) end=(75.5628,112.507)
+  borders bounds=(15,41,70,70) borders=(left=(3,4,#ffffffff),top=(3,4,#ffffffff),right=(3,4,#ffffffff),bottom=(3,4,#ffffffff),radius=(32,32,32,32,32,32,32,32)) pos=(15,41,70,70) root=0
+  borders bounds=(15,229,330,54) borders=(left=(0,0,#000000ff),top=(1,4,#0000001a),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,229,330,54) root=0
+  solid-fill bounds=(15,293,130,22) layer=(border=(15,293,130,22),radius=(8,8,8,8,8,8,8,8),clip=(15,293,130,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff24
+  solid-fill bounds=(151,293,66,22) layer=(border=(151,293,66,22),radius=(8,8,8,8,8,8,8,8),clip=(151,293,66,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52de24
+  solid-fill bounds=(15,321,122,21) layer=(border=(15,321,122,21),radius=(8,8,8,8,8,8,8,8),clip=(15,321,122,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c729
+  solid-fill bounds=(143,321,66,21) layer=(border=(143,321,66,21),radius=(8,8,8,8,8,8,8,8),clip=(143,321,66,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(215,321,58,21) layer=(border=(215,321,58,21),radius=(8,8,8,8,8,8,8,8),clip=(215,321,58,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,358,161,30) layer=(border=(15,358,161,30),radius=(9,9,9,9,9,9,9,9),clip=(15,358,161,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(184,358,161,30) layer=(border=(184,358,161,30),radius=(9,9,9,9,9,9,9,9),clip=(184,358,161,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(34,59,32,32) pos=(42,67,16,16) color=#ffffffff text="MK" font=f1 glyphs=2 advance=16
+  text bounds=(7,112,48,32) pos=(15,120,32,16) color=#000000ff text="Maya" font=f2 glyphs=4 advance=32
+  text bounds=(47,112,80,32) pos=(55,120,64,16) color=#000000ff text="Kowalski" font=f2 glyphs=8 advance=64
+  text bounds=(7,132,56,32) pos=(15,140,40,16) color=#6e6e73ff text="@maya" font=f3 glyphs=5 advance=40
+  text bounds=(55,132,32,32) pos=(63,140,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(79,132,72,32) pos=(87,140,56,16) color=#6e6e73ff text="Product" font=f3 glyphs=7 advance=56
+  text bounds=(143,132,80,32) pos=(151,140,64,16) color=#6e6e73ff text="designer" font=f3 glyphs=8 advance=64
+  text bounds=(215,132,32,32) pos=(223,140,16,16) color=#6e6e73ff text="at" font=f3 glyphs=2 advance=16
+  text bounds=(239,132,88,32) pos=(247,140,72,16) color=#6e6e73ff text="Northwind" font=f3 glyphs=9 advance=72
+  text bounds=(7,155,72,32) pos=(15,163,56,16) color=#000000ff text="Designs" font=f4 glyphs=7 advance=56
+  text bounds=(71,155,40,32) pos=(79,163,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(103,155,96,32) pos=(111,163,80,16) color=#000000ff text="onboarding" font=f4 glyphs=10 advance=80
+  text bounds=(191,155,48,32) pos=(199,163,32,16) color=#000000ff text="flow" font=f4 glyphs=4 advance=32
+  text bounds=(231,155,40,32) pos=(239,163,24,16) color=#000000ff text="and" font=f4 glyphs=3 advance=24
+  text bounds=(263,155,40,32) pos=(271,163,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(295,155,56,32) pos=(303,163,40,16) color=#000000ff text="rich-" font=f4 glyphs=5 advance=40
+  text bounds=(7,173,72,32) pos=(15,181,56,16) color=#000000ff text="message" font=f4 glyphs=7 advance=56
+  text bounds=(71,173,48,32) pos=(79,181,32,16) color=#000000ff text="kit." font=f4 glyphs=4 advance=32
+  text bounds=(111,173,56,32) pos=(119,181,40,16) color=#000000ff text="Talks" font=f4 glyphs=5 advance=40
+  text bounds=(159,173,32,32) pos=(167,181,16,16) color=#000000ff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(183,173,88,32) pos=(191,181,72,16) color=#000000ff text="sketches," font=f4 glyphs=9 advance=72
+  text bounds=(263,173,56,32) pos=(271,181,40,16) color=#000000ff text="ships" font=f4 glyphs=5 advance=40
+  text bounds=(311,173,32,32) pos=(319,181,16,16) color=#000000ff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(7,191,64,32) pos=(15,199,48,16) color=#000000ff text="Figma." font=f4 glyphs=6 advance=48
+  text bounds=(50,233,40,32) pos=(58,241,24,16) color=#000000ff text="128" font=f5 glyphs=3 advance=24
+  text bounds=(42,252,56,32) pos=(50,260,40,16) color=#6e6e73ff text="Posts" font=f6 glyphs=5 advance=40
+  text bounds=(156,233,48,32) pos=(164,241,32,16) color=#000000ff text="4.2k" font=f5 glyphs=4 advance=32
+  text bounds=(136,252,88,32) pos=(144,260,72,16) color=#6e6e73ff text="Followers" font=f6 glyphs=9 advance=72
+  text bounds=(270,233,40,32) pos=(278,241,24,16) color=#000000ff text="311" font=f5 glyphs=3 advance=24
+  text bounds=(246,252,88,32) pos=(254,260,72,16) color=#6e6e73ff text="Following" font=f6 glyphs=9 advance=72
+  text bounds=(16,288,64,32) pos=(24,296,48,16) color=#007affff text="Design" font=f7 glyphs=6 advance=48
+  text bounds=(72,288,72,32) pos=(80,296,56,16) color=#007affff text="systems" font=f7 glyphs=7 advance=56
+  text bounds=(152,288,64,32) pos=(160,296,48,16) color=#af52deff text="Motion" font=f7 glyphs=6 advance=48
+  text bounds=(16,316,120,32) pos=(24,324,104,16) color=#30b0c7ff text="Accessibility" font=f7 glyphs=13 advance=104
+  text bounds=(144,316,64,32) pos=(152,324,48,16) color=#000000ff text="Berlin" font=f7 glyphs=6 advance=48
+  text bounds=(216,316,56,32) pos=(224,324,40,16) color=#000000ff text="UTC+1" font=f7 glyphs=5 advance=40
+  text bounds=(51.5,357,88,32) pos=(59.5,365,72,16) color=#ffffffff text="Portfolio" font=f8 glyphs=9 advance=72
+  text bounds=(232.5,357,64,32) pos=(240.5,365,48,16) color=#000000ff text="Follow" font=f8 glyphs=6 advance=48
+  solid-fill bounds=(15,400,8,8) layer=(border=(15,400,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,400,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(20,388,64,32) pos=(28,396,48,16) color=#6e6e73ff text="Online" font=f6 glyphs=6 advance=48
+  text bounds=(76,388,40,32) pos=(84,396,24,16) color=#6e6e73ff text="now" font=f6 glyphs=3 advance=24
+  text bounds=(108,388,32,32) pos=(116,396,16,16) color=#6e6e73ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(132,388,48,32) pos=(140,396,32,16) color=#6e6e73ff text="last" font=f6 glyphs=4 advance=32
+  text bounds=(172,388,48,32) pos=(180,396,32,16) color=#6e6e73ff text="seen" font=f6 glyphs=4 advance=32
+  text bounds=(212,388,48,32) pos=(220,396,32,16) color=#6e6e73ff text="just" font=f6 glyphs=4 advance=32
+  text bounds=(252,388,40,32) pos=(260,396,24,16) color=#6e6e73ff text="now" font=f6 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=24,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=18,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=17,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

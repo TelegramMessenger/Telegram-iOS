@@ -1,0 +1,57 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--line:light-dark(#e6e6e6,#3a3a3a);--acc:#3390ec}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+h3{margin:0;font-size:16px}
+#all{border:0;background:none;color:var(--acc);font:inherit;font-size:14px;padding:4px 0}
+.item{border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.q{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:12px 0;border:0;background:none;color:var(--fg);font:inherit;font-weight:500;text-align:left}
+.q i{font-style:normal;font-size:20px;color:var(--acc);transition:transform .2s}
+.item.open .q i{transform:rotate(45deg)}
+.a{padding:0 0 12px;color:var(--mut);font-size:14px}
+</style>
+<div class="head"><h3>Your trip · FAQ</h3><button id="all">Expand all</button></div>
+<div id="list"></div>
+<script>
+const faq = [
+  ['When is check-in?', 'From 15:00. Early check-in from 12:00 if the room is ready — ask at the front desk.'],
+  ['Is breakfast included?', 'Yes, 7:00–10:30 on the ground floor. Room service breakfast costs €12 extra.'],
+  ['How do I get from the airport?', 'Metro red line to Saldanha, change to yellow, two stops to Rato. About 35 minutes, €1.85. A taxi is ~€20.'],
+  ['Can I cancel?', 'Free cancellation until 48 hours before arrival. After that the first night is charged.'],
+  ['Is there parking?', 'Underground garage next door, €18 per day. Reserve a space at least a day ahead.']
+];
+const list = document.getElementById('list');
+const all = document.getElementById('all');
+for (const [q, a] of faq) {
+  const item = document.createElement('div');
+  item.className = 'item';
+  item.innerHTML = '<button class="q"><span></span><i>+</i></button><div class="a" hidden></div>';
+  item.querySelector('span').textContent = q;
+  item.querySelector('.a').textContent = a;
+  list.appendChild(item);
+}
+function setOpen(item, open) {
+  item.classList.toggle('open', open);
+  item.querySelector('.a').hidden = !open;
+}
+function allOpen() {
+  return [...list.children].every((i) => i.classList.contains('open'));
+}
+function syncButton() {
+  all.textContent = allOpen() ? 'Collapse all' : 'Expand all';
+}
+list.addEventListener('click', (e) => {
+  const q = e.target.closest('.q');
+  if (!q) return;
+  const item = q.parentElement;
+  setOpen(item, !item.classList.contains('open'));
+  syncButton();
+});
+all.onclick = () => {
+  const open = !allOpen();
+  for (const item of list.children) setOpen(item, open);
+  syncButton();
+};
+</script>

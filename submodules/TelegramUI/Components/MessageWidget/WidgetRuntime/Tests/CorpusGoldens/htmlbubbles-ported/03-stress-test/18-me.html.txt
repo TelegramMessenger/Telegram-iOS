@@ -1,0 +1,66 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="out">
+<h3 style="margin-top: 0">Outgoing bubbles render HTML too</h3>
+<ul><li><b>Lists</b>, <i>emphasis</i>, <code>code</code></li><li><a href="https://github.com/litehtml/litehtml">links</a> turn white</li></ul>
+<table style="border-collapse: collapse; font-size: 12px"><tbody><tr><td style="border: 1px solid rgba(255,255,255,0.5); padding: 2px 8px">tables</td><td style="border: 1px solid rgba(255,255,255,0.5); padding: 2px 8px">on blue</td></tr></tbody></table>
+</div>
+</body></html>
+
+== layout
+html 0 0 360 110.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 110.4
+    div 12 8 336 94.4
+      h3 12 8 336 20.4
+      ul 34 34.4 314 38.4
+        li 34 34.4 314 18.2
+          b 34 34.4 0 0
+          i 34 34.4 0 0
+          code 34 34.4 0 0
+        li 34 54.6 314 18.2
+          a 34 54.6 0 0
+      table 12 80.8 139 21.6
+        tbody 0 0 0 0
+          tr 0 0 0 0
+            td 21 83.8 48 15.6
+            td 86 83.8 56 15.6
+
+== paint
+root 360x110.4 items=22
+  solid-fill bounds=(0,0,360,110) layer=(border=(0,0,360,110),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,110),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3d8ee8ff
+  list-marker bounds=(20,41.1667,4.66667,4.66667) marker=(type=2,color=#ffffffff,pos=(20,41.1667,4.66667,4.66667),index=-1) font=1 image=-
+  list-marker bounds=(20,61.3667,4.66667,4.66667) marker=(type=2,color=#ffffffff,pos=(20,61.3667,4.66667,4.66667),index=-1) font=1 image=-
+  borders bounds=(12,81,66,21) borders=(left=(1,4,#ffffff80),top=(1,4,#ffffff80),right=(1,4,#ffffff80),bottom=(1,4,#ffffff80),radius=(0,0,0,0,0,0,0,0)) pos=(12,81,66,21) root=0
+  borders bounds=(77,81,74,21) borders=(left=(1,4,#ffffff80),top=(1,4,#ffffff80),right=(1,4,#ffffff80),bottom=(1,4,#ffffff80),radius=(0,0,0,0,0,0,0,0)) pos=(77,81,74,21) root=0
+  text bounds=(4,2,80,32) pos=(12,10,64,16) color=#ffffffff text="Outgoing" font=f1 glyphs=8 advance=64
+  text bounds=(76,2,72,32) pos=(84,10,56,16) color=#ffffffff text="bubbles" font=f1 glyphs=7 advance=56
+  text bounds=(140,2,64,32) pos=(148,10,48,16) color=#ffffffff text="render" font=f1 glyphs=6 advance=48
+  text bounds=(196,2,48,32) pos=(204,10,32,16) color=#ffffffff text="HTML" font=f1 glyphs=4 advance=32
+  text bounds=(236,2,40,32) pos=(244,10,24,16) color=#ffffffff text="too" font=f1 glyphs=3 advance=24
+  text bounds=(26,27,56,32) pos=(34,35,40,16) color=#ffffffff text="Lists" font=f2 glyphs=5 advance=40
+  text bounds=(66,27,24,32) pos=(74,35,8,16) color=#ffffffff text="," font=f3 glyphs=1 advance=8
+  text bounds=(82,27,80,32) pos=(90,35,64,16) color=#ffffffff text="emphasis" font=f4 glyphs=8 advance=64
+  text bounds=(146,27,24,32) pos=(154,35,8,16) color=#ffffffff text="," font=f3 glyphs=1 advance=8
+  solid-fill bounds=(170,34,40,18) layer=(border=(170,34,40,18),radius=(4,4,4,4,4,4,4,4),clip=(170,34,40,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff2e
+  text bounds=(166,27,48,32) pos=(174,35,32,16) color=#ffffffff text="code" font=f5 glyphs=4 advance=32
+  text bounds=(26,48,56,32) pos=(34,56,40,16) color=#ffffffff text="links" font=f6 glyphs=5 advance=40
+  text bounds=(74,48,48,32) pos=(82,56,32,16) color=#ffffffff text="turn" font=f3 glyphs=4 advance=32
+  text bounds=(114,48,56,32) pos=(122,56,40,16) color=#ffffffff text="white" font=f3 glyphs=5 advance=40
+  text bounds=(13,76,64,32) pos=(21,84,48,16) color=#ffffffff text="tables" font=f7 glyphs=6 advance=48
+  text bounds=(78,76,32,32) pos=(86,84,16,16) color=#ffffffff text="on" font=f7 glyphs=2 advance=16
+  text bounds=(102,76,48,32) pos=(110,84,32,16) color=#ffffffff text="blue" font=f7 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(-2147483648,predef0,0,#ffffffff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

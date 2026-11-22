@@ -1,0 +1,137 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Launch day so far</span><span class="tiny muted" id="t">updating</span></div>
+  <div class="nums">
+    <div class="num"><div class="v" data-to="18432" data-fmt="int">16,857</div><div class="l">Installs</div><div class="d">+212% vs avg</div></div>
+    <div class="num"><div class="v" data-to="4.87" data-fmt="rating">4.45</div><div class="l">Rating</div><div class="d">1,204 reviews</div></div>
+    <div class="num"><div class="v" data-to="96300" data-fmt="money">€88,070</div><div class="l">Revenue</div><div class="d">goal €80k</div></div>
+  </div>
+  <div class="spark" id="spark"><i style="height: 6%;"></i><i style="height: 5%;"></i><i style="height: 4%;"></i><i style="height: 4%;"></i><i style="height: 5%;"></i><i style="height: 9%;"></i><i style="height: 22%;"></i><i style="height: 47%;"></i><i style="height: 74%;"></i><i style="height: 87%;"></i><i style="height: 89%;"></i><i style="height: 97%;"></i><i style="height: 100%;"></i><i style="height: 39%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i style="height: 0%;"></i><i class="now" style="height: 0%;"></i></div>
+  <div class="row between tiny muted" style="margin-top: 3px"><span>00:00</span><span>installs per hour</span><span>now</span></div>
+  <div style="text-align: right; margin-top: 10px"><span class="btn" role="button" id="replay">Replay</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 275.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 275.8
+    div 15 13 330 249.8
+      div 15 13 330 20.8
+        span 15 13 136 20.8
+        span 281 16.25 64 14.3
+      div 15 43.8 330 93.5
+        div 23 53.8 88.6667 73.5
+          div 23 53.8 88.6667 28.6
+          div 23 84.4 88.6667 14.3
+          div 23 98.7 88.6667 28.6
+        div 135.667 53.8 88.6667 73.5
+          div 135.667 53.8 88.6667 28.6
+          div 135.667 84.4 88.6667 14.3
+          div 135.667 98.7 88.6667 28.6
+        div 248.333 53.8 88.6667 73.5
+          div 248.333 53.8 88.6667 28.6
+          div 248.333 84.4 88.6667 14.3
+          div 248.333 98.7 88.6667 14.3
+      div 15 149.3 330 56
+        i 16 201.94 11.75 3.36
+        i 29.75 202.5 11.75 2.8
+        i 43.5 203.06 11.75 2.24
+        i 57.25 203.06 11.75 2.24
+        i 71 202.5 11.75 2.8
+        i 84.75 200.26 11.75 5.04
+        i 98.5 192.98 11.75 12.32
+        i 112.25 178.98 11.75 26.32
+        i 126 163.86 11.75 41.44
+        i 139.75 156.58 11.75 48.72
+        i 153.5 155.46 11.75 49.84
+        i 167.25 150.98 11.75 54.32
+        i 181 149.3 11.75 56
+        i 194.75 183.46 11.75 21.84
+        i 208.5 205.3 11.75 0
+        i 222.25 205.3 11.75 0
+        i 236 205.3 11.75 0
+        i 249.75 205.3 11.75 0
+        i 263.5 205.3 11.75 0
+        i 277.25 205.3 11.75 0
+        i 291 205.3 11.75 0
+        i 304.75 205.3 11.75 0
+        i 318.5 205.3 11.75 0
+        i 332.25 205.3 11.75 0
+      div 15 208.3 330 14.3
+        span 15 208.3 40 14.3
+        span 120 208.3 136 14.3
+        span 321 208.3 24 14.3
+      div 15 232.6 330 30.2
+        span 297 238.6 48 18.2
+
+== paint
+root 360x275.8 items=54
+  solid-fill bounds=(0,0,360,276) layer=(border=(0,0,360,276),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,276),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,276) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,276) root=0
+  solid-fill bounds=(15,44,105,93) layer=(border=(15,44,105,93),radius=(12,12,12,12,12,12,12,12),clip=(15,44,105,93),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(128,44,104,93) layer=(border=(128,44,104,93),radius=(12,12,12,12,12,12,12,12),clip=(128,44,104,93),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(240,44,105,93) layer=(border=(240,44,105,93),radius=(12,12,12,12,12,12,12,12),clip=(240,44,105,93),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(16,202,12,3) layer=(border=(16,202,12,3),radius=(1.68,1.68,1.68,1.68,0,0,0,0),clip=(16,202,12,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(30,203,12,2) layer=(border=(30,203,12,2),radius=(1.4,1.4,1.4,1.4,0,0,0,0),clip=(30,203,12,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(44,203,11,2) layer=(border=(44,203,11,2),radius=(1.12,1.12,1.12,1.12,0,0,0,0),clip=(44,203,11,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(57,203,12,2) layer=(border=(57,203,12,2),radius=(1.12,1.12,1.12,1.12,0,0,0,0),clip=(57,203,12,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(71,203,12,2) layer=(border=(71,203,12,2),radius=(1.4,1.4,1.4,1.4,0,0,0,0),clip=(71,203,12,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(85,200,12,5) layer=(border=(85,200,12,5),radius=(2,2,2,2,0,0,0,0),clip=(85,200,12,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(99,193,11,12) layer=(border=(99,193,11,12),radius=(2,2,2,2,0,0,0,0),clip=(99,193,11,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(112,179,12,26) layer=(border=(112,179,12,26),radius=(2,2,2,2,0,0,0,0),clip=(112,179,12,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(126,164,12,41) layer=(border=(126,164,12,41),radius=(2,2,2,2,0,0,0,0),clip=(126,164,12,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(140,157,12,48) layer=(border=(140,157,12,48),radius=(2,2,2,2,0,0,0,0),clip=(140,157,12,48),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(154,155,11,50) layer=(border=(154,155,11,50),radius=(2,2,2,2,0,0,0,0),clip=(154,155,11,50),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(167,151,12,54) layer=(border=(167,151,12,54),radius=(2,2,2,2,0,0,0,0),clip=(167,151,12,54),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(181,149,12,56) layer=(border=(181,149,12,56),radius=(2,2,2,2,0,0,0,0),clip=(181,149,12,56),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(195,183,12,22) layer=(border=(195,183,12,22),radius=(2,2,2,2,0,0,0,0),clip=(195,183,12,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(209,205,11,0) layer=(border=(209,205,11,0),radius=(0,0,0,0,0,0,0,0),clip=(209,205,11,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(222,205,12,0) layer=(border=(222,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(222,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(236,205,12,0) layer=(border=(236,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(236,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(250,205,12,0) layer=(border=(250,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(250,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(264,205,11,0) layer=(border=(264,205,11,0),radius=(0,0,0,0,0,0,0,0),clip=(264,205,11,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(277,205,12,0) layer=(border=(277,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(277,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(291,205,12,0) layer=(border=(291,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(291,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(305,205,12,0) layer=(border=(305,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(305,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(319,205,11,0) layer=(border=(319,205,11,0),radius=(0,0,0,0,0,0,0,0),clip=(319,205,11,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(332,205,12,0) layer=(border=(332,205,12,0),radius=(0,0,0,0,0,0,0,0),clip=(332,205,12,0),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(7,7,64,32) pos=(15,15,48,16) color=#000000ff text="Launch" font=f1 glyphs=6 advance=48
+  text bounds=(63,7,40,32) pos=(71,15,24,16) color=#000000ff text="day" font=f1 glyphs=3 advance=24
+  text bounds=(95,7,32,32) pos=(103,15,16,16) color=#000000ff text="so" font=f1 glyphs=2 advance=16
+  text bounds=(119,7,40,32) pos=(127,15,24,16) color=#000000ff text="far" font=f1 glyphs=3 advance=24
+  text bounds=(273,8,80,32) pos=(281,16,64,16) color=#6e6e73ff text="updating" font=f2 glyphs=8 advance=64
+  text bounds=(15,52,64,32) pos=(23,60,48,16) color=#000000ff text="16,857" font=f3 glyphs=6 advance=48
+  text bounds=(15,76,80,32) pos=(23,84,64,16) color=#6e6e73ff text="Installs" font=f2 glyphs=8 advance=64
+  text bounds=(15,91,56,32) pos=(23,99,40,16) color=#34c759ff text="+212%" font=f4 glyphs=5 advance=40
+  text bounds=(63,91,32,32) pos=(71,99,16,16) color=#34c759ff text="vs" font=f4 glyphs=2 advance=16
+  text bounds=(15,105,40,32) pos=(23,113,24,16) color=#34c759ff text="avg" font=f4 glyphs=3 advance=24
+  text bounds=(127.667,52,48,32) pos=(135.667,60,32,16) color=#000000ff text="4.45" font=f3 glyphs=4 advance=32
+  text bounds=(127.667,76,64,32) pos=(135.667,84,48,16) color=#6e6e73ff text="Rating" font=f2 glyphs=6 advance=48
+  text bounds=(127.667,91,56,32) pos=(135.667,99,40,16) color=#34c759ff text="1,204" font=f4 glyphs=5 advance=40
+  text bounds=(127.667,105,72,32) pos=(135.667,113,56,16) color=#34c759ff text="reviews" font=f4 glyphs=7 advance=56
+  text bounds=(240.333,52,88,32) pos=(248.333,60,72,16) color=#000000ff text="€88,070" font=f3 glyphs=9 advance=72
+  text bounds=(240.333,76,72,32) pos=(248.333,84,56,16) color=#6e6e73ff text="Revenue" font=f2 glyphs=7 advance=56
+  text bounds=(240.333,91,48,32) pos=(248.333,99,32,16) color=#34c759ff text="goal" font=f4 glyphs=4 advance=32
+  text bounds=(280.333,91,64,32) pos=(288.333,99,48,16) color=#34c759ff text="€80k" font=f4 glyphs=6 advance=48
+  text bounds=(7,200,56,32) pos=(15,208,40,16) color=#6e6e73ff text="00:00" font=f2 glyphs=5 advance=40
+  text bounds=(112,200,80,32) pos=(120,208,64,16) color=#6e6e73ff text="installs" font=f2 glyphs=8 advance=64
+  text bounds=(184,200,40,32) pos=(192,208,24,16) color=#6e6e73ff text="per" font=f2 glyphs=3 advance=24
+  text bounds=(216,200,48,32) pos=(224,208,32,16) color=#6e6e73ff text="hour" font=f2 glyphs=4 advance=32
+  text bounds=(313,200,40,32) pos=(321,208,24,16) color=#6e6e73ff text="now" font=f2 glyphs=3 advance=24
+  solid-fill bounds=(283,233,76,30) layer=(border=(283,233,76,30),radius=(9,9,9,9,9,9,9,9),clip=(283,233,76,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(289,232,64,32) pos=(297,240,48,16) color=#000000ff text="Replay" font=f5 glyphs=6 advance=48
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=26,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

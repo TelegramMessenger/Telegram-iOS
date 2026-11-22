@@ -1,0 +1,138 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mortgage Calculator</title>
+<style></style>
+</head>
+<body>
+<div class="card">
+  <h2>🏠 Mortgage Calculator</h2>
+  <span class="label">Loan amount ($)</span>
+  <div class="stepper" data-field="amount"><button data-step="-10000">−</button><span id="amountVal">{"kind":"number","locale":"en-US","opts":{"style":"currency","currency":"USD","maximumFractionDigits":0},"value":300000}</span><button data-step="10000">+</button></div>
+  <span class="label">Interest rate (%)</span>
+  <div class="stepper" data-field="rate"><button data-step="-0.25">−</button><span id="rateVal">6.50</span><button data-step="0.25">+</button></div>
+  <span class="label">Term (years)</span>
+  <div class="presets" id="years">
+    <button data-years="10">10</button><button data-years="15">15</button><button data-years="20">20</button><button data-years="25">25</button><button data-years="30" class="active">30</button>
+  </div>
+  <div class="result">
+    <div style="font-size:13px;color:#6b7280">Monthly payment</div>
+    <div class="big" id="monthly">{"kind":"number","locale":"en-US","opts":{"style":"currency","currency":"USD","maximumFractionDigits":0},"value":1896.204070478896}</div>
+    <div class="row"><span>Total paid</span><strong id="total">{"kind":"number","locale":"en-US","opts":{"style":"currency","currency":"USD","maximumFractionDigits":0},"value":682633.4653724026}</strong></div>
+    <div class="row"><span>Total interest</span><strong id="interest">{"kind":"number","locale":"en-US","opts":{"style":"currency","currency":"USD","maximumFractionDigits":0},"value":382633.46537240257}</strong></div>
+  </div>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 670.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 638.6
+    div 36 36 288 598.6
+      h2 36 36 288 22.5
+      span 36 74.5 288 17.55
+      div 40 100.05 280 40.5
+        button 40 104.3 24 32
+        span 64 100.05 720 40.5
+        button 784 104.3 8 32
+      span 36 158.55 288 17.55
+      div 40 184.1 280 32
+        button 40 184.1 38 32
+        span 78 189.975 204 20.25
+        button 282 184.1 38 32
+      span 36 234.1 288 17.55
+      div 36 255.65 288 34.8
+        button 37 264.65 50.8 16.8
+        button 95.8 264.65 50.8 16.8
+        button 154.6 264.65 50.8 16.8
+        button 213.4 264.65 50.8 16.8
+        button 272.2 264.65 50.8 16.8
+      div 52 320.45 256 298.15
+        div 52 320.45 256 17.55
+        div 52 338 256 189
+        div 52 535 256 37.8
+          span 52 535 40 37.8
+          strong 92 535 808 37.8
+        div 52 580.8 256 37.8
+          span 52 580.8 64 37.8
+          strong 116 580.8 816 37.8
+
+== paint
+root 932x670.6 items=58
+  solid-fill bounds=(0,0,360,671) layer=(border=(0,0,360,671),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,671),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#f5f7faff
+  box-shadow bounds=(4,4,352,663) box=(16,16,328,639) radius=(12,12,12,12,12,12,12,12) shadow=(0,2,8,0,#00000014,0)
+  solid-fill bounds=(16,16,328,639) layer=(border=(16,16,328,639),radius=(12,12,12,12,12,12,12,12),clip=(16,16,328,639),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(36,96,288,49) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(36,96,288,49) root=0
+  solid-fill bounds=(40,104,24,32) layer=(border=(40,104,24,32),radius=(8,8,8,8,8,8,8,8),clip=(40,104,24,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef2ffff
+  solid-fill bounds=(784,104,8,32) layer=(border=(784,104,8,32),radius=(4,4,4,4,4,4,4,4),clip=(784,104,8,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef2ffff
+  borders bounds=(36,180,288,40) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(36,180,288,40) root=0
+  solid-fill bounds=(40,184,38,32) layer=(border=(40,184,38,32),radius=(8,8,8,8,8,8,8,8),clip=(40,184,38,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef2ffff
+  solid-fill bounds=(282,184,38,32) layer=(border=(282,184,38,32),radius=(8,8,8,8,8,8,8,8),clip=(282,184,38,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef2ffff
+  solid-fill bounds=(36,256,53,34) layer=(border=(36,256,53,34),radius=(8,8,8,8,8,8,8,8),clip=(36,256,53,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(36,256,53,34) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(36,256,53,34) root=0
+  solid-fill bounds=(95,256,53,34) layer=(border=(95,256,53,34),radius=(8,8,8,8,8,8,8,8),clip=(95,256,53,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(95,256,53,34) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(95,256,53,34) root=0
+  solid-fill bounds=(154,256,52,34) layer=(border=(154,256,52,34),radius=(8,8,8,8,8,8,8,8),clip=(154,256,52,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(154,256,52,34) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(154,256,52,34) root=0
+  solid-fill bounds=(212,256,53,34) layer=(border=(212,256,53,34),radius=(8,8,8,8,8,8,8,8),clip=(212,256,53,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(212,256,53,34) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(212,256,53,34) root=0
+  solid-fill bounds=(271,256,53,34) layer=(border=(271,256,53,34),radius=(8,8,8,8,8,8,8,8),clip=(271,256,53,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#4338caff
+  borders bounds=(271,256,53,34) borders=(left=(1,4,#4338caff),top=(1,4,#4338caff),right=(1,4,#4338caff),bottom=(1,4,#4338caff),radius=(8,8,8,8,8,8,8,8)) pos=(271,256,53,34) root=0
+  solid-fill bounds=(36,304,288,331) layer=(border=(36,304,288,331),radius=(10,10,10,10,10,10,10,10),clip=(36,304,288,331),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef2ffff
+  text bounds=(28,31,48,32) pos=(36,39,32,16) color=#1f2937ff text="🏠" font=f1 glyphs=4 advance=32
+  text bounds=(68,31,80,32) pos=(76,39,64,16) color=#1f2937ff text="Mortgage" font=f1 glyphs=8 advance=64
+  text bounds=(140,31,96,32) pos=(148,39,80,16) color=#1f2937ff text="Calculator" font=f1 glyphs=10 advance=80
+  text bounds=(28,67,48,32) pos=(36,75,32,16) color=#6b7280ff text="Loan" font=f2 glyphs=4 advance=32
+  text bounds=(68,67,64,32) pos=(76,75,48,16) color=#6b7280ff text="amount" font=f2 glyphs=6 advance=48
+  text bounds=(124,67,40,32) pos=(132,75,24,16) color=#6b7280ff text="($)" font=f2 glyphs=3 advance=24
+  text bounds=(32,104,40,32) pos=(40,112,24,16) color=#4338caff text="−" font=f3 glyphs=3 advance=24
+  text bounds=(296,94,256,32) pos=(304,102,240,16) color=#1f2937ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f4 glyphs=30 advance=240
+  text bounds=(56,114,736,32) pos=(64,122,720,16) color=#1f2937ff text="US\",\"opts\":{\"style\":\"currency\",\"currency\":\"USD\",\"maximumFractionDigits\":0},\"value\":300000}" font=f4 glyphs=90 advance=720
+  text bounds=(776,104,24,32) pos=(784,112,8,16) color=#4338caff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(28,151,80,32) pos=(36,159,64,16) color=#6b7280ff text="Interest" font=f2 glyphs=8 advance=64
+  text bounds=(100,151,48,32) pos=(108,159,32,16) color=#6b7280ff text="rate" font=f2 glyphs=4 advance=32
+  text bounds=(140,151,40,32) pos=(148,159,24,16) color=#6b7280ff text="(%)" font=f2 glyphs=3 advance=24
+  text bounds=(39,184,40,32) pos=(47,192,24,16) color=#4338caff text="−" font=f3 glyphs=3 advance=24
+  text bounds=(156,184,48,32) pos=(164,192,32,16) color=#1f2937ff text="6.50" font=f4 glyphs=4 advance=32
+  text bounds=(289,184,24,32) pos=(297,192,8,16) color=#4338caff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(28,226,48,32) pos=(36,234,32,16) color=#6b7280ff text="Term" font=f2 glyphs=4 advance=32
+  text bounds=(68,226,72,32) pos=(76,234,56,16) color=#6b7280ff text="(years)" font=f2 glyphs=7 advance=56
+  text bounds=(46.4,257,32,32) pos=(54.4,265,16,16) color=#1f2937ff text="10" font=f5 glyphs=2 advance=16
+  text bounds=(105.2,257,32,32) pos=(113.2,265,16,16) color=#1f2937ff text="15" font=f5 glyphs=2 advance=16
+  text bounds=(164,257,32,32) pos=(172,265,16,16) color=#1f2937ff text="20" font=f5 glyphs=2 advance=16
+  text bounds=(222.8,257,32,32) pos=(230.8,265,16,16) color=#1f2937ff text="25" font=f5 glyphs=2 advance=16
+  text bounds=(281.6,257,32,32) pos=(289.6,265,16,16) color=#ffffffff text="30" font=f5 glyphs=2 advance=16
+  text bounds=(44,312,72,32) pos=(52,320,56,16) color=#6b7280ff text="Monthly" font=f2 glyphs=7 advance=56
+  text bounds=(108,312,72,32) pos=(116,320,56,16) color=#6b7280ff text="payment" font=f2 glyphs=7 advance=56
+  text bounds=(44,340,256,32) pos=(52,348,240,16) color=#4338caff text="{\"kind\":\"number\",\"locale\":\"en-" font=f6 glyphs=30 advance=240
+  text bounds=(44,378,272,32) pos=(52,386,256,16) color=#4338caff text="US\",\"opts\":{\"style\":\"currency\",\"" font=f6 glyphs=32 advance=256
+  text bounds=(44,416,272,32) pos=(52,424,256,16) color=#4338caff text="currency\":\"USD\",\"maximumFraction" font=f6 glyphs=32 advance=256
+  text bounds=(44,453,272,32) pos=(52,461,256,16) color=#4338caff text="Digits\":0},\"value\":1896.20407047" font=f6 glyphs=32 advance=256
+  text bounds=(44,491,56,32) pos=(52,499,40,16) color=#4338caff text="8896}" font=f6 glyphs=5 advance=40
+  text bounds=(44,528,56,32) pos=(52,536,40,16) color=#1f2937ff text="Total" font=f7 glyphs=5 advance=40
+  text bounds=(44,547,48,32) pos=(52,555,32,16) color=#1f2937ff text="paid" font=f7 glyphs=4 advance=32
+  text bounds=(84,528,256,32) pos=(92,536,240,16) color=#1f2937ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f8 glyphs=30 advance=240
+  text bounds=(84,547,824,32) pos=(92,555,808,16) color=#1f2937ff text="US\",\"opts\":{\"style\":\"currency\",\"currency\":\"USD\",\"maximumFractionDigits\":0},\"value\":682633.4653724026}" font=f8 glyphs=101 advance=808
+  text bounds=(44,574,56,32) pos=(52,582,40,16) color=#1f2937ff text="Total" font=f7 glyphs=5 advance=40
+  text bounds=(44,593,80,32) pos=(52,601,64,16) color=#1f2937ff text="interest" font=f7 glyphs=8 advance=64
+  text bounds=(108,574,256,32) pos=(116,582,240,16) color=#1f2937ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f8 glyphs=30 advance=240
+  text bounds=(108,593,832,32) pos=(116,601,816,16) color=#1f2937ff text="US\",\"opts\":{\"style\":\"currency\",\"currency\":\"USD\",\"maximumFractionDigits\":0},\"value\":382633.46537240257}" font=f8 glyphs=102 advance=816
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=20,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=28,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

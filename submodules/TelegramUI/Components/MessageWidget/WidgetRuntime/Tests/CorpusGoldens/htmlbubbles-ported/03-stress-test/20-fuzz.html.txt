@@ -1,0 +1,179 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><h3>Lorem ipsum (long message)</h3>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.</p>
+<p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
+<p>Morbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit. Class aptent taciti sociosqu ad litora torquent per conubia nostra.</p>
+<hr>
+<p style="font-size: 12px; color: #8e8e93; text-align: right">— end of stress test —</p>
+</body></html>
+
+== layout
+html 0 0 360 511.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 511.8
+    h3 0 0 360 20.4
+    p 0 26.4 360 145.6
+    p 0 180 360 145.6
+    p 0 333.6 360 145.6
+    hr 0 488.2 360 0
+    p 0 496.2 360 15.6
+
+== paint
+root 360x512.2 items=146
+  borders bounds=(0,487,360,1) borders=(left=(0,0,#808080ff),top=(1,4,#0000001a),right=(0,0,#808080ff),bottom=(0,0,#808080ff),radius=(0,0,0,0,0,0,0,0)) pos=(0,487,360,1) root=0
+  text bounds=(-8,-6,56,32) pos=(0,2,40,16) color=#000000ff text="Lorem" font=f1 glyphs=5 advance=40
+  text bounds=(40,-6,56,32) pos=(48,2,40,16) color=#000000ff text="ipsum" font=f1 glyphs=5 advance=40
+  text bounds=(88,-6,56,32) pos=(96,2,40,16) color=#000000ff text="(long" font=f1 glyphs=5 advance=40
+  text bounds=(136,-6,80,32) pos=(144,2,64,16) color=#000000ff text="message)" font=f1 glyphs=8 advance=64
+  text bounds=(-8,19,56,32) pos=(0,27,40,16) color=#000000ff text="Lorem" font=f2 glyphs=5 advance=40
+  text bounds=(40,19,56,32) pos=(48,27,40,16) color=#000000ff text="ipsum" font=f2 glyphs=5 advance=40
+  text bounds=(88,19,56,32) pos=(96,27,40,16) color=#000000ff text="dolor" font=f2 glyphs=5 advance=40
+  text bounds=(136,19,40,32) pos=(144,27,24,16) color=#000000ff text="sit" font=f2 glyphs=3 advance=24
+  text bounds=(168,19,56,32) pos=(176,27,40,16) color=#000000ff text="amet," font=f2 glyphs=5 advance=40
+  text bounds=(216,19,104,32) pos=(224,27,88,16) color=#000000ff text="consectetur" font=f2 glyphs=11 advance=88
+  text bounds=(-8,38,96,32) pos=(0,46,80,16) color=#000000ff text="adipiscing" font=f2 glyphs=10 advance=80
+  text bounds=(80,38,56,32) pos=(88,46,40,16) color=#000000ff text="elit." font=f2 glyphs=5 advance=40
+  text bounds=(128,38,72,32) pos=(136,46,56,16) color=#000000ff text="Integer" font=f2 glyphs=7 advance=56
+  text bounds=(192,38,40,32) pos=(200,46,24,16) color=#000000ff text="nec" font=f2 glyphs=3 advance=24
+  text bounds=(224,38,56,32) pos=(232,46,40,16) color=#000000ff text="odio." font=f2 glyphs=5 advance=40
+  text bounds=(272,38,80,32) pos=(280,46,64,16) color=#000000ff text="Praesent" font=f2 glyphs=8 advance=64
+  text bounds=(-8,56,72,32) pos=(0,64,56,16) color=#000000ff text="libero." font=f2 glyphs=7 advance=56
+  text bounds=(56,56,40,32) pos=(64,64,24,16) color=#000000ff text="Sed" font=f2 glyphs=3 advance=24
+  text bounds=(88,56,64,32) pos=(96,64,48,16) color=#000000ff text="cursus" font=f2 glyphs=6 advance=48
+  text bounds=(144,56,48,32) pos=(152,64,32,16) color=#000000ff text="ante" font=f2 glyphs=4 advance=32
+  text bounds=(184,56,72,32) pos=(192,64,56,16) color=#000000ff text="dapibus" font=f2 glyphs=7 advance=56
+  text bounds=(248,56,56,32) pos=(256,64,40,16) color=#000000ff text="diam." font=f2 glyphs=5 advance=40
+  text bounds=(296,56,40,32) pos=(304,64,24,16) color=#000000ff text="Sed" font=f2 glyphs=3 advance=24
+  text bounds=(-8,74,56,32) pos=(0,82,40,16) color=#000000ff text="nisi." font=f2 glyphs=5 advance=40
+  text bounds=(40,74,56,32) pos=(48,82,40,16) color=#000000ff text="Nulla" font=f2 glyphs=5 advance=40
+  text bounds=(88,74,48,32) pos=(96,82,32,16) color=#000000ff text="quis" font=f2 glyphs=4 advance=32
+  text bounds=(128,74,40,32) pos=(136,82,24,16) color=#000000ff text="sem" font=f2 glyphs=3 advance=24
+  text bounds=(160,74,32,32) pos=(168,82,16,16) color=#000000ff text="at" font=f2 glyphs=2 advance=16
+  text bounds=(184,74,48,32) pos=(192,82,32,16) color=#000000ff text="nibh" font=f2 glyphs=4 advance=32
+  text bounds=(224,74,88,32) pos=(232,82,72,16) color=#000000ff text="elementum" font=f2 glyphs=9 advance=72
+  text bounds=(-8,92,96,32) pos=(0,100,80,16) color=#000000ff text="imperdiet." font=f2 glyphs=10 advance=80
+  text bounds=(80,92,48,32) pos=(88,100,32,16) color=#000000ff text="Duis" font=f2 glyphs=4 advance=32
+  text bounds=(120,92,80,32) pos=(128,100,64,16) color=#000000ff text="sagittis" font=f2 glyphs=8 advance=64
+  text bounds=(192,92,64,32) pos=(200,100,48,16) color=#000000ff text="ipsum." font=f2 glyphs=6 advance=48
+  text bounds=(248,92,80,32) pos=(256,100,64,16) color=#000000ff text="Praesent" font=f2 glyphs=8 advance=64
+  text bounds=(-8,110,72,32) pos=(0,118,56,16) color=#000000ff text="mauris." font=f2 glyphs=7 advance=56
+  text bounds=(56,110,56,32) pos=(64,118,40,16) color=#000000ff text="Fusce" font=f2 glyphs=5 advance=40
+  text bounds=(104,110,40,32) pos=(112,118,24,16) color=#000000ff text="nec" font=f2 glyphs=3 advance=24
+  text bounds=(136,110,64,32) pos=(144,118,48,16) color=#000000ff text="tellus" font=f2 glyphs=6 advance=48
+  text bounds=(192,110,40,32) pos=(200,118,24,16) color=#000000ff text="sed" font=f2 glyphs=3 advance=24
+  text bounds=(224,110,56,32) pos=(232,118,40,16) color=#000000ff text="augue" font=f2 glyphs=5 advance=40
+  text bounds=(272,110,64,32) pos=(280,118,48,16) color=#000000ff text="semper" font=f2 glyphs=6 advance=48
+  text bounds=(-8,129,64,32) pos=(0,137,48,16) color=#000000ff text="porta." font=f2 glyphs=6 advance=48
+  text bounds=(48,129,64,32) pos=(56,137,48,16) color=#000000ff text="Mauris" font=f2 glyphs=6 advance=48
+  text bounds=(104,129,64,32) pos=(112,137,48,16) color=#000000ff text="massa." font=f2 glyphs=6 advance=48
+  text bounds=(160,129,96,32) pos=(168,137,80,16) color=#000000ff text="Vestibulum" font=f2 glyphs=10 advance=80
+  text bounds=(248,129,72,32) pos=(256,137,56,16) color=#000000ff text="lacinia" font=f2 glyphs=7 advance=56
+  text bounds=(312,129,48,32) pos=(320,137,32,16) color=#000000ff text="arcu" font=f2 glyphs=4 advance=32
+  text bounds=(-8,147,48,32) pos=(0,155,32,16) color=#000000ff text="eget" font=f2 glyphs=4 advance=32
+  text bounds=(32,147,64,32) pos=(40,155,48,16) color=#000000ff text="nulla." font=f2 glyphs=6 advance=48
+  text bounds=(-8,173,56,32) pos=(0,181,40,16) color=#000000ff text="Class" font=f2 glyphs=5 advance=40
+  text bounds=(40,173,64,32) pos=(48,181,48,16) color=#000000ff text="aptent" font=f2 glyphs=6 advance=48
+  text bounds=(96,173,64,32) pos=(104,181,48,16) color=#000000ff text="taciti" font=f2 glyphs=6 advance=48
+  text bounds=(152,173,80,32) pos=(160,181,64,16) color=#000000ff text="sociosqu" font=f2 glyphs=8 advance=64
+  text bounds=(224,173,32,32) pos=(232,181,16,16) color=#000000ff text="ad" font=f2 glyphs=2 advance=16
+  text bounds=(248,173,64,32) pos=(256,181,48,16) color=#000000ff text="litora" font=f2 glyphs=6 advance=48
+  text bounds=(-8,191,80,32) pos=(0,199,64,16) color=#000000ff text="torquent" font=f2 glyphs=8 advance=64
+  text bounds=(64,191,40,32) pos=(72,199,24,16) color=#000000ff text="per" font=f2 glyphs=3 advance=24
+  text bounds=(96,191,72,32) pos=(104,199,56,16) color=#000000ff text="conubia" font=f2 glyphs=7 advance=56
+  text bounds=(160,191,72,32) pos=(168,199,56,16) color=#000000ff text="nostra," font=f2 glyphs=7 advance=56
+  text bounds=(224,191,40,32) pos=(232,199,24,16) color=#000000ff text="per" font=f2 glyphs=3 advance=24
+  text bounds=(256,191,80,32) pos=(264,199,64,16) color=#000000ff text="inceptos" font=f2 glyphs=8 advance=64
+  text bounds=(-8,209,96,32) pos=(0,217,80,16) color=#000000ff text="himenaeos." font=f2 glyphs=10 advance=80
+  text bounds=(80,209,88,32) pos=(88,217,72,16) color=#000000ff text="Curabitur" font=f2 glyphs=9 advance=72
+  text bounds=(160,209,72,32) pos=(168,217,56,16) color=#000000ff text="sodales" font=f2 glyphs=7 advance=56
+  text bounds=(224,209,64,32) pos=(232,217,48,16) color=#000000ff text="ligula" font=f2 glyphs=6 advance=48
+  text bounds=(280,209,32,32) pos=(288,217,16,16) color=#000000ff text="in" font=f2 glyphs=2 advance=16
+  text bounds=(-8,228,72,32) pos=(0,236,56,16) color=#000000ff text="libero." font=f2 glyphs=7 advance=56
+  text bounds=(56,228,40,32) pos=(64,236,24,16) color=#000000ff text="Sed" font=f2 glyphs=3 advance=24
+  text bounds=(88,228,88,32) pos=(96,236,72,16) color=#000000ff text="dignissim" font=f2 glyphs=9 advance=72
+  text bounds=(168,228,72,32) pos=(176,236,56,16) color=#000000ff text="lacinia" font=f2 glyphs=7 advance=56
+  text bounds=(232,228,56,32) pos=(240,236,40,16) color=#000000ff text="nunc." font=f2 glyphs=5 advance=40
+  text bounds=(280,228,88,32) pos=(288,236,72,16) color=#000000ff text="Curabitur" font=f2 glyphs=9 advance=72
+  text bounds=(-8,246,72,32) pos=(0,254,56,16) color=#000000ff text="tortor." font=f2 glyphs=7 advance=56
+  text bounds=(56,246,112,32) pos=(64,254,96,16) color=#000000ff text="Pellentesque" font=f2 glyphs=12 advance=96
+  text bounds=(160,246,56,32) pos=(168,254,40,16) color=#000000ff text="nibh." font=f2 glyphs=5 advance=40
+  text bounds=(208,246,64,32) pos=(216,254,48,16) color=#000000ff text="Aenean" font=f2 glyphs=6 advance=48
+  text bounds=(264,246,56,32) pos=(272,254,40,16) color=#000000ff text="quam." font=f2 glyphs=5 advance=40
+  text bounds=(312,246,32,32) pos=(320,254,16,16) color=#000000ff text="In" font=f2 glyphs=2 advance=16
+  text bounds=(-8,264,104,32) pos=(0,272,88,16) color=#000000ff text="scelerisque" font=f2 glyphs=11 advance=88
+  text bounds=(88,264,40,32) pos=(96,272,24,16) color=#000000ff text="sem" font=f2 glyphs=3 advance=24
+  text bounds=(120,264,32,32) pos=(128,272,16,16) color=#000000ff text="at" font=f2 glyphs=2 advance=16
+  text bounds=(144,264,64,32) pos=(152,272,48,16) color=#000000ff text="dolor." font=f2 glyphs=6 advance=48
+  text bounds=(200,264,80,32) pos=(208,272,64,16) color=#000000ff text="Maecenas" font=f2 glyphs=8 advance=64
+  text bounds=(272,264,72,32) pos=(280,272,56,16) color=#000000ff text="mattis." font=f2 glyphs=7 advance=56
+  text bounds=(-8,282,40,32) pos=(0,290,24,16) color=#000000ff text="Sed" font=f2 glyphs=3 advance=24
+  text bounds=(24,282,88,32) pos=(32,290,72,16) color=#000000ff text="convallis" font=f2 glyphs=9 advance=72
+  text bounds=(104,282,88,32) pos=(112,290,72,16) color=#000000ff text="tristique" font=f2 glyphs=9 advance=72
+  text bounds=(184,282,48,32) pos=(192,290,32,16) color=#000000ff text="sem." font=f2 glyphs=4 advance=32
+  text bounds=(224,282,56,32) pos=(232,290,40,16) color=#000000ff text="Proin" font=f2 glyphs=5 advance=40
+  text bounds=(272,282,32,32) pos=(280,290,16,16) color=#000000ff text="ut" font=f2 glyphs=2 advance=16
+  text bounds=(296,282,64,32) pos=(304,290,48,16) color=#000000ff text="ligula" font=f2 glyphs=6 advance=48
+  text bounds=(-8,300,40,32) pos=(0,308,24,16) color=#000000ff text="vel" font=f2 glyphs=3 advance=24
+  text bounds=(24,300,48,32) pos=(32,308,32,16) color=#000000ff text="nunc" font=f2 glyphs=4 advance=32
+  text bounds=(64,300,72,32) pos=(72,308,56,16) color=#000000ff text="egestas" font=f2 glyphs=7 advance=56
+  text bounds=(128,300,96,32) pos=(136,308,80,16) color=#000000ff text="porttitor." font=f2 glyphs=10 advance=80
+  text bounds=(-8,327,56,32) pos=(0,335,40,16) color=#000000ff text="Morbi" font=f2 glyphs=5 advance=40
+  text bounds=(40,327,64,32) pos=(48,335,48,16) color=#000000ff text="lectus" font=f2 glyphs=6 advance=48
+  text bounds=(96,327,64,32) pos=(104,335,48,16) color=#000000ff text="risus," font=f2 glyphs=6 advance=48
+  text bounds=(152,327,72,32) pos=(160,335,56,16) color=#000000ff text="iaculis" font=f2 glyphs=7 advance=56
+  text bounds=(216,327,48,32) pos=(224,335,32,16) color=#000000ff text="vel," font=f2 glyphs=4 advance=32
+  text bounds=(256,327,80,32) pos=(264,335,64,16) color=#000000ff text="suscipit" font=f2 glyphs=8 advance=64
+  text bounds=(-8,345,56,32) pos=(0,353,40,16) color=#000000ff text="quis," font=f2 glyphs=5 advance=40
+  text bounds=(40,345,64,32) pos=(48,353,48,16) color=#000000ff text="luctus" font=f2 glyphs=6 advance=48
+  text bounds=(96,345,48,32) pos=(104,353,32,16) color=#000000ff text="non," font=f2 glyphs=4 advance=32
+  text bounds=(136,345,64,32) pos=(144,353,48,16) color=#000000ff text="massa." font=f2 glyphs=6 advance=48
+  text bounds=(192,345,56,32) pos=(200,353,40,16) color=#000000ff text="Fusce" font=f2 glyphs=5 advance=40
+  text bounds=(240,345,32,32) pos=(248,353,16,16) color=#000000ff text="ac" font=f2 glyphs=2 advance=16
+  text bounds=(264,345,64,32) pos=(272,353,48,16) color=#000000ff text="turpis" font=f2 glyphs=6 advance=48
+  text bounds=(320,345,48,32) pos=(328,353,32,16) color=#000000ff text="quis" font=f2 glyphs=4 advance=32
+  text bounds=(-8,363,64,32) pos=(0,371,48,16) color=#000000ff text="ligula" font=f2 glyphs=6 advance=48
+  text bounds=(48,363,72,32) pos=(56,371,56,16) color=#000000ff text="lacinia" font=f2 glyphs=7 advance=56
+  text bounds=(112,363,80,32) pos=(120,371,64,16) color=#000000ff text="aliquet." font=f2 glyphs=8 advance=64
+  text bounds=(184,363,64,32) pos=(192,371,48,16) color=#000000ff text="Mauris" font=f2 glyphs=6 advance=48
+  text bounds=(240,363,64,32) pos=(248,371,48,16) color=#000000ff text="ipsum." font=f2 glyphs=6 advance=48
+  text bounds=(296,363,56,32) pos=(304,371,40,16) color=#000000ff text="Nulla" font=f2 glyphs=5 advance=40
+  text bounds=(-8,381,56,32) pos=(0,389,40,16) color=#000000ff text="metus" font=f2 glyphs=5 advance=40
+  text bounds=(40,381,64,32) pos=(48,389,48,16) color=#000000ff text="metus," font=f2 glyphs=6 advance=48
+  text bounds=(96,381,104,32) pos=(104,389,88,16) color=#000000ff text="ullamcorper" font=f2 glyphs=11 advance=88
+  text bounds=(192,381,48,32) pos=(200,389,32,16) color=#000000ff text="vel," font=f2 glyphs=4 advance=32
+  text bounds=(232,381,88,32) pos=(240,389,72,16) color=#000000ff text="tincidunt" font=f2 glyphs=9 advance=72
+  text bounds=(312,381,48,32) pos=(320,389,32,16) color=#000000ff text="sed," font=f2 glyphs=4 advance=32
+  text bounds=(-8,399,72,32) pos=(0,407,56,16) color=#000000ff text="euismod" font=f2 glyphs=7 advance=56
+  text bounds=(56,399,40,32) pos=(64,407,24,16) color=#000000ff text="in," font=f2 glyphs=3 advance=24
+  text bounds=(88,399,56,32) pos=(96,407,40,16) color=#000000ff text="nibh." font=f2 glyphs=5 advance=40
+  text bounds=(136,399,72,32) pos=(144,407,56,16) color=#000000ff text="Quisque" font=f2 glyphs=7 advance=56
+  text bounds=(200,399,80,32) pos=(208,407,64,16) color=#000000ff text="volutpat" font=f2 glyphs=8 advance=64
+  text bounds=(-8,418,104,32) pos=(0,426,88,16) color=#000000ff text="condimentum" font=f2 glyphs=11 advance=88
+  text bounds=(88,418,64,32) pos=(96,426,48,16) color=#000000ff text="velit." font=f2 glyphs=6 advance=48
+  text bounds=(144,418,56,32) pos=(152,426,40,16) color=#000000ff text="Class" font=f2 glyphs=5 advance=40
+  text bounds=(192,418,64,32) pos=(200,426,48,16) color=#000000ff text="aptent" font=f2 glyphs=6 advance=48
+  text bounds=(248,418,64,32) pos=(256,426,48,16) color=#000000ff text="taciti" font=f2 glyphs=6 advance=48
+  text bounds=(-8,436,80,32) pos=(0,444,64,16) color=#000000ff text="sociosqu" font=f2 glyphs=8 advance=64
+  text bounds=(64,436,32,32) pos=(72,444,16,16) color=#000000ff text="ad" font=f2 glyphs=2 advance=16
+  text bounds=(88,436,64,32) pos=(96,444,48,16) color=#000000ff text="litora" font=f2 glyphs=6 advance=48
+  text bounds=(144,436,80,32) pos=(152,444,64,16) color=#000000ff text="torquent" font=f2 glyphs=8 advance=64
+  text bounds=(216,436,40,32) pos=(224,444,24,16) color=#000000ff text="per" font=f2 glyphs=3 advance=24
+  text bounds=(248,436,72,32) pos=(256,444,56,16) color=#000000ff text="conubia" font=f2 glyphs=7 advance=56
+  text bounds=(-8,454,72,32) pos=(0,462,56,16) color=#000000ff text="nostra." font=f2 glyphs=7 advance=56
+  text bounds=(144,488,40,32) pos=(152,496,24,16) color=#8e8e93ff text="—" font=f3 glyphs=3 advance=24
+  text bounds=(176,488,40,32) pos=(184,496,24,16) color=#8e8e93ff text="end" font=f3 glyphs=3 advance=24
+  text bounds=(208,488,32,32) pos=(216,496,16,16) color=#8e8e93ff text="of" font=f3 glyphs=2 advance=16
+  text bounds=(232,488,64,32) pos=(240,496,48,16) color=#8e8e93ff text="stress" font=f3 glyphs=6 advance=48
+  text bounds=(288,488,48,32) pos=(296,496,32,16) color=#8e8e93ff text="test" font=f3 glyphs=4 advance=32
+  text bounds=(328,488,40,32) pos=(336,496,24,16) color=#8e8e93ff text="—" font=f3 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

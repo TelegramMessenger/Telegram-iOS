@@ -1,0 +1,579 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="wrap">
+  <div class="pass" id="pass" role="button" aria-label="flip the boarding pass">
+    <div class="face front">
+      <div class="head">
+        <div class="airline"><span>NORDWIND · NW 1472</span><span>BOARDING PASS</span></div>
+        <div class="route">
+          <div><div class="code">LIS</div><div class="city">Lisbon</div></div>
+          <div class="plane"><span class="line"></span><svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"></path></svg></div>
+          <div style="text-align:right"><div class="code">TBS</div><div class="city">Tbilisi</div></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="grid">
+          <div><div class="lbl">Passenger</div><div class="val">M. Vasquez</div></div>
+          <div><div class="lbl">Date</div><div class="val">24 May</div></div>
+          <div><div class="lbl">Boarding</div><div class="val">18:05</div></div>
+          <div><div class="lbl">Gate</div><div class="val big">B22</div></div>
+          <div><div class="lbl">Seat</div><div class="val big">14A</div></div>
+          <div><div class="lbl">Group</div><div class="val big">2</div></div>
+        </div>
+        <div class="gate" id="gate"><span style="display:flex;align-items:center"><span class="dot"></span><span id="gateText">Gate closes in</span></span><span class="t" id="count">12:33</span></div>
+      </div>
+    </div>
+    <div class="face back">
+      <div class="qr"><svg viewBox="0 0 29 29" id="qr"><rect x="0" y="0" width="1" height="1"></rect><rect x="1" y="0" width="1" height="1"></rect><rect x="2" y="0" width="1" height="1"></rect><rect x="3" y="0" width="1" height="1"></rect><rect x="4" y="0" width="1" height="1"></rect><rect x="5" y="0" width="1" height="1"></rect><rect x="6" y="0" width="1" height="1"></rect><rect x="11" y="0" width="1" height="1"></rect><rect x="12" y="0" width="1" height="1"></rect><rect x="13" y="0" width="1" height="1"></rect><rect x="15" y="0" width="1" height="1"></rect><rect x="16" y="0" width="1" height="1"></rect><rect x="17" y="0" width="1" height="1"></rect><rect x="22" y="0" width="1" height="1"></rect><rect x="23" y="0" width="1" height="1"></rect><rect x="24" y="0" width="1" height="1"></rect><rect x="25" y="0" width="1" height="1"></rect><rect x="26" y="0" width="1" height="1"></rect><rect x="27" y="0" width="1" height="1"></rect><rect x="28" y="0" width="1" height="1"></rect><rect x="0" y="1" width="1" height="1"></rect><rect x="6" y="1" width="1" height="1"></rect><rect x="9" y="1" width="1" height="1"></rect><rect x="11" y="1" width="1" height="1"></rect><rect x="16" y="1" width="1" height="1"></rect><rect x="22" y="1" width="1" height="1"></rect><rect x="28" y="1" width="1" height="1"></rect><rect x="0" y="2" width="1" height="1"></rect><rect x="2" y="2" width="1" height="1"></rect><rect x="3" y="2" width="1" height="1"></rect><rect x="4" y="2" width="1" height="1"></rect><rect x="6" y="2" width="1" height="1"></rect><rect x="8" y="2" width="1" height="1"></rect><rect x="12" y="2" width="1" height="1"></rect><rect x="13" y="2" width="1" height="1"></rect><rect x="14" y="2" width="1" height="1"></rect><rect x="19" y="2" width="1" height="1"></rect><rect x="22" y="2" width="1" height="1"></rect><rect x="24" y="2" width="1" height="1"></rect><rect x="25" y="2" width="1" height="1"></rect><rect x="26" y="2" width="1" height="1"></rect><rect x="28" y="2" width="1" height="1"></rect><rect x="0" y="3" width="1" height="1"></rect><rect x="2" y="3" width="1" height="1"></rect><rect x="3" y="3" width="1" height="1"></rect><rect x="4" y="3" width="1" height="1"></rect><rect x="6" y="3" width="1" height="1"></rect><rect x="8" y="3" width="1" height="1"></rect><rect x="11" y="3" width="1" height="1"></rect><rect x="12" y="3" width="1" height="1"></rect><rect x="13" y="3" width="1" height="1"></rect><rect x="19" y="3" width="1" height="1"></rect><rect x="22" y="3" width="1" height="1"></rect><rect x="24" y="3" width="1" height="1"></rect><rect x="25" y="3" width="1" height="1"></rect><rect x="26" y="3" width="1" height="1"></rect><rect x="28" y="3" width="1" height="1"></rect><rect x="0" y="4" width="1" height="1"></rect><rect x="2" y="4" width="1" height="1"></rect><rect x="3" y="4" width="1" height="1"></rect><rect x="4" y="4" width="1" height="1"></rect><rect x="6" y="4" width="1" height="1"></rect><rect x="8" y="4" width="1" height="1"></rect><rect x="9" y="4" width="1" height="1"></rect><rect x="12" y="4" width="1" height="1"></rect><rect x="15" y="4" width="1" height="1"></rect><rect x="17" y="4" width="1" height="1"></rect><rect x="19" y="4" width="1" height="1"></rect><rect x="20" y="4" width="1" height="1"></rect><rect x="22" y="4" width="1" height="1"></rect><rect x="24" y="4" width="1" height="1"></rect><rect x="25" y="4" width="1" height="1"></rect><rect x="26" y="4" width="1" height="1"></rect><rect x="28" y="4" width="1" height="1"></rect><rect x="0" y="5" width="1" height="1"></rect><rect x="6" y="5" width="1" height="1"></rect><rect x="8" y="5" width="1" height="1"></rect><rect x="10" y="5" width="1" height="1"></rect><rect x="14" y="5" width="1" height="1"></rect><rect x="18" y="5" width="1" height="1"></rect><rect x="20" y="5" width="1" height="1"></rect><rect x="22" y="5" width="1" height="1"></rect><rect x="28" y="5" width="1" height="1"></rect><rect x="0" y="6" width="1" height="1"></rect><rect x="1" y="6" width="1" height="1"></rect><rect x="2" y="6" width="1" height="1"></rect><rect x="3" y="6" width="1" height="1"></rect><rect x="4" y="6" width="1" height="1"></rect><rect x="5" y="6" width="1" height="1"></rect><rect x="6" y="6" width="1" height="1"></rect><rect x="13" y="6" width="1" height="1"></rect><rect x="15" y="6" width="1" height="1"></rect><rect x="18" y="6" width="1" height="1"></rect><rect x="22" y="6" width="1" height="1"></rect><rect x="23" y="6" width="1" height="1"></rect><rect x="24" y="6" width="1" height="1"></rect><rect x="25" y="6" width="1" height="1"></rect><rect x="26" y="6" width="1" height="1"></rect><rect x="27" y="6" width="1" height="1"></rect><rect x="28" y="6" width="1" height="1"></rect><rect x="9" y="7" width="1" height="1"></rect><rect x="12" y="7" width="1" height="1"></rect><rect x="13" y="7" width="1" height="1"></rect><rect x="15" y="7" width="1" height="1"></rect><rect x="18" y="7" width="1" height="1"></rect><rect x="19" y="7" width="1" height="1"></rect><rect x="20" y="7" width="1" height="1"></rect><rect x="2" y="8" width="1" height="1"></rect><rect x="6" y="8" width="1" height="1"></rect><rect x="7" y="8" width="1" height="1"></rect><rect x="11" y="8" width="1" height="1"></rect><rect x="13" y="8" width="1" height="1"></rect><rect x="15" y="8" width="1" height="1"></rect><rect x="16" y="8" width="1" height="1"></rect><rect x="17" y="8" width="1" height="1"></rect><rect x="19" y="8" width="1" height="1"></rect><rect x="21" y="8" width="1" height="1"></rect><rect x="22" y="8" width="1" height="1"></rect><rect x="24" y="8" width="1" height="1"></rect><rect x="25" y="8" width="1" height="1"></rect><rect x="28" y="8" width="1" height="1"></rect><rect x="8" y="9" width="1" height="1"></rect><rect x="11" y="9" width="1" height="1"></rect><rect x="12" y="9" width="1" height="1"></rect><rect x="14" y="9" width="1" height="1"></rect><rect x="15" y="9" width="1" height="1"></rect><rect x="21" y="9" width="1" height="1"></rect><rect x="23" y="9" width="1" height="1"></rect><rect x="24" y="9" width="1" height="1"></rect><rect x="27" y="9" width="1" height="1"></rect><rect x="0" y="10" width="1" height="1"></rect><rect x="6" y="10" width="1" height="1"></rect><rect x="10" y="10" width="1" height="1"></rect><rect x="11" y="10" width="1" height="1"></rect><rect x="16" y="10" width="1" height="1"></rect><rect x="25" y="10" width="1" height="1"></rect><rect x="26" y="10" width="1" height="1"></rect><rect x="27" y="10" width="1" height="1"></rect><rect x="28" y="10" width="1" height="1"></rect><rect x="0" y="11" width="1" height="1"></rect><rect x="3" y="11" width="1" height="1"></rect><rect x="4" y="11" width="1" height="1"></rect><rect x="5" y="11" width="1" height="1"></rect><rect x="7" y="11" width="1" height="1"></rect><rect x="9" y="11" width="1" height="1"></rect><rect x="10" y="11" width="1" height="1"></rect><rect x="11" y="11" width="1" height="1"></rect><rect x="12" y="11" width="1" height="1"></rect><rect x="13" y="11" width="1" height="1"></rect><rect x="16" y="11" width="1" height="1"></rect><rect x="17" y="11" width="1" height="1"></rect><rect x="19" y="11" width="1" height="1"></rect><rect x="24" y="11" width="1" height="1"></rect><rect x="0" y="12" width="1" height="1"></rect><rect x="2" y="12" width="1" height="1"></rect><rect x="10" y="12" width="1" height="1"></rect><rect x="11" y="12" width="1" height="1"></rect><rect x="15" y="12" width="1" height="1"></rect><rect x="18" y="12" width="1" height="1"></rect><rect x="19" y="12" width="1" height="1"></rect><rect x="21" y="12" width="1" height="1"></rect><rect x="22" y="12" width="1" height="1"></rect><rect x="23" y="12" width="1" height="1"></rect><rect x="26" y="12" width="1" height="1"></rect><rect x="28" y="12" width="1" height="1"></rect><rect x="0" y="13" width="1" height="1"></rect><rect x="2" y="13" width="1" height="1"></rect><rect x="3" y="13" width="1" height="1"></rect><rect x="4" y="13" width="1" height="1"></rect><rect x="7" y="13" width="1" height="1"></rect><rect x="11" y="13" width="1" height="1"></rect><rect x="12" y="13" width="1" height="1"></rect><rect x="14" y="13" width="1" height="1"></rect><rect x="15" y="13" width="1" height="1"></rect><rect x="16" y="13" width="1" height="1"></rect><rect x="17" y="13" width="1" height="1"></rect><rect x="20" y="13" width="1" height="1"></rect><rect x="21" y="13" width="1" height="1"></rect><rect x="24" y="13" width="1" height="1"></rect><rect x="25" y="13" width="1" height="1"></rect><rect x="27" y="13" width="1" height="1"></rect><rect x="3" y="14" width="1" height="1"></rect><rect x="4" y="14" width="1" height="1"></rect><rect x="5" y="14" width="1" height="1"></rect><rect x="6" y="14" width="1" height="1"></rect><rect x="8" y="14" width="1" height="1"></rect><rect x="9" y="14" width="1" height="1"></rect><rect x="10" y="14" width="1" height="1"></rect><rect x="11" y="14" width="1" height="1"></rect><rect x="12" y="14" width="1" height="1"></rect><rect x="13" y="14" width="1" height="1"></rect><rect x="14" y="14" width="1" height="1"></rect><rect x="18" y="14" width="1" height="1"></rect><rect x="19" y="14" width="1" height="1"></rect><rect x="23" y="14" width="1" height="1"></rect><rect x="26" y="14" width="1" height="1"></rect><rect x="27" y="14" width="1" height="1"></rect><rect x="2" y="15" width="1" height="1"></rect><rect x="3" y="15" width="1" height="1"></rect><rect x="4" y="15" width="1" height="1"></rect><rect x="9" y="15" width="1" height="1"></rect><rect x="10" y="15" width="1" height="1"></rect><rect x="12" y="15" width="1" height="1"></rect><rect x="16" y="15" width="1" height="1"></rect><rect x="17" y="15" width="1" height="1"></rect><rect x="21" y="15" width="1" height="1"></rect><rect x="27" y="15" width="1" height="1"></rect><rect x="28" y="15" width="1" height="1"></rect><rect x="0" y="16" width="1" height="1"></rect><rect x="1" y="16" width="1" height="1"></rect><rect x="2" y="16" width="1" height="1"></rect><rect x="4" y="16" width="1" height="1"></rect><rect x="6" y="16" width="1" height="1"></rect><rect x="7" y="16" width="1" height="1"></rect><rect x="8" y="16" width="1" height="1"></rect><rect x="9" y="16" width="1" height="1"></rect><rect x="12" y="16" width="1" height="1"></rect><rect x="14" y="16" width="1" height="1"></rect><rect x="22" y="16" width="1" height="1"></rect><rect x="23" y="16" width="1" height="1"></rect><rect x="25" y="16" width="1" height="1"></rect><rect x="26" y="16" width="1" height="1"></rect><rect x="0" y="17" width="1" height="1"></rect><rect x="1" y="17" width="1" height="1"></rect><rect x="2" y="17" width="1" height="1"></rect><rect x="10" y="17" width="1" height="1"></rect><rect x="11" y="17" width="1" height="1"></rect><rect x="12" y="17" width="1" height="1"></rect><rect x="13" y="17" width="1" height="1"></rect><rect x="15" y="17" width="1" height="1"></rect><rect x="16" y="17" width="1" height="1"></rect><rect x="20" y="17" width="1" height="1"></rect><rect x="26" y="17" width="1" height="1"></rect><rect x="27" y="17" width="1" height="1"></rect><rect x="28" y="17" width="1" height="1"></rect><rect x="1" y="18" width="1" height="1"></rect><rect x="5" y="18" width="1" height="1"></rect><rect x="8" y="18" width="1" height="1"></rect><rect x="12" y="18" width="1" height="1"></rect><rect x="13" y="18" width="1" height="1"></rect><rect x="14" y="18" width="1" height="1"></rect><rect x="16" y="18" width="1" height="1"></rect><rect x="17" y="18" width="1" height="1"></rect><rect x="18" y="18" width="1" height="1"></rect><rect x="24" y="18" width="1" height="1"></rect><rect x="25" y="18" width="1" height="1"></rect><rect x="26" y="18" width="1" height="1"></rect><rect x="27" y="18" width="1" height="1"></rect><rect x="28" y="18" width="1" height="1"></rect><rect x="0" y="19" width="1" height="1"></rect><rect x="1" y="19" width="1" height="1"></rect><rect x="2" y="19" width="1" height="1"></rect><rect x="3" y="19" width="1" height="1"></rect><rect x="12" y="19" width="1" height="1"></rect><rect x="13" y="19" width="1" height="1"></rect><rect x="17" y="19" width="1" height="1"></rect><rect x="20" y="19" width="1" height="1"></rect><rect x="21" y="19" width="1" height="1"></rect><rect x="22" y="19" width="1" height="1"></rect><rect x="24" y="19" width="1" height="1"></rect><rect x="27" y="19" width="1" height="1"></rect><rect x="28" y="19" width="1" height="1"></rect><rect x="0" y="20" width="1" height="1"></rect><rect x="1" y="20" width="1" height="1"></rect><rect x="2" y="20" width="1" height="1"></rect><rect x="3" y="20" width="1" height="1"></rect><rect x="4" y="20" width="1" height="1"></rect><rect x="7" y="20" width="1" height="1"></rect><rect x="9" y="20" width="1" height="1"></rect><rect x="13" y="20" width="1" height="1"></rect><rect x="14" y="20" width="1" height="1"></rect><rect x="17" y="20" width="1" height="1"></rect><rect x="19" y="20" width="1" height="1"></rect><rect x="20" y="20" width="1" height="1"></rect><rect x="25" y="20" width="1" height="1"></rect><rect x="26" y="20" width="1" height="1"></rect><rect x="9" y="21" width="1" height="1"></rect><rect x="11" y="21" width="1" height="1"></rect><rect x="14" y="21" width="1" height="1"></rect><rect x="16" y="21" width="1" height="1"></rect><rect x="19" y="21" width="1" height="1"></rect><rect x="20" y="21" width="1" height="1"></rect><rect x="21" y="21" width="1" height="1"></rect><rect x="23" y="21" width="1" height="1"></rect><rect x="25" y="21" width="1" height="1"></rect><rect x="26" y="21" width="1" height="1"></rect><rect x="0" y="22" width="1" height="1"></rect><rect x="1" y="22" width="1" height="1"></rect><rect x="2" y="22" width="1" height="1"></rect><rect x="3" y="22" width="1" height="1"></rect><rect x="4" y="22" width="1" height="1"></rect><rect x="5" y="22" width="1" height="1"></rect><rect x="6" y="22" width="1" height="1"></rect><rect x="12" y="22" width="1" height="1"></rect><rect x="15" y="22" width="1" height="1"></rect><rect x="17" y="22" width="1" height="1"></rect><rect x="20" y="22" width="1" height="1"></rect><rect x="26" y="22" width="1" height="1"></rect><rect x="27" y="22" width="1" height="1"></rect><rect x="28" y="22" width="1" height="1"></rect><rect x="0" y="23" width="1" height="1"></rect><rect x="6" y="23" width="1" height="1"></rect><rect x="10" y="23" width="1" height="1"></rect><rect x="11" y="23" width="1" height="1"></rect><rect x="13" y="23" width="1" height="1"></rect><rect x="14" y="23" width="1" height="1"></rect><rect x="15" y="23" width="1" height="1"></rect><rect x="17" y="23" width="1" height="1"></rect><rect x="19" y="23" width="1" height="1"></rect><rect x="21" y="23" width="1" height="1"></rect><rect x="24" y="23" width="1" height="1"></rect><rect x="27" y="23" width="1" height="1"></rect><rect x="0" y="24" width="1" height="1"></rect><rect x="2" y="24" width="1" height="1"></rect><rect x="3" y="24" width="1" height="1"></rect><rect x="4" y="24" width="1" height="1"></rect><rect x="6" y="24" width="1" height="1"></rect><rect x="10" y="24" width="1" height="1"></rect><rect x="11" y="24" width="1" height="1"></rect><rect x="14" y="24" width="1" height="1"></rect><rect x="22" y="24" width="1" height="1"></rect><rect x="25" y="24" width="1" height="1"></rect><rect x="27" y="24" width="1" height="1"></rect><rect x="28" y="24" width="1" height="1"></rect><rect x="0" y="25" width="1" height="1"></rect><rect x="2" y="25" width="1" height="1"></rect><rect x="3" y="25" width="1" height="1"></rect><rect x="4" y="25" width="1" height="1"></rect><rect x="6" y="25" width="1" height="1"></rect><rect x="8" y="25" width="1" height="1"></rect><rect x="12" y="25" width="1" height="1"></rect><rect x="16" y="25" width="1" height="1"></rect><rect x="20" y="25" width="1" height="1"></rect><rect x="23" y="25" width="1" height="1"></rect><rect x="28" y="25" width="1" height="1"></rect><rect x="0" y="26" width="1" height="1"></rect><rect x="2" y="26" width="1" height="1"></rect><rect x="3" y="26" width="1" height="1"></rect><rect x="4" y="26" width="1" height="1"></rect><rect x="6" y="26" width="1" height="1"></rect><rect x="8" y="26" width="1" height="1"></rect><rect x="10" y="26" width="1" height="1"></rect><rect x="14" y="26" width="1" height="1"></rect><rect x="15" y="26" width="1" height="1"></rect><rect x="17" y="26" width="1" height="1"></rect><rect x="20" y="26" width="1" height="1"></rect><rect x="21" y="26" width="1" height="1"></rect><rect x="23" y="26" width="1" height="1"></rect><rect x="27" y="26" width="1" height="1"></rect><rect x="0" y="27" width="1" height="1"></rect><rect x="6" y="27" width="1" height="1"></rect><rect x="8" y="27" width="1" height="1"></rect><rect x="10" y="27" width="1" height="1"></rect><rect x="12" y="27" width="1" height="1"></rect><rect x="13" y="27" width="1" height="1"></rect><rect x="18" y="27" width="1" height="1"></rect><rect x="19" y="27" width="1" height="1"></rect><rect x="20" y="27" width="1" height="1"></rect><rect x="22" y="27" width="1" height="1"></rect><rect x="25" y="27" width="1" height="1"></rect><rect x="27" y="27" width="1" height="1"></rect><rect x="0" y="28" width="1" height="1"></rect><rect x="1" y="28" width="1" height="1"></rect><rect x="2" y="28" width="1" height="1"></rect><rect x="3" y="28" width="1" height="1"></rect><rect x="4" y="28" width="1" height="1"></rect><rect x="5" y="28" width="1" height="1"></rect><rect x="6" y="28" width="1" height="1"></rect><rect x="8" y="28" width="1" height="1"></rect><rect x="14" y="28" width="1" height="1"></rect><rect x="16" y="28" width="1" height="1"></rect><rect x="18" y="28" width="1" height="1"></rect><rect x="19" y="28" width="1" height="1"></rect><rect x="20" y="28" width="1" height="1"></rect><rect x="22" y="28" width="1" height="1"></rect><rect x="26" y="28" width="1" height="1"></rect><rect x="27" y="28" width="1" height="1"></rect><rect x="28" y="28" width="1" height="1"></rect></svg></div>
+      <div class="name">NW1472 · 14A · M. VASQUEZ</div>
+      <div class="seq">SEQ 042 · ETKT 724 2403 981 227</div>
+    </div>
+  </div>
+  <div class="tear"></div>
+  <div class="foot">
+    <button class="btn primary" id="wallet">Add to Wallet</button>
+    <button class="btn" id="share">Share</button>
+  </div>
+  <div class="hint">Tap the pass to show the QR code</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 708.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 708.6
+    div 0 0 360 708.6
+      div 0 0 360 606.85
+        div 0 0 360 295.05
+          div 18 16 324 80.4
+            div 18 16 324 16.2
+              span 18 16 152 16.2
+              span 238 16 104 16.2
+            div 18 42.2 324 54.2
+              div 18 42.2 48 54.2
+                div 18 42.2 48 34
+                div 18 80.2 48 16.2
+              div 80 57.3 192 24
+                span 80 70.3 192 0
+                svg 80 59.3 20 20
+                  path 0 0 0 0
+              div 286 42.2 56 54.2
+                div 286 42.2 56 34
+                div 286 80.2 56 16.2
+            -tag-after 190 -150 260 260
+          div 18 122.4 324 156.65
+            div 18 122.4 324 95.65
+              div 18 122.4 101.333 38.45
+                div 18 122.4 101.333 13.5
+                div 18 137.9 101.333 22.95
+              div 129.333 122.4 101.333 38.45
+                div 129.333 122.4 101.333 13.5
+                div 129.333 137.9 101.333 22.95
+              div 240.667 122.4 101.333 38.45
+                div 240.667 122.4 101.333 13.5
+                div 240.667 137.9 101.333 22.95
+              div 18 172.85 101.333 45.2
+                div 18 172.85 101.333 13.5
+                div 18 188.35 101.333 29.7
+              div 129.333 172.85 101.333 45.2
+                div 129.333 172.85 101.333 13.5
+                div 129.333 188.35 101.333 29.7
+              div 240.667 172.85 101.333 45.2
+                div 240.667 172.85 101.333 13.5
+                div 240.667 188.35 101.333 29.7
+            div 30 242.05 300 27
+              span 30 246.1 128 18.9
+                span 30 251.55 8 8
+                span 46 246.1 112 18.9
+              span 290 242.05 40 27
+        div 18 313.05 324 275.8
+          div 94 325.05 172 196
+            svg 94 325.05 172 220
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+              rect 0 0 0 0
+          div 72 549.05 216 21.6
+          div 52 572.65 256 16.2
+      div 18 608.85 324 0
+        -tag-before -10 597.85 20 20
+        -tag-after 350 597.85 20 20
+      div 18 622.85 324 40.9
+        button 32 633.85 129 18.9
+        button 199 633.85 129 18.9
+      div 0 681.75 360 14.85
+
+== paint
+root 360x708.6 items=74
+  solid-fill bounds=(0,0,360,709) layer=(border=(0,0,360,709),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,709),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,708.6) pos=(0,0,360,708.6) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(0,0,360,295) layer=(border=(0,0,360,295),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,295),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,295.05) pos=(0,0,360,295.05) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(18,232,324,47) layer=(border=(18,232,324,47),radius=(12,12,12,12,12,12,12,12),clip=(18,232,324,47),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  box-shadow bounds=(21.9583,243.958,24.0834,24.0834) box=(30,252,8,8) radius=(4,4,4,4,4,4,4,4) shadow=(0,0,0,6.0417,#34c75932,0)
+  solid-fill bounds=(30,252,8,8) layer=(border=(30,252,8,8),radius=(4,4,4,4,4,4,4,4),clip=(30,252,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(18,623,157,41) layer=(border=(18,623,157,41),radius=(8,8,8,8,8,8,8,8),clip=(18,623,157,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0a0a0aff
+  solid-fill bounds=(185,623,157,41) layer=(border=(185,623,157,41),radius=(8,8,8,8,8,8,8,8),clip=(185,623,157,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,708.6) pos=(0,0,360,708.6) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(0,0,360,295.05) pos=(0,0,360,295.05) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(10,113,88,32) pos=(18,121,72,16) color=#6e6e73ff text="PASSENGER" font=f1 glyphs=9 advance=72
+  text bounds=(10,133,32,32) pos=(18,141,16,16) color=#0a0a0aff text="M." font=f2 glyphs=2 advance=16
+  text bounds=(34,133,72,32) pos=(42,141,56,16) color=#0a0a0aff text="Vasquez" font=f2 glyphs=7 advance=56
+  text bounds=(121.333,113,48,32) pos=(129.333,121,32,16) color=#6e6e73ff text="DATE" font=f1 glyphs=4 advance=32
+  text bounds=(121.333,133,32,32) pos=(129.333,141,16,16) color=#0a0a0aff text="24" font=f2 glyphs=2 advance=16
+  text bounds=(145.333,133,40,32) pos=(153.333,141,24,16) color=#0a0a0aff text="May" font=f2 glyphs=3 advance=24
+  text bounds=(232.667,113,80,32) pos=(240.667,121,64,16) color=#6e6e73ff text="BOARDING" font=f1 glyphs=8 advance=64
+  text bounds=(232.667,133,56,32) pos=(240.667,141,40,16) color=#0a0a0aff text="18:05" font=f2 glyphs=5 advance=40
+  text bounds=(10,164,48,32) pos=(18,172,32,16) color=#6e6e73ff text="GATE" font=f1 glyphs=4 advance=32
+  text bounds=(10,186,40,32) pos=(18,194,24,16) color=#0a0a0aff text="B22" font=f3 glyphs=3 advance=24
+  text bounds=(121.333,164,48,32) pos=(129.333,172,32,16) color=#6e6e73ff text="SEAT" font=f1 glyphs=4 advance=32
+  text bounds=(121.333,186,40,32) pos=(129.333,194,24,16) color=#0a0a0aff text="14A" font=f3 glyphs=3 advance=24
+  text bounds=(232.667,164,56,32) pos=(240.667,172,40,16) color=#6e6e73ff text="GROUP" font=f1 glyphs=5 advance=40
+  text bounds=(232.667,186,24,32) pos=(240.667,194,8,16) color=#0a0a0aff text="2" font=f3 glyphs=1 advance=8
+  text bounds=(38,239,48,32) pos=(46,247,32,16) color=#0a0a0aff text="Gate" font=f4 glyphs=4 advance=32
+  text bounds=(78,239,64,32) pos=(86,247,48,16) color=#0a0a0aff text="closes" font=f4 glyphs=6 advance=48
+  text bounds=(134,239,32,32) pos=(142,247,16,16) color=#0a0a0aff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(282,239,56,32) pos=(290,247,40,16) color=#34c759ff text="12:33" font=f5 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(36.5,627,40,32) pos=(44.5,635,24,16) color=#ffffffff text="Add" font=f6 glyphs=3 advance=24
+  text bounds=(68.5,627,32,32) pos=(76.5,635,16,16) color=#ffffffff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(92.5,627,64,32) pos=(100.5,635,48,16) color=#ffffffff text="Wallet" font=f6 glyphs=6 advance=48
+  text bounds=(235.5,627,56,32) pos=(243.5,635,40,16) color=#0a0a0aff text="Share" font=f6 glyphs=5 advance=40
+  text bounds=(44,674,40,32) pos=(52,682,24,16) color=#6e6e73ff text="Tap" font=f7 glyphs=3 advance=24
+  text bounds=(76,674,40,32) pos=(84,682,24,16) color=#6e6e73ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(108,674,48,32) pos=(116,682,32,16) color=#6e6e73ff text="pass" font=f7 glyphs=4 advance=32
+  text bounds=(148,674,32,32) pos=(156,682,16,16) color=#6e6e73ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(172,674,48,32) pos=(180,682,32,16) color=#6e6e73ff text="show" font=f7 glyphs=4 advance=32
+  text bounds=(212,674,40,32) pos=(220,682,24,16) color=#6e6e73ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(244,674,32,32) pos=(252,682,16,16) color=#6e6e73ff text="QR" font=f7 glyphs=2 advance=16
+  text bounds=(268,674,48,32) pos=(276,682,32,16) color=#6e6e73ff text="code" font=f7 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,708.6) pos=(0,0,360,708.6) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(0,0,360,295.05) pos=(0,0,360,295.05) radius=(0,0,0,0,0,0,0,0)
+  linear-gradient bounds=(0,0,360,108) layer=(border=(0,0,360,108),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,108),origin=(0,0,360,108),attachment=0,repeat=0,root=0) points=((0,#0b3d91ff,-),(0.6,#1e6fe0ff,-),(1,#52a8ffff,-)) space=0 hue=0 start=(63,-63) end=(297,171)
+  set-clip bounds=(0,0,360,108.4) pos=(0,0,360,108.4) radius=(0,0,0,0,0,0,0,0)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(8,6,344,36) exact=1
+    text bounds=(10,8,80,32) pos=(18,16,64,16) color=#ffffffff text="NORDWIND" font=f8 glyphs=8 advance=64
+    text bounds=(82,8,32,32) pos=(90,16,16,16) color=#ffffffff text="·" font=f8 glyphs=2 advance=16
+    text bounds=(106,8,32,32) pos=(114,16,16,16) color=#ffffffff text="NW" font=f8 glyphs=2 advance=16
+    text bounds=(130,8,48,32) pos=(138,16,32,16) color=#ffffffff text="1472" font=f8 glyphs=4 advance=32
+    text bounds=(230,8,80,32) pos=(238,16,64,16) color=#ffffffff text="BOARDING" font=f8 glyphs=8 advance=64
+    text bounds=(302,8,48,32) pos=(310,16,32,16) color=#ffffffff text="PASS" font=f8 glyphs=4 advance=32
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(8,70.2,68,36) exact=1
+    text bounds=(10,72,64,32) pos=(18,80,48,16) color=#ffffffff text="Lisbon" font=f9 glyphs=6 advance=48
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(276,70.2,76,36) exact=1
+    text bounds=(278,72,72,32) pos=(286,80,56,16) color=#ffffffff text="Tbilisi" font=f9 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,108.4) pos=(0,0,360,108.4) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(10,43,40,32) pos=(18,51,24,16) color=#ffffffff text="LIS" font=f10 glyphs=3 advance=24
+  text bounds=(310,43,40,32) pos=(318,51,24,16) color=#ffffffff text="TBS" font=f10 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,108.4) pos=(0,0,360,108.4) radius=(0,0,0,0,0,0,0,0)
+  borders bounds=(80,68,192,2) borders=(left=(0,0,#ffffffff),top=(2,3,#ffffff80),right=(0,0,#ffffffff),bottom=(0,0,#ffffffff),radius=(0,0,0,0,0,0,0,0)) pos=(80,68,192,2) root=0
+  group opacity=1 matrix=(-0.0151157,0.999886,-0.999886,-0.0151157,160.652,-20.2918) backface=0 bounds=(80,59.3,20,20) exact=0
+    set-clip bounds=(80,59.3,20,20) pos=(80,59.3,20,20) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(80,59.3,20,20)
+      group opacity=1 matrix=(0.833333,0,0,0.833333,80,59.3) backface=0 bounds=(0,0,24,24) exact=0
+        path bounds=(1,1,21,22) ops=(0,1,1,1,3,3,1,1,1,1,1,1,1,1,1,1,1,1,4) points=(21,16,21,14,13,9,13,3.5,13,2.67157,12.3284,2,11.5,2,10.6716,2,10,2.67157,10,3.5,10,9,2,14,2,16,10,13.5,10,19,8,20.5,8,22,11.5,21,15,22,15,20.5,13,19,13,13.5) fill=1 fill-color=#ffffffff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(190,-150,260,260) layer=(border=(190,-150,260,260),radius=(130,130,130,130,130,130,130,130),clip=(190,-150,260,260),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff1f
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(18,607,324,2) borders=(left=(0,0,#0a0a0aff),top=(2,3,#00000014),right=(0,0,#0a0a0aff),bottom=(0,0,#0a0a0aff),radius=(0,0,0,0,0,0,0,0)) pos=(18,607,324,2) root=0
+  solid-fill bounds=(-10,598,20,20) layer=(border=(-10,598,20,20),radius=(10,10,10,10,10,10,10,10),clip=(-10,598,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e9ebf0ff
+  solid-fill bounds=(350,598,20,20) layer=(border=(350,598,20,20),radius=(10,10,10,10,10,10,10,10),clip=(350,598,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e9ebf0ff
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0.8,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=17,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=22,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=20,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0.48,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=34,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.68,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

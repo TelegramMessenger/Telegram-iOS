@@ -1,0 +1,158 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad pl" id="root">
+  <div id="ballot">
+    <div class="row between"><span class="caps" id="count">📊 Poll · 3 votes</span><span class="badge blue" id="voted" hidden="">voted</span></div>
+    <div class="q">Where should we go for the offsite?</div>
+    <div class="opt" data-act="vote" data-value="lis">
+      <div class="top"><span class="lbl">🇵🇹 Lisbon<b class="tick" style="color: #007aff" hidden=""> ✓</b></span><span class="avs"><span class="vt" style="background-color: #ff2d55">M</span><span class="vt" style="background-color: #34c759">L</span></span><span class="pc">66%</span></div>
+      <div class="track"><div style="width: 66.5%; background-color: #007aff;"></div></div>
+      <div class="names" hidden="">Maya · Leo</div>
+    </div>
+    <div class="opt" data-act="vote" data-value="kyo">
+      <div class="top"><span class="lbl">🇯🇵 Kyoto<b class="tick" style="color: #ff2d55" hidden=""> ✓</b></span><span class="avs"><span class="vt" style="background-color: #af52de">P</span></span><span class="pc">33%</span></div>
+      <div class="track"><div style="width: 33.2%; background-color: #ff2d55;"></div></div>
+      <div class="names" hidden="">Priya</div>
+    </div>
+    <div class="opt" data-act="vote" data-value="rey">
+      <div class="top"><span class="lbl">🇮🇸 Reykjavík<b class="tick" style="color: #30b0c7" hidden=""> ✓</b></span><span class="avs"></span><span class="pc">0%</span></div>
+      <div class="track"><div style="width: 0.0%; background-color: #30b0c7;"></div></div>
+      <div class="names" hidden="">No votes yet</div>
+    </div>
+    <div class="say" id="say" hidden=""></div>
+    <div class="foot"><span class="tiny muted" id="hint">Click an option to vote ↑</span>
+      <span><span class="lnk t-blue" data-act="names" id="namesLnk">👥 Voters</span><span class="lnk t-red" data-act="close">Close poll</span></span></div>
+  </div>
+  <div id="results" hidden="">
+    <div class="row between"><span class="caps" id="finalCount">📊 Poll closed · 0 votes</span><span class="badge">final</span></div>
+    <div class="q">Where should we go for the offsite?</div>
+    <div class="win" id="win"><b style="font-size: 16px" id="winTitle"></b><div class="small" style="color: rgba(255,255,255,0.85)" id="winSub"></div></div>
+    <div id="ranked"></div>
+    <div class="foot"><span class="tiny muted">Closed by you</span><span class="lnk t-blue" data-act="reopen">↺ Reopen poll</span></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 248.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 248.5
+    div 15 13 330 222.5
+      div 15 13 330 222.5
+        div 15 13 330 16.3
+          span 15 14 160 14.3
+          span 297 14 40 14.3
+        div 15 31.3 330 20.8
+        div 15 65.1 330 31
+          div 15 65.1 330 22
+            span 15 67.65 250 16.9
+              b 0 0 0 0
+            span 265 67.1 40 18
+              span 267 67.1 18 18
+              span 287 67.1 18 18
+            span 305 67.65 40 16.9
+          div 15 90.1 330 6
+            div 15 90.1 219.45 6
+          div 0 0 0 0
+        div 15 110.1 330 31
+          div 15 110.1 330 22
+            span 15 112.65 270 16.9
+              b 0 0 0 0
+            span 285 112.1 20 18
+              span 287 112.1 18 18
+            span 305 112.65 40 16.9
+          div 15 135.1 330 6
+            div 15 135.1 109.56 6
+          div 0 0 0 0
+        div 15 155.1 330 31
+          div 15 155.1 330 22
+            span 15 157.65 290 16.9
+              b 0 0 0 0
+            span 305 166.1 0 0
+            span 305 157.65 40 16.9
+          div 15 180.1 330 6
+            div 15 180.1 0 6
+          div 0 0 0 0
+        div 0 0 0 0
+        div 15 199.1 330 36.4
+          span 15 203 171.346 28.6
+          span 186.346 199.1 158.654 36.4
+            span 186.346 199.1 0 0
+            span 186.346 199.1 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          b 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+
+== paint
+root 360x248.5 items=47
+  solid-fill bounds=(0,0,360,249) layer=(border=(0,0,360,249),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,249),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,249) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,249) root=0
+  solid-fill bounds=(289,13,56,16) layer=(border=(289,13,56,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(289,13,56,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  solid-fill bounds=(15,90,330,6) layer=(border=(15,90,330,6),radius=(3,3,3,3,3,3,3,3),clip=(15,90,330,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f33
+  solid-fill bounds=(15,90,219,6) layer=(border=(15,90,219,6),radius=(3,3,3,3,3,3,3,3),clip=(15,90,219,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(15,135,330,6) layer=(border=(15,135,330,6),radius=(3,3,3,3,3,3,3,3),clip=(15,135,330,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f33
+  solid-fill bounds=(15,135,110,6) layer=(border=(15,135,110,6),radius=(3,3,3,3,3,3,3,3),clip=(15,135,110,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(15,180,330,6) layer=(border=(15,180,330,6),radius=(3,3,3,3,3,3,3,3),clip=(15,180,330,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f33
+  solid-fill bounds=(15,180,0,6) layer=(border=(15,180,0,6),radius=(0,0,0,0,0,0,0,0),clip=(15,180,0,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  text bounds=(7,6,48,32) pos=(15,14,32,16) color=#6e6e73ff text="📊" font=f1 glyphs=4 advance=32
+  text bounds=(47,6,48,32) pos=(55,14,32,16) color=#6e6e73ff text="POLL" font=f1 glyphs=4 advance=32
+  text bounds=(87,6,32,32) pos=(95,14,16,16) color=#6e6e73ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(111,6,24,32) pos=(119,14,8,16) color=#6e6e73ff text="3" font=f1 glyphs=1 advance=8
+  text bounds=(127,6,56,32) pos=(135,14,40,16) color=#6e6e73ff text="VOTES" font=f1 glyphs=5 advance=40
+  text bounds=(289,6,56,32) pos=(297,14,40,16) color=#007affff text="voted" font=f1 glyphs=5 advance=40
+  text bounds=(7,25,56,32) pos=(15,33,40,16) color=#000000ff text="Where" font=f2 glyphs=5 advance=40
+  text bounds=(55,25,64,32) pos=(63,33,48,16) color=#000000ff text="should" font=f2 glyphs=6 advance=48
+  text bounds=(111,25,32,32) pos=(119,33,16,16) color=#000000ff text="we" font=f2 glyphs=2 advance=16
+  text bounds=(135,25,32,32) pos=(143,33,16,16) color=#000000ff text="go" font=f2 glyphs=2 advance=16
+  text bounds=(159,25,40,32) pos=(167,33,24,16) color=#000000ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(191,25,40,32) pos=(199,33,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(223,25,80,32) pos=(231,33,64,16) color=#000000ff text="offsite?" font=f2 glyphs=8 advance=64
+  text bounds=(7,60,80,32) pos=(15,68,64,16) color=#000000ff text="🇵🇹" font=f3 glyphs=8 advance=64
+  text bounds=(79,60,64,32) pos=(87,68,48,16) color=#000000ff text="Lisbon" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(267,67,18,18) layer=(border=(267,67,18,18),radius=(9,9,9,9,9,9,9,9),clip=(267,67,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  text bounds=(264,60,24,32) pos=(272,68,8,16) color=#ffffffff text="M" font=f4 glyphs=1 advance=8
+  solid-fill bounds=(287,67,18,18) layer=(border=(287,67,18,18),radius=(9,9,9,9,9,9,9,9),clip=(287,67,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(284,60,24,32) pos=(292,68,8,16) color=#ffffffff text="L" font=f4 glyphs=1 advance=8
+  text bounds=(313,60,40,32) pos=(321,68,24,16) color=#000000ff text="66%" font=f5 glyphs=3 advance=24
+  text bounds=(7,105,80,32) pos=(15,113,64,16) color=#000000ff text="🇯🇵" font=f3 glyphs=8 advance=64
+  text bounds=(79,105,56,32) pos=(87,113,40,16) color=#000000ff text="Kyoto" font=f3 glyphs=5 advance=40
+  solid-fill bounds=(287,112,18,18) layer=(border=(287,112,18,18),radius=(9,9,9,9,9,9,9,9),clip=(287,112,18,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  text bounds=(284,105,24,32) pos=(292,113,8,16) color=#ffffffff text="P" font=f4 glyphs=1 advance=8
+  text bounds=(313,105,40,32) pos=(321,113,24,16) color=#000000ff text="33%" font=f5 glyphs=3 advance=24
+  text bounds=(7,150,80,32) pos=(15,158,64,16) color=#000000ff text="🇮🇸" font=f3 glyphs=8 advance=64
+  text bounds=(79,150,96,32) pos=(87,158,80,16) color=#000000ff text="Reykjavík" font=f3 glyphs=10 advance=80
+  text bounds=(321,150,32,32) pos=(329,158,16,16) color=#000000ff text="0%" font=f5 glyphs=2 advance=16
+  text bounds=(7,195,56,32) pos=(15,203,40,16) color=#6e6e73ff text="Click" font=f6 glyphs=5 advance=40
+  text bounds=(55,195,32,32) pos=(63,203,16,16) color=#6e6e73ff text="an" font=f6 glyphs=2 advance=16
+  text bounds=(79,195,64,32) pos=(87,203,48,16) color=#6e6e73ff text="option" font=f6 glyphs=6 advance=48
+  text bounds=(135,195,32,32) pos=(143,203,16,16) color=#6e6e73ff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(7,209,48,32) pos=(15,217,32,16) color=#6e6e73ff text="vote" font=f6 glyphs=4 advance=32
+  text bounds=(47,209,40,32) pos=(55,217,24,16) color=#6e6e73ff text="↑" font=f6 glyphs=3 advance=24
+  text bounds=(186.346,192,48,32) pos=(194.346,200,32,16) color=#007affff text="👥" font=f7 glyphs=4 advance=32
+  text bounds=(226.346,192,64,32) pos=(234.346,200,48,16) color=#007affff text="Voters" font=f7 glyphs=6 advance=48
+  text bounds=(290.346,192,56,32) pos=(298.346,200,40,16) color=#ff3b30ff text="Close" font=f7 glyphs=5 advance=40
+  text bounds=(178.346,210,48,32) pos=(186.346,218,32,16) color=#ff3b30ff text="poll" font=f7 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=9,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

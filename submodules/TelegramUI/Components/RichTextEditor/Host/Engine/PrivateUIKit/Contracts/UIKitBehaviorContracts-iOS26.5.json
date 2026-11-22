@@ -1,0 +1,3074 @@
+{
+  "schema": 1,
+  "runtime": {
+    "osVersion": "26.5",
+    "osBuild": "23F73"
+  },
+  "capabilities": {
+    "inputController": {
+      "mandatory": true,
+      "dependencies": [
+
+      ],
+      "fallback": "none",
+      "members": [
+        {
+          "identifier": "inputController.classLookup",
+          "class": "UITextInputController",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|UITextInputController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "inputController.constructor",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "initWithTextLayoutController:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|initWithTextLayoutController:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Detach from the layout manager before releasing the layout adapter."
+        },
+        {
+          "identifier": "inputController.delegate",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setDelegate:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|setDelegate:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Release the delegate relationship with the controller."
+        },
+        {
+          "identifier": "inputController.textInRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "textInRange:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|textInRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.replaceRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "replaceRange:withText:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|replaceRange:withText:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Finish the controller transaction before teardown."
+        },
+        {
+          "identifier": "inputController.selectedTextRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "selectedTextRange",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|selectedTextRange",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.setSelectedTextRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setSelectedTextRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|setSelectedTextRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Publish the final selection before detach."
+        },
+        {
+          "identifier": "inputController.markedTextRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "markedTextRange",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|markedTextRange",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Unmark composed text before detach."
+        },
+        {
+          "identifier": "inputController.markedTextStyle",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "markedTextStyle",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|markedTextStyle",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Release with the controller."
+        },
+        {
+          "identifier": "inputController.setMarkedTextStyle",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setMarkedTextStyle:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|setMarkedTextStyle:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Release with the controller."
+        },
+        {
+          "identifier": "inputController.setMarkedText",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setMarkedText:selectedRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "{_NSRange=QQ}"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|setMarkedText:selectedRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#ime-composition",
+          "fallback": "none",
+          "teardown": "Unmark composed text before detach."
+        },
+        {
+          "identifier": "inputController.unmarkText",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "unmarkText",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|unmarkText",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#ime-composition",
+          "fallback": "none",
+          "teardown": "Complete composition before detach."
+        },
+        {
+          "identifier": "inputController.beginningOfDocument",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "beginningOfDocument",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|beginningOfDocument",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.endOfDocument",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "endOfDocument",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|endOfDocument",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.textRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "textRangeFromPosition:toPosition:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|textRangeFromPosition:toPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.positionOffset",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "positionFromPosition:offset:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|positionFromPosition:offset:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.positionDirection",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "positionFromPosition:inDirection:offset:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q",
+            "q"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|positionFromPosition:inDirection:offset:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.comparePosition",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "comparePosition:toPosition:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|comparePosition:toPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.offsetPosition",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "offsetFromPosition:toPosition:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|offsetFromPosition:toPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.inputDelegate",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "inputDelegate",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|inputDelegate",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Clear with the controller."
+        },
+        {
+          "identifier": "inputController.setInputDelegate",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setInputDelegate:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|setInputDelegate:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Clear the input delegate before detach."
+        },
+        {
+          "identifier": "inputController.tokenizer",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "tokenizer",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|tokenizer",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "Release with the controller."
+        },
+        {
+          "identifier": "inputController.farthestPosition",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "positionWithinRange:farthestInDirection:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|positionWithinRange:farthestInDirection:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.extendCharacterRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "characterRangeByExtendingPosition:inDirection:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|characterRangeByExtendingPosition:inDirection:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.baseWritingDirection",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "baseWritingDirectionForPosition:inDirection:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|baseWritingDirectionForPosition:inDirection:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.setBaseWritingDirection",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setBaseWritingDirection:forRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "q",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|setBaseWritingDirection:forRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "Finish the direction update before detach."
+        },
+        {
+          "identifier": "inputController.firstRect",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "firstRectForRange:",
+          "returnType": "{CGRect={CGPoint=dd}{CGSize=dd}}",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|firstRectForRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.caretRect",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "caretRectForPosition:",
+          "returnType": "{CGRect={CGPoint=dd}{CGSize=dd}}",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|caretRectForPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.selectionRects",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "selectionRectsForRange:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|selectionRectsForRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.closestPosition",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "closestPositionToPoint:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|closestPositionToPoint:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.closestPositionWithinRange",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "closestPositionToPoint:withinRange:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|closestPositionToPoint:withinRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.characterRangeAtPoint",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "characterRangeAtPoint:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|characterRangeAtPoint:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.textStyling",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "textStylingAtPosition:inDirection:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|textStylingAtPosition:inDirection:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.insertText",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "insertText:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|insertText:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Finish the input transaction before detach."
+        },
+        {
+          "identifier": "inputController.deleteBackward",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "deleteBackward",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|deleteBackward",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#backward-delete",
+          "fallback": "none",
+          "teardown": "Finish the deletion transaction before detach."
+        },
+        {
+          "identifier": "inputController.undoManager",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "undoManager",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|undoManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "none",
+          "teardown": "Detach the undo manager observer with the controller."
+        },
+        {
+          "identifier": "inputController.selectionAffinity",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "selectionAffinity",
+          "returnType": "q",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|selectionAffinity",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "Use downstream affinity.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.suppressDelegateNotifications",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_performWhileSuppressingDelegateNotifications:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@?"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_performWhileSuppressingDelegateNotifications:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#text-input-controller-delegation",
+          "fallback": "none",
+          "teardown": "Never leave a suppression block active during detach."
+        },
+        {
+          "identifier": "inputController.backwardDeleteRanges",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_rangesForBackwardsDelete",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_rangesForBackwardsDelete",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#backward-delete",
+          "fallback": "none",
+          "teardown": "Release the transient range adapter immediately."
+        },
+        {
+          "identifier": "inputController.backwardDeleteUnionRange",
+          "class": "NSObject",
+          "kind": "instanceMethod",
+          "name": "unionRange",
+          "returnType": "{_NSRange=QQ}",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|unionRange",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#backward-delete",
+          "fallback": "Reject deletion when the returned adapter ABI cannot be validated.",
+          "teardown": "Release the transient result immediately."
+        },
+        {
+          "identifier": "inputController.keyboardDeletePreflight",
+          "class": "IDBlockTextView",
+          "kind": "incomingCallback",
+          "name": "keyboardInputShouldDelete:",
+          "returnType": "B",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDBlockTextView+PrivateInputDelegate.m|keyboardInputShouldDelete:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#backward-delete",
+          "fallback": "Reject deletion.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "inputController.detach",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_detachFromLayoutManager",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_detachFromLayoutManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "This is the terminal controller teardown operation."
+        }
+      ]
+    },
+    "typingAttributes": {
+      "mandatory": true,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "Use UIKit defaults and omit rich typing extensions.",
+      "members": [
+        {
+          "identifier": "typingAttributes.defaultTraitsClassLookup",
+          "class": "UITextInputTraits",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|UITextInputTraits",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "typingAttributes.traitsClassLookup",
+          "class": "UITextInputTraits",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDBlockTextView+PrivateCallbacks.m|UITextInputTraits",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "typingAttributes.controllerTraits",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_textInputTraits",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_textInputTraits",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Release with the input controller."
+        },
+        {
+          "identifier": "typingAttributes.defaultTraits",
+          "class": "UITextInputTraits",
+          "kind": "classMethod",
+          "name": "defaultTextInputTraits",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|defaultTextInputTraits",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "Use controller-owned traits when available.",
+          "teardown": "Release copied defaults after controller adoption."
+        },
+        {
+          "identifier": "typingAttributes.get",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "typingAttributes",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|typingAttributes",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#rich-typing-attribute-insertion-parity",
+          "fallback": "Use contextual document attributes.",
+          "teardown": "Invalidate cached attributes before detach."
+        },
+        {
+          "identifier": "typingAttributes.set",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setTypingAttributes:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setTypingAttributes:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#rich-typing-attribute-insertion-parity",
+          "fallback": "Use contextual document attributes.",
+          "teardown": "Clear copied attributes before detach."
+        },
+        {
+          "identifier": "typingAttributes.allowed",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_allowedTypingAttributes",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_allowedTypingAttributes",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#rich-typing-attribute-insertion-parity",
+          "fallback": "Use UIKit's default allowed keys.",
+          "teardown": "Release with the controller."
+        },
+        {
+          "identifier": "typingAttributes.setAllowed",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_setAllowedTypingAttributes:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_setAllowedTypingAttributes:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#rich-typing-attribute-insertion-parity",
+          "fallback": "Use UIKit's default allowed keys.",
+          "teardown": "Clear copied allowed keys before detach."
+        },
+        {
+          "identifier": "typingAttributes.invalidate",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_invalidateTypingAttributes",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_invalidateTypingAttributes",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#rich-typing-attribute-insertion-parity",
+          "fallback": "Recompute contextual attributes.",
+          "teardown": "Invalidate before releasing formatting observers."
+        }
+      ]
+    },
+    "interaction": {
+      "mandatory": false,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "Use project-owned selection presentation and gestures.",
+      "members": [
+        {
+          "identifier": "interaction.classLookup",
+          "class": "UITextInteractionAssistant",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|UITextInteractionAssistant",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "interaction.constructor",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "initWithView:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|initWithView:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Use project-owned selection interaction.",
+          "teardown": "Clear recognizers and detach on every failure path."
+        },
+        {
+          "identifier": "interaction.selectionChanged",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "selectionChanged",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|selectionChanged",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Refresh project-owned selection UI.",
+          "teardown": "Do not publish after detach."
+        },
+        {
+          "identifier": "interaction.activate",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "activateSelection",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|activateSelection",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Activate project-owned presentation.",
+          "teardown": "Deactivate before detach."
+        },
+        {
+          "identifier": "interaction.deactivate",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "deactivateSelection",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|deactivateSelection",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Deactivate project-owned presentation.",
+          "teardown": "Call before detach."
+        },
+        {
+          "identifier": "interaction.displayVisible",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "setSelectionDisplayVisible:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setSelectionDisplayVisible:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Set project presentation visibility.",
+          "teardown": "Hide before detach."
+        },
+        {
+          "identifier": "interaction.displayUpdate",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "setNeedsSelectionDisplayUpdate",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setNeedsSelectionDisplayUpdate",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Invalidate project presentation.",
+          "teardown": "Drop pending invalidations at detach."
+        },
+        {
+          "identifier": "interaction.installRecognizers",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "setGestureRecognizers",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setGestureRecognizers",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Install project recognizers.",
+          "teardown": "Clear recognizers before release."
+        },
+        {
+          "identifier": "interaction.clearRecognizers",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "clearGestureRecognizers:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|clearGestureRecognizers:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Remove project recognizers.",
+          "teardown": "Call exactly once during terminal teardown."
+        },
+        {
+          "identifier": "interaction.resigned",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "resignedFirstResponder",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|resignedFirstResponder",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "End project transient interactions.",
+          "teardown": "Call before detach after responder loss."
+        },
+        {
+          "identifier": "interaction.detach",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "detach:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|detach:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Release project interaction state.",
+          "teardown": "Terminal assistant teardown."
+        },
+        {
+          "identifier": "interaction.selectWord",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "selectWord",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|selectWord",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Use tokenizer-backed project selection.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "interaction.selectAll",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "selectAll:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|selectAll:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#interaction-assistant-and-loupe",
+          "fallback": "Select the canonical document range.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "interaction.autoscrollWillNotStart",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "autoscrollWillNotStart",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|autoscrollWillNotStart",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Cancel project edge-scroll state.",
+          "teardown": "Call before releasing a failed autoscroll start."
+        }
+      ]
+    },
+    "floatingCursor": {
+      "mandatory": false,
+      "dependencies": [
+        "interaction"
+      ],
+      "fallback": "Keep ordinary selection active without a keyboard-trackpad session.",
+      "members": [
+        {
+          "identifier": "floatingCursor.begin",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "beginFloatingCursorAtPoint:",
+          "returnType": "v",
+          "argumentTypes": [
+            "{CGPoint=dd}"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|beginFloatingCursorAtPoint:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Keep ordinary selection active.",
+          "teardown": "End any begun session before assistant detach."
+        },
+        {
+          "identifier": "floatingCursor.update",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "updateFloatingCursorAtPoint:animated:",
+          "returnType": "v",
+          "argumentTypes": [
+            "{CGPoint=dd}",
+            "B"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|updateFloatingCursorAtPoint:animated:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Keep ordinary selection active.",
+          "teardown": "Stop updates before ending the session."
+        },
+        {
+          "identifier": "floatingCursor.end",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "endFloatingCursor",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|endFloatingCursor",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "No-op when no session exists.",
+          "teardown": "End before assistant detach."
+        }
+      ]
+    },
+    "autoscrollEntry": {
+      "mandatory": false,
+      "dependencies": [
+
+      ],
+      "fallback": "Use project-owned scroll-container edge scrolling.",
+      "members": [
+        {
+          "identifier": "autoscrollEntry.protocol",
+          "class": "UITextAutoscrolling",
+          "kind": "protocol",
+          "name": "UITextAutoscrolling",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/BehaviorKernel/IDUIKitAutoscrollEntryCapability.m|UITextAutoscrolling",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#clean-room-vertical-autoscroll-oracle",
+          "fallback": "Disable vertical edge autoscroll.",
+          "teardown": "Protocol lookup retains no instance state."
+        },
+        {
+          "identifier": "autoscrollEntry.start",
+          "class": "IDBlockTextView",
+          "kind": "incomingCallback",
+          "name": "startAutoscroll:",
+          "returnType": "v",
+          "argumentTypes": [
+            "{CGPoint=dd}"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDBlockTextView+PrivateInteractionCallbacks.m|startAutoscroll:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Disable vertical edge autoscroll.",
+          "teardown": "Cancel the project session before view teardown."
+        },
+        {
+          "identifier": "autoscrollEntry.cancel",
+          "class": "IDBlockTextView",
+          "kind": "incomingCallback",
+          "name": "cancelAutoscroll",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDBlockTextView+PrivateInteractionCallbacks.m|cancelAutoscroll",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "No-op when no project session exists.",
+          "teardown": "Terminal project autoscroll teardown."
+        }
+      ]
+    },
+    "checking": {
+      "mandatory": false,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "Disable native continuous checking while preserving editing.",
+      "members": [
+        {
+          "identifier": "checking.setContinuous",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setContinuousSpellCheckingEnabled:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setContinuousSpellCheckingEnabled:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Leave native checking disabled.",
+          "teardown": "Disable checking before controller detach."
+        },
+        {
+          "identifier": "checking.continuous",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "continuousSpellCheckingEnabled",
+          "returnType": "B",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|continuousSpellCheckingEnabled",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Report disabled.",
+          "teardown": "No retained transient state."
+        }
+      ]
+    },
+    "prediction": {
+      "mandatory": false,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "Use plain marked-text composition.",
+      "members": [
+        {
+          "identifier": "prediction.attributedMarkedText",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setAttributedMarkedText:selectedRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "{_NSRange=QQ}"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|setAttributedMarkedText:selectedRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#inline-prediction",
+          "fallback": "Use setMarkedText:selectedRange:.",
+          "teardown": "Unmark prediction state before detach."
+        }
+      ]
+    },
+    "paste": {
+      "mandatory": false,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "Use public pasteboard import through the canonical style resolver.",
+      "members": [
+        {
+          "identifier": "paste.cut",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "cut:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|cut:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "Use canonical document deletion after copying.",
+          "teardown": "Finish the controller transaction before detach."
+        },
+        {
+          "identifier": "paste.copy",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "copy:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|copy:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "Write the canonical selection to the pasteboard.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "paste.paste",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "paste:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|paste:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "Import through the canonical style resolver.",
+          "teardown": "Finish the controller transaction before detach."
+        },
+        {
+          "identifier": "paste.canHandle",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_canHandleResponderAction:",
+          "returnType": "B",
+          "argumentTypes": [
+            ":"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_canHandleResponderAction:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "Use public action availability.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "paste.shouldHandle",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "_shouldHandleResponderAction:withSender:",
+          "returnType": "B",
+          "argumentTypes": [
+            ":",
+            "@"
+          ],
+          "required": true,
+          "direction": "outgoing",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_shouldHandleResponderAction:withSender:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#controller-owned-undo-paste-and-selection-affinity",
+          "fallback": "Use public action availability.",
+          "teardown": "No retained transient state."
+        }
+      ]
+    },
+    "dictation": {
+      "mandatory": false,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "Concatenate phrase text and call insertText:.",
+      "members": [
+        {
+          "identifier": "dictation.insertResult",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "insertDictationResult:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "outgoing",
+          "source": "TextView/IDBlockTextView+TextInput.m|insertDictationResult:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#dictation",
+          "fallback": "Concatenate phrase text and call insertText:.",
+          "teardown": "Finish any active dictation transaction before detach."
+        }
+      ]
+    },
+    "incomingCallbacks": {
+      "mandatory": true,
+      "dependencies": [
+        "inputController"
+      ],
+      "fallback": "none",
+      "members": [
+        {
+          "identifier": "incoming.textStorage",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textStorage",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textStorage",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Detach the controller connection before document release."
+        },
+        {
+          "identifier": "incoming.textContainers",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textContainers",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textContainers",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Release container references with the layout adapter."
+        },
+        {
+          "identifier": "incoming.firstTextContainer",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "firstTextContainer",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|firstTextContainer",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Release with the layout adapter."
+        },
+        {
+          "identifier": "incoming.textContainerForPosition",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textContainerForPosition:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textContainerForPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.beginning",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "beginningOfDocument",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|beginningOfDocument",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.end",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "endOfDocument",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|endOfDocument",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.emptyRange",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "emptyTextRangeAtPosition:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|emptyTextRangeAtPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.textRange",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textRangeFromPosition:toPosition:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textRangeFromPosition:toPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.positionOffset",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "positionFromPosition:offset:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|positionFromPosition:offset:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.positionAffinity",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "positionFromPosition:offset:affinity:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|positionFromPosition:offset:affinity:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.positionNavigation",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "positionFromPosition:inDirection:offset:affinity:anchorPositionOffset:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q",
+            "q",
+            "q",
+            "d"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|positionFromPosition:inDirection:offset:affinity:anchorPositionOffset:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.lineRange",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textRangeForLineEnclosingPosition:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textRangeForLineEnclosingPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.lineRangeAffinity",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textRangeForLineEnclosingPosition:effectiveAffinity:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textRangeForLineEnclosingPosition:effectiveAffinity:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.attributes",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "attributesAtPosition:inDirection:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|attributesAtPosition:inDirection:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#rich-typing-attribute-insertion-parity",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.baseWritingDirection",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "baseWritingDirectionAtPosition:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|baseWritingDirectionAtPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.compare",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "comparePosition:toPosition:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|comparePosition:toPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.offset",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "offsetFromPosition:toPosition:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|offsetFromPosition:toPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.affinity",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "affinityForPosition:",
+          "returnType": "q",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|affinityForPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.characterRange",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "characterRangeForTextRange:",
+          "returnType": "{_NSRange=QQ}",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|characterRangeForTextRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.boundingRect",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "boundingRectForCharacterRange:",
+          "returnType": "{CGRect={CGPoint=dd}{CGSize=dd}}",
+          "argumentTypes": [
+            "{_NSRange=QQ}"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|boundingRectForCharacterRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.characterRangeClipped",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "characterRangeForTextRange:clippedToDocument:",
+          "returnType": "{_NSRange=QQ}",
+          "argumentTypes": [
+            "@",
+            "B"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|characterRangeForTextRange:clippedToDocument:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.characterRanges",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "characterRangesForTextRange:clippedToDocument:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "B"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|characterRangesForTextRange:clippedToDocument:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.rangeForCharacters",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textRangeForCharacterRange:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{_NSRange=QQ}"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textRangeForCharacterRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.rangeForCharacterRanges",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textRangeForCharacterRanges:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textRangeForCharacterRanges:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.positionWithAffinity",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "positionWithOffset:affinity:",
+          "returnType": "@",
+          "argumentTypes": [
+            "q",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|positionWithOffset:affinity:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.textInputController",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "textInputController",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|textInputController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Clear before releasing the layout adapter."
+        },
+        {
+          "identifier": "incoming.adoptController",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "adoptTextInputController:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|adoptTextInputController:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Balance with detachFromTextInputController."
+        },
+        {
+          "identifier": "incoming.detachController",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "detachFromTextInputController",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|detachFromTextInputController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Terminal callback ownership teardown."
+        },
+        {
+          "identifier": "incoming.canAccessLayout",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "canAccessLayoutManager",
+          "returnType": "B",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|canAccessLayoutManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Return false after detachment."
+        },
+        {
+          "identifier": "incoming.invalidateDisplay",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "invalidateDisplayForCharacterRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "{_NSRange=QQ}"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|invalidateDisplayForCharacterRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "none",
+          "teardown": "Drop pending invalidations during detach."
+        },
+        {
+          "identifier": "incoming.characterCluster",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "rangeOfCharacterClusterAtIndex:type:",
+          "returnType": "{_NSRange=QQ}",
+          "argumentTypes": [
+            "Q",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|rangeOfCharacterClusterAtIndex:type:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.selectionRects",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "selectionRectsForRange:fromView:forContainerPassingTest:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@",
+            "@?"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|selectionRectsForRange:fromView:forContainerPassingTest:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "Release returned transient rects with the caller."
+        },
+        {
+          "identifier": "incoming.requestGeometry",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "requestTextGeometryAtPosition:typingAttributes:resultBlock:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@",
+            "@?"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|requestTextGeometryAtPosition:typingAttributes:resultBlock:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "Do not retain completion blocks across detach."
+        },
+        {
+          "identifier": "incoming.insertionRect",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:",
+          "returnType": "{CGRect={CGPoint=dd}{CGSize=dd}}",
+          "argumentTypes": [
+            "@",
+            "@",
+            "@",
+            "^@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "Do not retain the out-parameter."
+        },
+        {
+          "identifier": "incoming.cursorPosition",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "cursorPositionAtPoint:inContainer:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|cursorPositionAtPoint:inContainer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.nearestPosition",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "nearestPositionAtPoint:inContainer:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|nearestPositionAtPoint:inContainer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.visualSelection",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "{CGPoint=dd}",
+            "@",
+            "q"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "none",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.ensureLayout",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "ensureLayoutForRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|ensureLayoutForRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "Finish synchronous layout before detach."
+        },
+        {
+          "identifier": "incoming.invalidateLayout",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "invalidateLayoutForRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|invalidateLayoutForRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "none",
+          "teardown": "Drop pending invalidations during detach."
+        },
+        {
+          "identifier": "incoming.attributedText",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "attributedTextInRange:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|attributedTextInRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "none",
+          "teardown": "Release returned snapshots with the caller."
+        },
+        {
+          "identifier": "incoming.annotatedSubstring",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "annotatedSubstringForRange:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|annotatedSubstringForRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Return an unannotated attributed substring.",
+          "teardown": "Release returned snapshots with the caller."
+        },
+        {
+          "identifier": "incoming.addAnnotation",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "addAnnotationAttribute:value:forRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|addAnnotationAttribute:value:forRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Ignore native checking annotation.",
+          "teardown": "Clear ephemeral annotations before document release."
+        },
+        {
+          "identifier": "incoming.annotationAtPosition",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "annotationAttribute:atPosition:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|annotationAttribute:atPosition:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Return nil.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "incoming.removeAnnotation",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "removeAnnotationAttribute:forRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|removeAnnotationAttribute:forRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "No-op.",
+          "teardown": "Clear ephemeral annotations before document release."
+        },
+        {
+          "identifier": "incoming.addRendering",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "addRenderingAttributes:forRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|addRenderingAttributes:forRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "No-op.",
+          "teardown": "Clear ephemeral rendering attributes before release."
+        },
+        {
+          "identifier": "incoming.removeRendering",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "removeRenderingAttributes:forRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|removeRenderingAttributes:forRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "No-op.",
+          "teardown": "Clear ephemeral rendering attributes before release."
+        },
+        {
+          "identifier": "incoming.invalidateTemporary",
+          "class": "IDRichTextLayoutController",
+          "kind": "incomingCallback",
+          "name": "_invalidateTemporaryAttributesInRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "incoming",
+          "source": "PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m|_invalidateTemporaryAttributesInRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Invalidate project-owned ephemeral attributes.",
+          "teardown": "Drop pending invalidations during detach."
+        }
+      ]
+    }
+  },
+  "referenceOnly": {
+    "legacyAutoscroll": {
+      "mandatory": false,
+      "dependencies": [
+
+      ],
+      "fallback": "Reference backend retains UIKit-owned autoscroll.",
+      "members": [
+        {
+          "identifier": "reference.autoscroll.classLookup",
+          "class": "UIAutoscroll",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|UIAutoscroll",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "reference.autoscroll.start",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "startAutoscroll:scrollContainer:point:directions:repeatInterval:",
+          "returnType": "B",
+          "argumentTypes": ["@", "@", "{CGPoint=dd}", "i", "d"],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|startAutoscroll:scrollContainer:point:directions:repeatInterval:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Use project edge scrolling.",
+          "teardown": "Invalidate before releasing scroll or interaction state."
+        },
+        {
+          "identifier": "reference.autoscroll.invalidate",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "invalidate",
+          "returnType": "v",
+          "argumentTypes": [],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|invalidate",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Cancel project edge scrolling.",
+          "teardown": "Terminal autoscroll teardown."
+        }
+      ]
+    },
+    "legacyLayout": {
+      "mandatory": true,
+      "dependencies": [
+
+      ],
+      "fallback": "Direct concrete TextKit 2 construction when the base factory is unavailable.",
+      "members": [
+        {
+          "identifier": "reference.inputControllerClassLookup",
+          "class": "UITextInputController",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|UITextInputController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "reference.baseClassLookup",
+          "class": "_UITextLayoutControllerBase",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_UITextLayoutControllerBase",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "reference.concreteClassLookup",
+          "class": "_UITextKit2LayoutController",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_UITextKit2LayoutController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#minimal-private-input-kernel",
+          "fallback": "none",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "reference.layoutFactory",
+          "class": "_UITextLayoutControllerBase",
+          "kind": "classMethod",
+          "name": "layoutControllerWithTextView:textContainer:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|layoutControllerWithTextView:textContainer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "Use the concrete initializer.",
+          "teardown": "Detach the concrete controller before releasing its text view."
+        },
+        {
+          "identifier": "reference.concreteInitializer",
+          "class": "_UITextKit2LayoutController",
+          "kind": "instanceMethod",
+          "name": "initWithTextView:textContainer:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|initWithTextView:textContainer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "none",
+          "teardown": "Detach before releasing the text view and container."
+        },
+        {
+          "identifier": "reference.cursorPosition",
+          "class": "_UITextKit2LayoutController",
+          "kind": "instanceMethod",
+          "name": "cursorPositionAtPoint:inContainer:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}",
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|cursorPositionAtPoint:inContainer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#cursor-navigation",
+          "fallback": "Use the clean-room rich layout controller.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.canvasMap",
+          "class": "_UITextKit2LayoutController",
+          "kind": "ivar",
+          "name": "_textLayoutCanvasMap",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|IDCanvasMap",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "Use the clean-room block canvas.",
+          "teardown": "Release canvas ownership before the controller."
+        },
+        {
+          "identifier": "reference.layoutSelectionRects",
+          "class": "_UITextKit2LayoutController",
+          "kind": "instanceMethod",
+          "name": "selectionRectsForRange:fromView:forContainerPassingTest:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@",
+            "@",
+            "@?"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|selectionRectsForRange:fromView:forContainerPassingTest:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#geometry-forwarding",
+          "fallback": "Use the clean-room rich layout controller.",
+          "teardown": "Release transient selection rects with the caller."
+        },
+        {
+          "identifier": "reference.addRendering",
+          "class": "_UITextKit2LayoutController",
+          "kind": "instanceMethod",
+          "name": "addRenderingAttributes:forRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|addRenderingAttributes:forRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Use project rendering annotations.",
+          "teardown": "Clear attributes before release."
+        },
+        {
+          "identifier": "reference.invalidateTemporary",
+          "class": "_UITextKit2LayoutController",
+          "kind": "instanceMethod",
+          "name": "_invalidateTemporaryAttributesInRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|_invalidateTemporaryAttributesInRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Use project invalidation.",
+          "teardown": "Drop pending invalidations during release."
+        },
+        {
+          "identifier": "reference.viewportLayout",
+          "class": "NSTextViewportLayoutController",
+          "kind": "instanceMethod",
+          "name": "layoutViewport",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|layoutViewport",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "Use project block layout.",
+          "teardown": "Finish viewport layout before release."
+        },
+        {
+          "identifier": "reference.viewportController",
+          "class": "NSTextLayoutManager",
+          "kind": "instanceMethod",
+          "name": "textViewportLayoutController",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "TextView/IDTextLayoutCanvasView.m|textViewportLayoutController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "Use project block layout.",
+          "teardown": "Release with the layout manager."
+        },
+        {
+          "identifier": "reference.addTemporaryAttribute",
+          "class": "NSTextLayoutManager",
+          "kind": "instanceMethod",
+          "name": "addTemporaryAttribute:value:forTextRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|addTemporaryAttribute:value:forTextRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Use project-owned ephemeral attributes.",
+          "teardown": "Clear temporary attributes before releasing the layout manager."
+        },
+        {
+          "identifier": "reference.removeTemporaryAttribute",
+          "class": "NSTextLayoutManager",
+          "kind": "instanceMethod",
+          "name": "removeTemporaryAttribute:forTextRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "@"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|removeTemporaryAttribute:forTextRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Use project-owned ephemeral attributes.",
+          "teardown": "Clear temporary attributes before releasing the layout manager."
+        },
+        {
+          "identifier": "reference.containerHostSet",
+          "class": "NSTextContainer",
+          "kind": "instanceMethod",
+          "name": "setTextView:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setTextView:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "Use explicit project ownership.",
+          "teardown": "Clear the host before releasing the container."
+        },
+        {
+          "identifier": "reference.containerHostGet",
+          "class": "NSTextContainer",
+          "kind": "instanceMethod",
+          "name": "textView",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": true,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|textView",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#layout-controller-construction",
+          "fallback": "Use explicit project ownership.",
+          "teardown": "No retained transient state."
+        }
+      ]
+    },
+    "legacyCanvas": {
+      "mandatory": false,
+      "dependencies": [
+        "legacyLayout"
+      ],
+      "fallback": "Use the clean-room block canvas and rich-layout adapter.",
+      "members": [
+        {
+          "identifier": "reference.canvasSetChecking",
+          "class": "UITextInputController",
+          "kind": "instanceMethod",
+          "name": "setContinuousSpellCheckingEnabled:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|setContinuousSpellCheckingEnabled:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#native-continuous-spelling",
+          "fallback": "Disable checking in reference mode.",
+          "teardown": "Disable checking before controller detach."
+        },
+        {
+          "identifier": "reference.canvasCustomRenderer",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "customRenderController",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|customRenderController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Skip custom rendering.",
+          "teardown": "Do not retain the renderer beyond its canvas."
+        },
+        {
+          "identifier": "reference.canvasTextColor",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "textColor",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|textColor",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use labelColor.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.canvasOrigin",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "textContainerOrigin",
+          "returnType": "{CGPoint=dd}",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|textContainerOrigin",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use CGPointZero.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.canvasClipRect",
+          "class": "IDTextView",
+          "kind": "instanceMethod",
+          "name": "_clipRectForFadedEdges",
+          "returnType": "{CGRect={CGPoint=dd}{CGSize=dd}}",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|_clipRectForFadedEdges",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use CGRectNull.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.canvasRangeEmpty",
+          "class": "<platform rendering-surface text range>",
+          "kind": "instanceMethod",
+          "name": "isEmpty",
+          "returnType": "B",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|isEmpty",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Reject the transient range.",
+          "teardown": "Release the transient range immediately."
+        },
+        {
+          "identifier": "reference.canvasNSRange",
+          "class": "IDTextView",
+          "kind": "instanceMethod",
+          "name": "_nsRangeForTextKitRanges:",
+          "returnType": "{_NSRange=QQ}",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|_nsRangeForTextKitRanges:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use canonical range conversion.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.canvasTextStorage",
+          "class": "IDTextView",
+          "kind": "instanceMethod",
+          "name": "textStorage",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|textStorage",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use canonical storage.",
+          "teardown": "Do not outlive the editor."
+        },
+        {
+          "identifier": "reference.canvasSetEmphasisRange",
+          "class": "<text emphasis view>",
+          "kind": "instanceMethod",
+          "name": "setTextRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|setTextRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Skip emphasis presentation.",
+          "teardown": "Clear the transient range before release."
+        },
+        {
+          "identifier": "reference.canvasSetEmphasisOrigin",
+          "class": "<text emphasis view>",
+          "kind": "instanceMethod",
+          "name": "setOrigin:",
+          "returnType": "v",
+          "argumentTypes": [
+            "{CGPoint=dd}"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|setOrigin:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Skip emphasis presentation.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.rendererBegin",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "beginLayout",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|beginLayout",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use native fragment drawing.",
+          "teardown": "Balance with endLayoutWithConsumer:."
+        },
+        {
+          "identifier": "reference.rendererScale",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "setContentsScale:",
+          "returnType": "v",
+          "argumentTypes": [
+            "d"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|setContentsScale:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use the view scale.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.rendererPreLayout",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "preLayoutNotify",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|preLayoutNotify",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "No-op.",
+          "teardown": "Do not notify after teardown."
+        },
+        {
+          "identifier": "reference.rendererFragment",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "didLayoutFragment:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|didLayoutFragment:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use native fragment drawing.",
+          "teardown": "Do not notify after teardown."
+        },
+        {
+          "identifier": "reference.rendererEnd",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "endLayoutWithConsumer:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@?"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|endLayoutWithConsumer:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use native fragment drawing.",
+          "teardown": "Terminal layout-cycle callback."
+        },
+        {
+          "identifier": "reference.rendererPostLayout",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "postLayoutNotify",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|postLayoutNotify",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "No-op.",
+          "teardown": "Do not notify after teardown."
+        },
+        {
+          "identifier": "reference.rendererSurfaceLayer",
+          "class": "<custom render surface>",
+          "kind": "instanceMethod",
+          "name": "layer",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|layer",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Reject the custom surface.",
+          "teardown": "Do not retain independently of the surface."
+        },
+        {
+          "identifier": "reference.rendererDisplay",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "setNeedsDisplay",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|setNeedsDisplay",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Invalidate the project canvas.",
+          "teardown": "Drop pending invalidations at teardown."
+        },
+        {
+          "identifier": "reference.rendererInvalidateTemporary",
+          "class": "<custom render controller>",
+          "kind": "instanceMethod",
+          "name": "invalidateTemporaryAttributesInRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|invalidateTemporaryAttributesInRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Invalidate project annotations.",
+          "teardown": "Drop pending invalidations at teardown."
+        },
+        {
+          "identifier": "reference.rangeAdapter",
+          "class": "<UITextRange adapter>",
+          "kind": "instanceMethod",
+          "name": "textKit2Ranges",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|textKit2Ranges",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use an NSTextRange directly.",
+          "teardown": "Release transient arrays immediately."
+        },
+        {
+          "identifier": "reference.hostsLayoutEngine",
+          "class": "UIView",
+          "kind": "instanceMethod",
+          "name": "_setHostsLayoutEngine:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|_setHostsLayoutEngine:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use ordinary UIView hosting.",
+          "teardown": "Set false before releasing hosted layout state."
+        },
+        {
+          "identifier": "reference.anchoredBounds",
+          "class": "NSTextLayoutFragment",
+          "kind": "instanceMethod",
+          "name": "boundsForTextParagraphAnchoredAttachment:",
+          "returnType": "{CGRect={CGPoint=dd}{CGSize=dd}}",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|boundsForTextParagraphAnchoredAttachment:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use project attachment bounds.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.anchoredProvider",
+          "class": "NSTextLayoutFragment",
+          "kind": "instanceMethod",
+          "name": "textAttachmentViewProviderForTextParagraphAnchoredAttachment:",
+          "returnType": "@",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|textAttachmentViewProviderForTextParagraphAnchoredAttachment:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use project attachment providers.",
+          "teardown": "Release with the fragment."
+        },
+        {
+          "identifier": "reference.anchoredProviderView",
+          "class": "<anchored attachment provider>",
+          "kind": "instanceMethod",
+          "name": "view",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|view",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Skip the view attachment.",
+          "teardown": "Do not retain independently of the provider."
+        },
+        {
+          "identifier": "reference.anchoredDraw",
+          "class": "NSTextLayoutFragment",
+          "kind": "instanceMethod",
+          "name": "drawTextParagraphAnchoredAttachment:bounds:context:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@",
+            "{CGRect={CGPoint=dd}{CGSize=dd}}",
+            "^v"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|drawTextParagraphAnchoredAttachment:bounds:context:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use project attachment drawing.",
+          "teardown": "Do not retain the graphics context."
+        },
+        {
+          "identifier": "reference.surfaceUpdaterGet",
+          "class": "NSTextViewportLayoutController",
+          "kind": "instanceMethod",
+          "name": "_platformRenderingSurfaceUpdater",
+          "returnType": "@?",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|_platformRenderingSurfaceUpdater",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Skip the platform updater.",
+          "teardown": "Clear before releasing viewport state."
+        },
+        {
+          "identifier": "reference.surfaceUpdaterSet",
+          "class": "NSTextViewportLayoutController",
+          "kind": "instanceMethod",
+          "name": "set_platformRenderingSurfaceUpdater:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@?"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|set_platformRenderingSurfaceUpdater:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Skip the platform updater.",
+          "teardown": "Set nil before release."
+        },
+        {
+          "identifier": "reference.contextDidLayout",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "_textKit2CanvasDidLayout",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|_textKit2CanvasDidLayout",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "No-op.",
+          "teardown": "Do not notify after teardown."
+        },
+        {
+          "identifier": "reference.contextGeometry",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "_updateInteractionGeometry",
+          "returnType": "v",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|_updateInteractionGeometry",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Use project interaction geometry.",
+          "teardown": "Drop pending updates at teardown."
+        },
+        {
+          "identifier": "reference.contextEditing",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "isEditing",
+          "returnType": "B",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|isEditing",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Report not editing.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.contextEditable",
+          "class": "<canvas context>",
+          "kind": "instanceMethod",
+          "name": "isEditable",
+          "returnType": "B",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|isEditable",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Report not editable.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.supportsAnchored",
+          "class": "NSTextContentManager",
+          "kind": "instanceMethod",
+          "name": "supportsAnchoredTextAttachments",
+          "returnType": "B",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|supportsAnchoredTextAttachments",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Report unsupported.",
+          "teardown": "No retained transient state."
+        },
+        {
+          "identifier": "reference.anchoredAttachments",
+          "class": "NSTextLayoutFragment",
+          "kind": "instanceMethod",
+          "name": "anchoredTextAttachments",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m|anchoredTextAttachments",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Return an empty array.",
+          "teardown": "Release transient arrays immediately."
+        },
+        {
+          "identifier": "reference.richCanvasInvalidateTemporary",
+          "class": "IDTextLayoutCanvasView",
+          "kind": "instanceMethod",
+          "name": "invalidateTemporaryAttributesInRange:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "reference",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|invalidateTemporaryAttributesInRange:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#reference-only-canvas",
+          "fallback": "Invalidate project annotations.",
+          "teardown": "Drop pending invalidations at teardown."
+        }
+      ]
+    }
+  },
+  "forbidden": [
+    "_UITextLayoutControllerBase",
+    "_UITextKit2LayoutController",
+    "_UITextLayoutCanvasView",
+    "_UITextLayoutCanvasViewController",
+    "layoutControllerWithTextView:textContainer:",
+    "initWithTextView:textContainer:",
+    "_canvasViewForTextContainer:",
+    "_setCanvasView:forTextContainer:"
+  ]
+}

@@ -1,0 +1,208 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Key numbers</span><span class="small muted">Week 41 vs 40</span></div>
+  <div class="tiles">
+    <div class="kt"><div class="caps"><span class="dot" style="background-color: var(--blue)"></span>Active users</div><div class="row between"><span class="big">48,213</span><span class="badge up">+12.4%</span></div></div>
+    <div class="kt"><div class="caps"><span class="dot" style="background-color: var(--green)"></span>Revenue</div><div class="row between"><span class="big">€182.4k</span><span class="badge up">+8.1%</span></div></div>
+    <div class="kt"><div class="caps"><span class="dot" style="background-color: var(--orange)"></span>Conversion</div><div class="row between"><span class="big">3.42%</span><span class="badge down">−0.3 pp</span></div></div>
+    <div class="kt"><div class="caps"><span class="dot" style="background-color: var(--purple)"></span>NPS</div><div class="row between"><span class="big">61</span><span class="badge up">+4</span></div></div>
+  </div>
+  <div class="caps2">Signups per day</div>
+  <div class="chart">
+    <div class="col lo" style="height: 38%"></div><div class="col" style="height: 52%"></div><div class="col" style="height: 61%"></div><div class="col" style="height: 47%"></div><div class="col hi" style="height: 100%"></div><div class="col" style="height: 74%"></div><div class="col lo" style="height: 30%"></div>
+  </div>
+  <div class="labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+  <div class="caps2">Traffic by source</div>
+  <div class="hbar">
+    <div class="row"><span class="nm">Organic</span><div class="tr"><div class="fl" style="width: 46%; background-color: var(--blue)"></div></div><span class="v">46%</span></div>
+    <div class="row"><span class="nm">Direct</span><div class="tr"><div class="fl" style="width: 24%; background-color: var(--teal)"></div></div><span class="v">24%</span></div>
+    <div class="row"><span class="nm">Social</span><div class="tr"><div class="fl" style="width: 17%; background-color: var(--purple)"></div></div><span class="v">17%</span></div>
+    <div class="row"><span class="nm">Referral</span><div class="tr"><div class="fl" style="width: 9%; background-color: var(--orange)"></div></div><span class="v">9%</span></div>
+    <div class="row"><span class="nm">Email</span><div class="tr"><div class="fl" style="width: 4%; background-color: var(--green)"></div></div><span class="v">4%</span></div>
+  </div>
+</div>
+</body></html>
+
+== layout
+html 0 0 360 604
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 604
+    div 15 13 330 578
+      div 15 13 330 20.8
+        span 15 13 88 20.8
+        span 241 15.6 104 15.6
+      div 15 43.8 330 287.6
+        div 27 53.8 152 44.9
+          div 27 53.8 152 14.3
+            span 27 57.45 7 7
+          div 27 68.1 152 30.6
+            span 27 70.1 48 28.6
+            span 124 76.25 48 14.3
+        div 27 125.7 152 44.9
+          div 27 125.7 152 14.3
+            span 27 129.35 7 7
+          div 27 140 152 30.6
+            span 27 142 72 28.6
+            span 132 148.15 40 14.3
+        div 27 197.6 152 44.9
+          div 27 197.6 152 14.3
+            span 27 201.25 7 7
+          div 27 211.9 152 30.6
+            span 27 213.9 40 28.6
+            span 100 220.05 72 14.3
+        div 27 269.5 152 44.9
+          div 27 269.5 152 14.3
+            span 27 273.15 7 7
+          div 27 283.8 152 30.6
+            span 27 285.8 16 28.6
+            span 156 291.95 16 14.3
+      div 15 337.4 330 14.3
+      div 15 359.7 330 90
+        div 18 415.5 41.1429 34.2
+        div 65.1429 402.9 41.1429 46.8
+        div 112.286 394.8 41.1429 54.9
+        div 159.429 407.4 41.1429 42.3
+        div 206.571 359.7 41.1429 90
+        div 253.714 383.1 41.1429 66.6
+        div 300.857 422.7 41.1429 27
+      div 15 453.7 330 13
+        span 15 453.7 47.1429 13
+        span 62.1429 453.7 47.1429 13
+        span 109.286 453.7 47.1429 13
+        span 156.429 453.7 47.1429 13
+        span 203.571 453.7 47.1429 13
+        span 250.714 453.7 47.1429 13
+        span 297.857 453.7 47.1429 13
+      div 15 472.7 330 14.3
+      div 15 493 330 94
+        div 15 493 330 15.6
+          span 15 493 84 15.6
+          div 99 495.8 202 10
+            div 99 495.8 92.92 10
+          span 301 493 44 15.6
+        div 15 512.6 330 15.6
+          span 15 512.6 84 15.6
+          div 99 515.4 202 10
+            div 99 515.4 48.48 10
+          span 301 512.6 44 15.6
+        div 15 532.2 330 15.6
+          span 15 532.2 84 15.6
+          div 99 535 202 10
+            div 99 535 34.34 10
+          span 301 532.2 44 15.6
+        div 15 551.8 330 15.6
+          span 15 551.8 84 15.6
+          div 99 554.6 202 10
+            div 99 554.6 18.18 10
+          span 301 551.8 44 15.6
+        div 15 571.4 330 15.6
+          span 15 571.4 84 15.6
+          div 99 574.2 202 10
+            div 99 574.2 8.08 10
+          span 301 571.4 44 15.6
+
+== paint
+root 360x604 items=89
+  solid-fill bounds=(0,0,360,604) layer=(border=(0,0,360,604),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,604),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,604) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,604) root=0
+  solid-fill bounds=(15,44,176,64) layer=(border=(15,44,176,64),radius=(12,12,12,12,12,12,12,12),clip=(15,44,176,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,44,176,64) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(12,12,12,12,12,12,12,12)) pos=(15,44,176,64) root=0
+  solid-fill bounds=(27,57,7,7) layer=(border=(27,57,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,57,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(117,75,62,17) layer=(border=(117,75,62,17),radius=(8,8,8,8,8,8,8,8),clip=(117,75,62,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  solid-fill bounds=(15,116,176,64) layer=(border=(15,116,176,64),radius=(12,12,12,12,12,12,12,12),clip=(15,116,176,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,116,176,64) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(12,12,12,12,12,12,12,12)) pos=(15,116,176,64) root=0
+  solid-fill bounds=(27,129,7,7) layer=(border=(27,129,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,129,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(125,147,54,16) layer=(border=(125,147,54,16),radius=(8,8,8,8,8,8,8,8),clip=(125,147,54,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  solid-fill bounds=(15,188,176,63) layer=(border=(15,188,176,63),radius=(12,12,12,12,12,12,12,12),clip=(15,188,176,63),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,188,176,63) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(12,12,12,12,12,12,12,12)) pos=(15,188,176,63) root=0
+  solid-fill bounds=(27,201,7,7) layer=(border=(27,201,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,201,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(93,219,86,16) layer=(border=(93,219,86,16),radius=(8,8,8,8,8,8,8,8),clip=(93,219,86,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3029
+  solid-fill bounds=(15,259,176,64) layer=(border=(15,259,176,64),radius=(12,12,12,12,12,12,12,12),clip=(15,259,176,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,259,176,64) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(12,12,12,12,12,12,12,12)) pos=(15,259,176,64) root=0
+  solid-fill bounds=(27,273,7,7) layer=(border=(27,273,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,273,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  solid-fill bounds=(149,291,30,16) layer=(border=(149,291,30,16),radius=(8,8,8,8,8,8,8,8),clip=(149,291,30,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  borders bounds=(15,360,330,91) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,360,330,91) root=0
+  solid-fill bounds=(18,415,41,35) layer=(border=(18,415,41,35),radius=(4,4,4,4,0,0,0,0),clip=(18,415,41,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(65,403,41,47) layer=(border=(65,403,41,47),radius=(4,4,4,4,0,0,0,0),clip=(65,403,41,47),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(112,395,41,55) layer=(border=(112,395,41,55),radius=(4,4,4,4,0,0,0,0),clip=(112,395,41,55),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(159,407,42,43) layer=(border=(159,407,42,43),radius=(4,4,4,4,0,0,0,0),clip=(159,407,42,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(207,360,41,90) layer=(border=(207,360,41,90),radius=(4,4,4,4,0,0,0,0),clip=(207,360,41,90),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(254,383,41,67) layer=(border=(254,383,41,67),radius=(4,4,4,4,0,0,0,0),clip=(254,383,41,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(301,423,41,27) layer=(border=(301,423,41,27),radius=(4,4,4,4,0,0,0,0),clip=(301,423,41,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(99,496,202,10) layer=(border=(99,496,202,10),radius=(5,5,5,5,5,5,5,5),clip=(99,496,202,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(99,495.8,202,10) pos=(99,495.8,202,10) radius=(5,5,5,5,5,5,5,5)
+  solid-fill bounds=(99,496,93,10) layer=(border=(99,496,93,10),radius=(5,5,5,5,5,5,5,5),clip=(99,496,93,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(99,515,202,10) layer=(border=(99,515,202,10),radius=(5,5,5,5,5,5,5,5),clip=(99,515,202,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(99,515.4,202,10) pos=(99,515.4,202,10) radius=(5,5,5,5,5,5,5,5)
+  solid-fill bounds=(99,515,48,10) layer=(border=(99,515,48,10),radius=(5,5,5,5,5,5,5,5),clip=(99,515,48,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(99,535,202,10) layer=(border=(99,535,202,10),radius=(5,5,5,5,5,5,5,5),clip=(99,535,202,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(99,535,202,10) pos=(99,535,202,10) radius=(5,5,5,5,5,5,5,5)
+  solid-fill bounds=(99,535,34,10) layer=(border=(99,535,34,10),radius=(5,5,5,5,5,5,5,5),clip=(99,535,34,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(99,555,202,10) layer=(border=(99,555,202,10),radius=(5,5,5,5,5,5,5,5),clip=(99,555,202,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(99,554.6,202,10) pos=(99,554.6,202,10) radius=(5,5,5,5,5,5,5,5)
+  solid-fill bounds=(99,555,18,10) layer=(border=(99,555,18,10),radius=(5,5,5,5,5,5,5,5),clip=(99,555,18,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(99,574,202,10) layer=(border=(99,574,202,10),radius=(5,5,5,5,5,5,5,5),clip=(99,574,202,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(99,574.2,202,10) pos=(99,574.2,202,10) radius=(5,5,5,5,5,5,5,5)
+  solid-fill bounds=(99,574,8,10) layer=(border=(99,574,8,10),radius=(4.04,4.04,4.04,4.04,4.04,4.04,4.04,4.04),clip=(99,574,8,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  text bounds=(7,7,40,32) pos=(15,15,24,16) color=#000000ff text="Key" font=f1 glyphs=3 advance=24
+  text bounds=(39,7,72,32) pos=(47,15,56,16) color=#000000ff text="numbers" font=f1 glyphs=7 advance=56
+  text bounds=(233,8,48,32) pos=(241,16,32,16) color=#6e6e73ff text="Week" font=f2 glyphs=4 advance=32
+  text bounds=(273,8,32,32) pos=(281,16,16,16) color=#6e6e73ff text="41" font=f2 glyphs=2 advance=16
+  text bounds=(297,8,32,32) pos=(305,16,16,16) color=#6e6e73ff text="vs" font=f2 glyphs=2 advance=16
+  text bounds=(321,8,32,32) pos=(329,16,16,16) color=#6e6e73ff text="40" font=f2 glyphs=2 advance=16
+  text bounds=(31,46,64,32) pos=(39,54,48,16) color=#6e6e73ff text="ACTIVE" font=f3 glyphs=6 advance=48
+  text bounds=(87,46,56,32) pos=(95,54,40,16) color=#6e6e73ff text="USERS" font=f3 glyphs=5 advance=40
+  text bounds=(19,68,64,32) pos=(27,76,48,16) color=#000000ff text="48,213" font=f4 glyphs=6 advance=48
+  text bounds=(116,68,64,32) pos=(124,76,48,16) color=#34c759ff text="+12.4%" font=f3 glyphs=6 advance=48
+  text bounds=(31,118,72,32) pos=(39,126,56,16) color=#6e6e73ff text="REVENUE" font=f3 glyphs=7 advance=56
+  text bounds=(19,140,88,32) pos=(27,148,72,16) color=#000000ff text="€182.4k" font=f4 glyphs=9 advance=72
+  text bounds=(124,140,56,32) pos=(132,148,40,16) color=#34c759ff text="+8.1%" font=f3 glyphs=5 advance=40
+  text bounds=(31,190,96,32) pos=(39,198,80,16) color=#6e6e73ff text="CONVERSION" font=f3 glyphs=10 advance=80
+  text bounds=(19,212,56,32) pos=(27,220,40,16) color=#000000ff text="3.42%" font=f4 glyphs=5 advance=40
+  text bounds=(92,212,64,32) pos=(100,220,48,16) color=#ff3b30ff text="−0.3" font=f3 glyphs=6 advance=48
+  text bounds=(148,212,32,32) pos=(156,220,16,16) color=#ff3b30ff text="pp" font=f3 glyphs=2 advance=16
+  text bounds=(31,261,40,32) pos=(39,269,24,16) color=#6e6e73ff text="NPS" font=f3 glyphs=3 advance=24
+  text bounds=(19,284,32,32) pos=(27,292,16,16) color=#000000ff text="61" font=f4 glyphs=2 advance=16
+  text bounds=(148,284,32,32) pos=(156,292,16,16) color=#34c759ff text="+4" font=f3 glyphs=2 advance=16
+  text bounds=(7,329,72,32) pos=(15,337,56,16) color=#6e6e73ff text="SIGNUPS" font=f3 glyphs=7 advance=56
+  text bounds=(71,329,40,32) pos=(79,337,24,16) color=#6e6e73ff text="PER" font=f3 glyphs=3 advance=24
+  text bounds=(103,329,40,32) pos=(111,337,24,16) color=#6e6e73ff text="DAY" font=f3 glyphs=3 advance=24
+  text bounds=(18.5714,445,40,32) pos=(26.5714,453,24,16) color=#6e6e73ff text="Mon" font=f5 glyphs=3 advance=24
+  text bounds=(65.7143,445,40,32) pos=(73.7143,453,24,16) color=#6e6e73ff text="Tue" font=f5 glyphs=3 advance=24
+  text bounds=(112.857,445,40,32) pos=(120.857,453,24,16) color=#6e6e73ff text="Wed" font=f5 glyphs=3 advance=24
+  text bounds=(160,445,40,32) pos=(168,453,24,16) color=#6e6e73ff text="Thu" font=f5 glyphs=3 advance=24
+  text bounds=(207.143,445,40,32) pos=(215.143,453,24,16) color=#6e6e73ff text="Fri" font=f5 glyphs=3 advance=24
+  text bounds=(254.286,445,40,32) pos=(262.286,453,24,16) color=#6e6e73ff text="Sat" font=f5 glyphs=3 advance=24
+  text bounds=(301.429,445,40,32) pos=(309.429,453,24,16) color=#6e6e73ff text="Sun" font=f5 glyphs=3 advance=24
+  text bounds=(7,465,72,32) pos=(15,473,56,16) color=#6e6e73ff text="TRAFFIC" font=f3 glyphs=7 advance=56
+  text bounds=(71,465,32,32) pos=(79,473,16,16) color=#6e6e73ff text="BY" font=f3 glyphs=2 advance=16
+  text bounds=(95,465,64,32) pos=(103,473,48,16) color=#6e6e73ff text="SOURCE" font=f3 glyphs=6 advance=48
+  text bounds=(7,485,72,32) pos=(15,493,56,16) color=#000000ff text="Organic" font=f2 glyphs=7 advance=56
+  text bounds=(313,485,40,32) pos=(321,493,24,16) color=#000000ff text="46%" font=f6 glyphs=3 advance=24
+  text bounds=(7,505,64,32) pos=(15,513,48,16) color=#000000ff text="Direct" font=f2 glyphs=6 advance=48
+  text bounds=(313,505,40,32) pos=(321,513,24,16) color=#000000ff text="24%" font=f6 glyphs=3 advance=24
+  text bounds=(7,524,64,32) pos=(15,532,48,16) color=#000000ff text="Social" font=f2 glyphs=6 advance=48
+  text bounds=(313,524,40,32) pos=(321,532,24,16) color=#000000ff text="17%" font=f6 glyphs=3 advance=24
+  text bounds=(7,544,80,32) pos=(15,552,64,16) color=#000000ff text="Referral" font=f2 glyphs=8 advance=64
+  text bounds=(321,544,32,32) pos=(329,552,16,16) color=#000000ff text="9%" font=f6 glyphs=2 advance=16
+  text bounds=(7,563,56,32) pos=(15,571,40,16) color=#000000ff text="Email" font=f2 glyphs=5 advance=40
+  text bounds=(321,563,32,32) pos=(329,571,16,16) color=#000000ff text="4%" font=f6 glyphs=2 advance=16
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=22,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,158 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad tc">
+  <div class="row"><b class="grow" style="font-size: 16px">Top countries</b><span class="tiny muted">share of active users</span></div>
+  <div class="hb"><span class="nm">🇩🇪 Germany</span><div class="tr"><div style="width: 100%"></div></div><span class="pc">18.2%</span></div>
+  <div class="hb"><span class="nm">🇺🇸 United States</span><div class="tr"><div style="width: 93%"></div></div><span class="pc">16.9%</span></div>
+  <div class="hb"><span class="nm">🇬🇧 United Kingdom</span><div class="tr"><div style="width: 52%"></div></div><span class="pc">9.4%</span></div>
+  <div class="hb"><span class="nm">🇫🇷 France</span><div class="tr"><div style="width: 42%"></div></div><span class="pc">7.7%</span></div>
+  <div class="hb"><span class="nm">🇯🇵 Japan</span><div class="tr"><div style="width: 34%"></div></div><span class="pc">6.1%</span></div>
+  <div class="hb"><span class="nm">🇧🇷 Brazil</span><div class="tr"><div style="width: 29%"></div></div><span class="pc">5.3%</span></div>
+  <div class="hb"><span class="nm">🇮🇳 India</span><div class="tr"><div style="width: 27%"></div></div><span class="pc">4.9%</span></div>
+  <div class="hb"><span class="nm">🇳🇱 Netherlands</span><div class="tr"><div style="width: 21%"></div></div><span class="pc">3.8%</span></div>
+  <div class="hb"><span class="nm">🇵🇹 Portugal</span><div class="tr"><div style="width: 17%"></div></div><span class="pc">3.1%</span></div>
+  <div class="hb"><span class="nm">🇰🇷 South Korea</span><div class="tr"><div style="width: 14%"></div></div><span class="pc">2.6%</span></div>
+  <div class="tiny muted" style="margin-top: 6px">+ 84 more countries · 22.0%</div>
+</div>
+</body></html>
+
+== layout
+html 0 0 360 363.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 363.7
+    div 15 13 330 337.7
+      div 15 13 330 20.8
+        b 15 13 162 20.8
+        span 177 16.25 168 14.3
+      div 15 39.8 330 16.9
+        span 15 39.8 150 16.9
+        div 175 41.25 116 14
+          div 175 41.25 116 14
+        span 301 40.45 44 15.6
+      div 15 62.7 330 33.8
+        span 15 62.7 150 33.8
+        div 175 72.6 116 14
+          div 175 72.6 107.88 14
+        span 301 71.8 44 15.6
+      div 15 102.5 330 33.8
+        span 15 102.5 150 33.8
+        div 175 112.4 116 14
+          div 175 112.4 60.32 14
+        span 301 111.6 44 15.6
+      div 15 142.3 330 16.9
+        span 15 142.3 150 16.9
+        div 175 143.75 116 14
+          div 175 143.75 48.72 14
+        span 301 142.95 44 15.6
+      div 15 165.2 330 16.9
+        span 15 165.2 150 16.9
+        div 175 166.65 116 14
+          div 175 166.65 39.44 14
+        span 301 165.85 44 15.6
+      div 15 188.1 330 16.9
+        span 15 188.1 150 16.9
+        div 175 189.55 116 14
+          div 175 189.55 33.64 14
+        span 301 188.75 44 15.6
+      div 15 211 330 16.9
+        span 15 211 150 16.9
+        div 175 212.45 116 14
+          div 175 212.45 31.32 14
+        span 301 211.65 44 15.6
+      div 15 233.9 330 33.8
+        span 15 233.9 150 33.8
+        div 175 243.8 116 14
+          div 175 243.8 24.36 14
+        span 301 243 44 15.6
+      div 15 273.7 330 16.9
+        span 15 273.7 150 16.9
+        div 175 275.15 116 14
+          div 175 275.15 19.72 14
+        span 301 274.35 44 15.6
+      div 15 296.6 330 33.8
+        span 15 296.6 150 33.8
+        div 175 306.5 116 14
+          div 175 306.5 16.24 14
+        span 301 305.7 44 15.6
+      div 15 336.4 330 14.3
+
+== paint
+root 360x363.7 items=67
+  solid-fill bounds=(0,0,360,364) layer=(border=(0,0,360,364),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,364),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,364) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,364) root=0
+  solid-fill bounds=(175,41,116,14) layer=(border=(175,41,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,41,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,41,116,14) layer=(border=(175,41,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,41,116,14),origin=(175,41,116,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,41) end=(291,41)
+  solid-fill bounds=(175,73,116,14) layer=(border=(175,73,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,73,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,73,108,14) layer=(border=(175,73,108,14),radius=(4,4,4,4,4,4,4,4),clip=(175,73,108,14),origin=(175,73,108,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,73) end=(283,73)
+  solid-fill bounds=(175,112,116,14) layer=(border=(175,112,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,112,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,112,60,14) layer=(border=(175,112,60,14),radius=(4,4,4,4,4,4,4,4),clip=(175,112,60,14),origin=(175,112,60,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,112) end=(235,112)
+  solid-fill bounds=(175,144,116,14) layer=(border=(175,144,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,144,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,144,49,14) layer=(border=(175,144,49,14),radius=(4,4,4,4,4,4,4,4),clip=(175,144,49,14),origin=(175,144,49,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,144) end=(224,144)
+  solid-fill bounds=(175,167,116,14) layer=(border=(175,167,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,167,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,167,39,14) layer=(border=(175,167,39,14),radius=(4,4,4,4,4,4,4,4),clip=(175,167,39,14),origin=(175,167,39,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,167) end=(214,167)
+  solid-fill bounds=(175,190,116,14) layer=(border=(175,190,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,190,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,190,34,14) layer=(border=(175,190,34,14),radius=(4,4,4,4,4,4,4,4),clip=(175,190,34,14),origin=(175,190,34,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,190) end=(209,190)
+  solid-fill bounds=(175,212,116,14) layer=(border=(175,212,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,212,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,212,31,14) layer=(border=(175,212,31,14),radius=(4,4,4,4,4,4,4,4),clip=(175,212,31,14),origin=(175,212,31,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,212) end=(206,212)
+  solid-fill bounds=(175,244,116,14) layer=(border=(175,244,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,244,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,244,24,14) layer=(border=(175,244,24,14),radius=(4,4,4,4,4,4,4,4),clip=(175,244,24,14),origin=(175,244,24,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,244) end=(199,244)
+  solid-fill bounds=(175,275,116,14) layer=(border=(175,275,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,275,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,275,20,14) layer=(border=(175,275,20,14),radius=(4,4,4,4,4,4,4,4),clip=(175,275,20,14),origin=(175,275,20,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,275) end=(195,275)
+  solid-fill bounds=(175,306,116,14) layer=(border=(175,306,116,14),radius=(4,4,4,4,4,4,4,4),clip=(175,306,116,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  linear-gradient bounds=(175,306,16,14) layer=(border=(175,306,16,14),radius=(4,4,4,4,4,4,4,4),clip=(175,306,16,14),origin=(175,306,16,14),attachment=0,repeat=0,root=0) points=((0,#5856d6ff,-),(1,#af52deff,-)) space=0 hue=0 start=(175,306) end=(191,306)
+  text bounds=(7,7,40,32) pos=(15,15,24,16) color=#000000ff text="Top" font=f1 glyphs=3 advance=24
+  text bounds=(39,7,88,32) pos=(47,15,72,16) color=#000000ff text="countries" font=f1 glyphs=9 advance=72
+  text bounds=(169,8,56,32) pos=(177,16,40,16) color=#6e6e73ff text="share" font=f2 glyphs=5 advance=40
+  text bounds=(217,8,32,32) pos=(225,16,16,16) color=#6e6e73ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(241,8,64,32) pos=(249,16,48,16) color=#6e6e73ff text="active" font=f2 glyphs=6 advance=48
+  text bounds=(297,8,56,32) pos=(305,16,40,16) color=#6e6e73ff text="users" font=f2 glyphs=5 advance=40
+  text bounds=(7,32,80,32) pos=(15,40,64,16) color=#000000ff text="🇩🇪" font=f3 glyphs=8 advance=64
+  text bounds=(79,32,72,32) pos=(87,40,56,16) color=#000000ff text="Germany" font=f3 glyphs=7 advance=56
+  text bounds=(297,32,56,32) pos=(305,40,40,16) color=#000000ff text="18.2%" font=f4 glyphs=5 advance=40
+  text bounds=(7,55,80,32) pos=(15,63,64,16) color=#000000ff text="🇺🇸" font=f3 glyphs=8 advance=64
+  text bounds=(79,55,64,32) pos=(87,63,48,16) color=#000000ff text="United" font=f3 glyphs=6 advance=48
+  text bounds=(7,72,64,32) pos=(15,80,48,16) color=#000000ff text="States" font=f3 glyphs=6 advance=48
+  text bounds=(297,64,56,32) pos=(305,72,40,16) color=#000000ff text="16.9%" font=f4 glyphs=5 advance=40
+  text bounds=(7,95,80,32) pos=(15,103,64,16) color=#000000ff text="🇬🇧" font=f3 glyphs=8 advance=64
+  text bounds=(79,95,64,32) pos=(87,103,48,16) color=#000000ff text="United" font=f3 glyphs=6 advance=48
+  text bounds=(7,111,72,32) pos=(15,119,56,16) color=#000000ff text="Kingdom" font=f3 glyphs=7 advance=56
+  text bounds=(305,104,48,32) pos=(313,112,32,16) color=#000000ff text="9.4%" font=f4 glyphs=4 advance=32
+  text bounds=(7,134,80,32) pos=(15,142,64,16) color=#000000ff text="🇫🇷" font=f3 glyphs=8 advance=64
+  text bounds=(79,134,64,32) pos=(87,142,48,16) color=#000000ff text="France" font=f3 glyphs=6 advance=48
+  text bounds=(305,135,48,32) pos=(313,143,32,16) color=#000000ff text="7.7%" font=f4 glyphs=4 advance=32
+  text bounds=(7,157,80,32) pos=(15,165,64,16) color=#000000ff text="🇯🇵" font=f3 glyphs=8 advance=64
+  text bounds=(79,157,56,32) pos=(87,165,40,16) color=#000000ff text="Japan" font=f3 glyphs=5 advance=40
+  text bounds=(305,158,48,32) pos=(313,166,32,16) color=#000000ff text="6.1%" font=f4 glyphs=4 advance=32
+  text bounds=(7,180,80,32) pos=(15,188,64,16) color=#000000ff text="🇧🇷" font=f3 glyphs=8 advance=64
+  text bounds=(79,180,64,32) pos=(87,188,48,16) color=#000000ff text="Brazil" font=f3 glyphs=6 advance=48
+  text bounds=(305,181,48,32) pos=(313,189,32,16) color=#000000ff text="5.3%" font=f4 glyphs=4 advance=32
+  text bounds=(7,203,80,32) pos=(15,211,64,16) color=#000000ff text="🇮🇳" font=f3 glyphs=8 advance=64
+  text bounds=(79,203,56,32) pos=(87,211,40,16) color=#000000ff text="India" font=f3 glyphs=5 advance=40
+  text bounds=(305,204,48,32) pos=(313,212,32,16) color=#000000ff text="4.9%" font=f4 glyphs=4 advance=32
+  text bounds=(7,226,80,32) pos=(15,234,64,16) color=#000000ff text="🇳🇱" font=f3 glyphs=8 advance=64
+  text bounds=(7,243,104,32) pos=(15,251,88,16) color=#000000ff text="Netherlands" font=f3 glyphs=11 advance=88
+  text bounds=(305,235,48,32) pos=(313,243,32,16) color=#000000ff text="3.8%" font=f4 glyphs=4 advance=32
+  text bounds=(7,266,80,32) pos=(15,274,64,16) color=#000000ff text="🇵🇹" font=f3 glyphs=8 advance=64
+  text bounds=(79,266,80,32) pos=(87,274,64,16) color=#000000ff text="Portugal" font=f3 glyphs=8 advance=64
+  text bounds=(305,266,48,32) pos=(313,274,32,16) color=#000000ff text="3.1%" font=f4 glyphs=4 advance=32
+  text bounds=(7,289,80,32) pos=(15,297,64,16) color=#000000ff text="🇰🇷" font=f3 glyphs=8 advance=64
+  text bounds=(79,289,56,32) pos=(87,297,40,16) color=#000000ff text="South" font=f3 glyphs=5 advance=40
+  text bounds=(7,305,56,32) pos=(15,313,40,16) color=#000000ff text="Korea" font=f3 glyphs=5 advance=40
+  text bounds=(305,298,48,32) pos=(313,306,32,16) color=#000000ff text="2.6%" font=f4 glyphs=4 advance=32
+  text bounds=(7,328,24,32) pos=(15,336,8,16) color=#6e6e73ff text="+" font=f2 glyphs=1 advance=8
+  text bounds=(23,328,32,32) pos=(31,336,16,16) color=#6e6e73ff text="84" font=f2 glyphs=2 advance=16
+  text bounds=(47,328,48,32) pos=(55,336,32,16) color=#6e6e73ff text="more" font=f2 glyphs=4 advance=32
+  text bounds=(87,328,88,32) pos=(95,336,72,16) color=#6e6e73ff text="countries" font=f2 glyphs=9 advance=72
+  text bounds=(167,328,32,32) pos=(175,336,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(191,328,56,32) pos=(199,336,40,16) color=#6e6e73ff text="22.0%" font=f2 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

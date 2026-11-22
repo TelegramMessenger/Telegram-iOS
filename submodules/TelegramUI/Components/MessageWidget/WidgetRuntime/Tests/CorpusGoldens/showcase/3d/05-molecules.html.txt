@@ -1,0 +1,97 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body><div class="card"><header><div><div class="eyebrow">OBJECT STUDIO / 3D</div><h2>Molecular desk</h2></div><span class="number">05</span></header><p>Ball-and-stick shapes, ready to turn.</p><canvas id="view" role="img" aria-label="Molecular desk. Drag sideways to orbit; use the buttons to adjust the view." width="320" height="240"></canvas><div class="tools"><button id="left" aria-label="Turn left">↶ Left</button><button id="right" aria-label="Turn right">Right ↷</button><button id="up">Raise</button><button id="down">Lower</button><button id="near" aria-label="Zoom in">＋</button><button id="far" aria-label="Zoom out">−</button><button id="reset">Reset</button><button id="special">Next molecule</button></div><div class="status" id="status" aria-live="polite">Water · H2O · 100%</div><p class="hint">Drag sideways to orbit · Scroll vertically to move the chat</p></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 496
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 496
+    div 20 18 320 464
+      header 20 18 320 51.2
+        div 20 18 144 46.2
+          div 20 18 144 16
+          h2 20 39 144 25.2
+        span 324 35.6 16 16
+      p 20 74.2 320 16.8
+      canvas 20 96 320 240
+      div 20 347 320 69
+        button 30 353 64 20
+        button 119 353 72 20
+        button 216 353 40 20
+        button 281 353 40 20
+        button 30 390 24 20
+        button 79 390 24 20
+        button 128 390 40 20
+        button 193 390 104 20
+      div 20 424 320 16
+      p 20 449 320 28
+
+== paint
+root 360x496 items=53
+  solid-fill bounds=(0,0,360,496) layer=(border=(0,0,360,496),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,496),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#f3f5f1ff
+  image bounds=(20,96,320,240) layer=(border=(20,96,320,240),radius=(0,0,0,0,0,0,0,0),clip=(20,96,320,240),origin=(20,96,320,240),attachment=0,repeat=3,root=0) size=(320,240)
+  borders bounds=(20,336,320,80) borders=(left=(0,0,#233b43ff),top=(1,4,#d4dfd9ff),right=(0,0,#233b43ff),bottom=(0,0,#233b43ff),radius=(0,0,0,0,0,0,0,0)) pos=(20,336,320,80) root=0
+  borders bounds=(20,347,84,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,347,84,32) root=0
+  borders bounds=(109,347,92,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(109,347,92,32) root=0
+  borders bounds=(206,347,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(206,347,60,32) root=0
+  borders bounds=(271,347,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(271,347,60,32) root=0
+  borders bounds=(20,384,44,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,384,44,32) root=0
+  borders bounds=(69,384,44,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(69,384,44,32) root=0
+  borders bounds=(118,384,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(118,384,60,32) root=0
+  solid-fill bounds=(183,384,124,32) layer=(border=(183,384,124,32),radius=(8,8,8,8,8,8,8,8),clip=(183,384,124,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#246e61ff
+  borders bounds=(183,384,124,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(183,384,124,32) root=0
+  text bounds=(12,10,64,32) pos=(20,18,48,16) color=#246e61ff text="OBJECT" font=f1 glyphs=6 advance=48
+  text bounds=(68,10,64,32) pos=(76,18,48,16) color=#246e61ff text="STUDIO" font=f1 glyphs=6 advance=48
+  text bounds=(124,10,24,32) pos=(132,18,8,16) color=#246e61ff text="/" font=f1 glyphs=1 advance=8
+  text bounds=(140,10,32,32) pos=(148,18,16,16) color=#246e61ff text="3D" font=f1 glyphs=2 advance=16
+  text bounds=(12,35,88,32) pos=(20,43,72,16) color=#233b43ff text="Molecular" font=f2 glyphs=9 advance=72
+  text bounds=(92,35,48,32) pos=(100,43,32,16) color=#233b43ff text="desk" font=f2 glyphs=4 advance=32
+  text bounds=(316,28,32,32) pos=(324,36,16,16) color=#536d70ff text="05" font=f3 glyphs=2 advance=16
+  text bounds=(12,66,56,32) pos=(20,74,40,16) color=#536d70ff text="Ball-" font=f4 glyphs=5 advance=40
+  text bounds=(52,66,48,32) pos=(60,74,32,16) color=#536d70ff text="and-" font=f4 glyphs=4 advance=32
+  text bounds=(84,66,56,32) pos=(92,74,40,16) color=#536d70ff text="stick" font=f4 glyphs=5 advance=40
+  text bounds=(132,66,72,32) pos=(140,74,56,16) color=#536d70ff text="shapes," font=f4 glyphs=7 advance=56
+  text bounds=(196,66,56,32) pos=(204,74,40,16) color=#536d70ff text="ready" font=f4 glyphs=5 advance=40
+  text bounds=(244,66,32,32) pos=(252,74,16,16) color=#536d70ff text="to" font=f4 glyphs=2 advance=16
+  text bounds=(268,66,56,32) pos=(276,74,40,16) color=#536d70ff text="turn." font=f4 glyphs=5 advance=40
+  text bounds=(22,347,40,32) pos=(30,355,24,16) color=#233b43ff text="↶" font=f4 glyphs=3 advance=24
+  text bounds=(54,347,48,32) pos=(62,355,32,16) color=#233b43ff text="Left" font=f4 glyphs=4 advance=32
+  text bounds=(111,347,56,32) pos=(119,355,40,16) color=#233b43ff text="Right" font=f4 glyphs=5 advance=40
+  text bounds=(159,347,40,32) pos=(167,355,24,16) color=#233b43ff text="↷" font=f4 glyphs=3 advance=24
+  text bounds=(208,347,56,32) pos=(216,355,40,16) color=#233b43ff text="Raise" font=f4 glyphs=5 advance=40
+  text bounds=(273,347,56,32) pos=(281,355,40,16) color=#233b43ff text="Lower" font=f4 glyphs=5 advance=40
+  text bounds=(22,384,40,32) pos=(30,392,24,16) color=#233b43ff text="＋" font=f4 glyphs=3 advance=24
+  text bounds=(71,384,40,32) pos=(79,392,24,16) color=#233b43ff text="−" font=f4 glyphs=3 advance=24
+  text bounds=(120,384,56,32) pos=(128,392,40,16) color=#233b43ff text="Reset" font=f4 glyphs=5 advance=40
+  text bounds=(185,384,48,32) pos=(193,392,32,16) color=#f3f5f1ff text="Next" font=f4 glyphs=4 advance=32
+  text bounds=(225,384,80,32) pos=(233,392,64,16) color=#f3f5f1ff text="molecule" font=f4 glyphs=8 advance=64
+  text bounds=(12,416,56,32) pos=(20,424,40,16) color=#246e61ff text="Water" font=f5 glyphs=5 advance=40
+  text bounds=(60,416,32,32) pos=(68,424,16,16) color=#246e61ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(84,416,40,32) pos=(92,424,24,16) color=#246e61ff text="H2O" font=f5 glyphs=3 advance=24
+  text bounds=(116,416,32,32) pos=(124,424,16,16) color=#246e61ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(140,416,48,32) pos=(148,424,32,16) color=#246e61ff text="100%" font=f5 glyphs=4 advance=32
+  text bounds=(12,440,48,32) pos=(20,448,32,16) color=#536d70ff text="Drag" font=f6 glyphs=4 advance=32
+  text bounds=(52,440,80,32) pos=(60,448,64,16) color=#536d70ff text="sideways" font=f6 glyphs=8 advance=64
+  text bounds=(124,440,32,32) pos=(132,448,16,16) color=#536d70ff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(148,440,56,32) pos=(156,448,40,16) color=#536d70ff text="orbit" font=f6 glyphs=5 advance=40
+  text bounds=(196,440,32,32) pos=(204,448,16,16) color=#536d70ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(220,440,64,32) pos=(228,448,48,16) color=#536d70ff text="Scroll" font=f6 glyphs=6 advance=48
+  text bounds=(12,454,96,32) pos=(20,462,80,16) color=#536d70ff text="vertically" font=f6 glyphs=10 advance=80
+  text bounds=(100,454,32,32) pos=(108,462,16,16) color=#536d70ff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(124,454,48,32) pos=(132,462,32,16) color=#536d70ff text="move" font=f6 glyphs=4 advance=32
+  text bounds=(164,454,40,32) pos=(172,462,24,16) color=#536d70ff text="the" font=f6 glyphs=3 advance=24
+  text bounds=(196,454,48,32) pos=(204,462,32,16) color=#536d70ff text="chat" font=f6 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=2,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=21,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=24,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

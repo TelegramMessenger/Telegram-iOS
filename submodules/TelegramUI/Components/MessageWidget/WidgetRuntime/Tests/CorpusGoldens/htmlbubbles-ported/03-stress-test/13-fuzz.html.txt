@@ -1,0 +1,62 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div style="height: 36px; border-radius: 8px; margin-bottom: 6px; background-image: linear-gradient(45deg, #ff9500 25%, #ffcc00 25%, #ffcc00 50%, #ff9500 50%, #ff9500 75%, #ffcc00 75%); background-size: 20px 20px"></div>
+<div style="height: 56px; border-radius: 8px; margin-bottom: 6px; background: radial-gradient(circle at 30% 40%, #ffffff, #5ac8fa 40%, #007aff)"></div>
+<div style="display: flex; align-items: center; margin-bottom: 6px">
+  <div style="width: 70px; height: 70px; border-radius: 35px; background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red); margin-right: 10px"></div>
+  <div style="width: 70px; height: 70px; border-radius: 12px; background: conic-gradient(from 45deg, #1c1c1e 0% 25%, #ffffff 25% 50%, #1c1c1e 50% 75%, #ffffff 75% 100%); background-size: 35px 35px; margin-right: 10px; border: 1px solid #c7c7cc"></div>
+  <div style="width: 70px; height: 70px; border-radius: 12px; background: radial-gradient(ellipse at center, #ff2d55 0%, #ff2d55 30%, transparent 31%), linear-gradient(135deg, #ffd60a, #ff9f0a)"></div>
+</div>
+<div class="aurora" style="height: 90px; border-radius: 12px; background-size: cover; background-position: center; padding: 12px; color: #ffffff; box-sizing: border-box">
+  <div style="font-size: 18px; font-weight: 800">background-image: url(app:aurora)</div>
+  <div style="font-size: 12px">background-size: cover · text drawn on top</div>
+</div>
+<div class="stars" style="height: 16px; margin-top: 6px; background-repeat: repeat-x"></div>
+</body></html>
+
+== layout
+html 0 0 360 294
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 294
+    div 0 0 360 36
+    div 0 42 360 56
+    div 0 104 360 72
+      div 0 105 70 70
+      div 81 105 70 70
+      div 162 105 70 70
+    div 12 194 336 66
+      div 12 194 336 23.4
+      div 12 217.4 336 31.2
+    div 0 278 360 16
+
+== paint
+root 360x294 items=20
+  linear-gradient bounds=(0,0,360,36) layer=(border=(0,0,360,36),radius=(8,8,8,8,8,8,8,8),clip=(0,0,360,36),origin=(0,0,20,20),attachment=0,repeat=0,root=0) points=((0,#ff9500ff,-),(0.25,#ff9500ff,-),(0.25,#ffcc00ff,-),(0.5,#ffcc00ff,-),(0.5,#ff9500ff,-),(0.75,#ff9500ff,-),(0.75,#ffcc00ff,-),(1,#ffcc00ff,-)) space=0 hue=0 start=(0,20) end=(20,0)
+  radial-gradient bounds=(0,42,360,56) layer=(border=(0,42,360,56),radius=(8,8,8,8,8,8,8,8),clip=(0,42,360,56),origin=(0,42,360,56),attachment=0,repeat=0,root=0) points=((0,#ffffffff,-),(0.4,#5ac8faff,-),(1,#007affff,-)) space=0 hue=0 position=(108,64.4) radius=(254.23,254.23)
+  conic-gradient bounds=(0,105,70,70) layer=(border=(0,105,70,70),radius=(35,35,35,35,35,35,35,35),clip=(0,105,70,70),origin=(0,105,70,70),attachment=0,repeat=0,root=0) points=((0,#ff0000ff,-),(0.166667,#ffff00ff,-),(0.333333,#00ff00ff,-),(0.5,#00ffffff,-),(0.666667,#0000ffff,-),(0.833333,#ff00ffff,-),(1,#ff0000ff,-)) space=8 hue=1 position=(35,140) angle=0 radius=49.4975
+  conic-gradient bounds=(80,104,72,72) layer=(border=(80,104,72,72),radius=(12,12,12,12,12,12,12,12),clip=(80,104,72,72),origin=(81,105,35,35),attachment=0,repeat=0,root=0) points=((0,#1c1c1eff,-),(0.25,#1c1c1eff,-),(0.25,#ffffffff,-),(0.5,#ffffffff,-),(0.5,#1c1c1eff,-),(0.75,#1c1c1eff,-),(0.75,#ffffffff,-),(1,#ffffffff,-)) space=8 hue=1 position=(98.5,122.5) angle=45 radius=24.7487
+  borders bounds=(80,104,72,72) borders=(left=(1,4,#c7c7ccff),top=(1,4,#c7c7ccff),right=(1,4,#c7c7ccff),bottom=(1,4,#c7c7ccff),radius=(12,12,12,12,12,12,12,12)) pos=(80,104,72,72) root=0
+  linear-gradient bounds=(162,105,70,70) layer=(border=(162,105,70,70),radius=(12,12,12,12,12,12,12,12),clip=(162,105,70,70),origin=(162,105,70,70),attachment=0,repeat=0,root=0) points=((0,#ffd60aff,-),(1,#ff9f0aff,-)) space=0 hue=0 start=(162,105) end=(232,175)
+  radial-gradient bounds=(162,105,70,70) layer=(border=(162,105,70,70),radius=(12,12,12,12,12,12,12,12),clip=(162,105,70,70),origin=(162,105,70,70),attachment=0,repeat=0,root=0) points=((0,#ff2d55ff,-),(0.3,#ff2d55ff,-),(0.31,#ff2d5500,-),(0.31,#00000000,-),(1,#00000000,-)) space=0 hue=0 position=(197,140) radius=(49.4975,49.4975)
+  linear-gradient bounds=(0,182,360,90) layer=(border=(0,182,360,90),radius=(12,12,12,12,12,12,12,12),clip=(0,182,360,90),origin=(0,182,360,90),attachment=0,repeat=0,root=0) points=((0,#0b1a3aff,-),(0.3,#123c6bff,-),(0.55,#1fb389ff,-),(0.75,#8ef0c4ff,-),(1,#0b1a3aff,-)) space=0 hue=0 start=(144.481,129.413) end=(215.519,324.587)
+  image bounds=(0,278,360,16) layer=(border=(0,278,360,16),radius=(0,0,0,0,0,0,0,0),clip=(0,278,360,16),origin=(0,278,12,12),attachment=0,repeat=1,root=0) size=(24,24)
+  text bounds=(4,189,104,32) pos=(12,197,88,16) color=#ffffffff text="background-" font=f1 glyphs=11 advance=88
+  text bounds=(92,189,64,32) pos=(100,197,48,16) color=#ffffffff text="image:" font=f1 glyphs=6 advance=48
+  text bounds=(148,189,136,32) pos=(156,197,120,16) color=#ffffffff text="url(app:aurora)" font=f1 glyphs=15 advance=120
+  text bounds=(4,209,104,32) pos=(12,217,88,16) color=#ffffffff text="background-" font=f2 glyphs=11 advance=88
+  text bounds=(92,209,56,32) pos=(100,217,40,16) color=#ffffffff text="size:" font=f2 glyphs=5 advance=40
+  text bounds=(140,209,56,32) pos=(148,217,40,16) color=#ffffffff text="cover" font=f2 glyphs=5 advance=40
+  text bounds=(188,209,32,32) pos=(196,217,16,16) color=#ffffffff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(212,209,48,32) pos=(220,217,32,16) color=#ffffffff text="text" font=f2 glyphs=4 advance=32
+  text bounds=(252,209,56,32) pos=(260,217,40,16) color=#ffffffff text="drawn" font=f2 glyphs=5 advance=40
+  text bounds=(300,209,32,32) pos=(308,217,16,16) color=#ffffffff text="on" font=f2 glyphs=2 advance=16
+  text bounds=(4,225,40,32) pos=(12,233,24,16) color=#ffffffff text="top" font=f2 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

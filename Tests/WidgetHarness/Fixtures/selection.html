@@ -1,0 +1,25 @@
+<!-- Text selection (sdk-v1 §2.4, §5.10): in the lifted bubble, #sel's text selects (its bold word too, not the
+     user-select:none span), #off's does not, #count ticks every 300 ms while a selection holds, #slide moves under its
+     highlight, and #btn clicks nothing while the bubble is lifted. A long press on #empty lifts the bubble. Each row is
+     40 px tall, #empty 60 px, so tests aim from the widget's top-left. -->
+<style>
+  body { margin: 0; font: 16px/20px system-ui, sans-serif; }
+  p { margin: 0; height: 40px; }
+  #sel { user-select: text; }
+  #off { background: #eee; }
+  #btn { display: block; width: 100%; height: 40px; margin: 0; border: 0; background: #8cf; }
+  #count, #slide-row { user-select: text; }
+  #slide { display: inline-block; animation: slide 2s linear infinite alternate; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(40px); } }
+  #empty { height: 60px; background: #f6f6f6; }
+</style>
+<p id="sel">Select these <b>bold</b> words<span style="user-select: none"> skipped</span> here</p>
+<p id="off">Not this one</p>
+<button id="btn" onclick="TelegramWidget.openLink('https://example.org/sel')">button</button>
+<p id="count">0</p>
+<p id="slide-row"><span id="slide">sliding</span></p>
+<div id="empty">empty</div>
+<script>
+  let n = 0;
+  setInterval(() => { document.getElementById('count').textContent = String(++n); }, 300);
+</script>

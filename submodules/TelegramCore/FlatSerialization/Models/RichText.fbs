@@ -1,0 +1,247 @@
+include "MediaId.fbs";
+include "PixelDimensions.fbs";
+
+namespace TelegramCore;
+
+union RichText_Value {
+    RichText_Empty,
+    RichText_Plain,
+    RichText_Bold,
+    RichText_Italic,
+    RichText_Underline,
+    RichText_Strikethrough,
+    RichText_Fixed,
+    RichText_Url,
+    RichText_Email,
+    RichText_Concat,
+    RichText_Subscript,
+    RichText_Superscript,
+    RichText_Marked,
+    RichText_Phone,
+    RichText_Image,
+    RichText_Anchor,
+    RichText_Formula,
+    RichText_CustomEmoji,
+    RichText_AutoEmail,
+    RichText_AutoPhone,
+    RichText_AutoUrl,
+    RichText_BankCard,
+    RichText_BotCommand,
+    RichText_Cashtag,
+    RichText_Hashtag,
+    RichText_Mention,
+    RichText_MentionName,
+    RichText_Spoiler,
+    RichText_Date,
+    RichText_TextButton,
+    RichText_TonAddress
+}
+
+table RichText {
+    value:RichText_Value (id: 1, required);
+}
+
+table RichText_Empty {}
+
+table RichText_Plain {
+    text:string (id: 0, required);
+}
+
+table RichText_Bold {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Italic {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Underline {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Strikethrough {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Fixed {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Url {
+    text:RichText (id: 0, required);
+    url:string (id: 1, required);
+    webpageId:MediaId (id: 2);
+}
+
+table RichText_Email {
+    text:RichText (id: 0, required);
+    email:string (id: 1, required);
+}
+
+table RichText_Concat {
+    texts:[RichText] (id: 0, required);
+}
+
+table RichText_Subscript {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Superscript {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Marked {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Phone {
+    text:RichText (id: 0, required);
+    phone:string (id: 1, required);
+}
+
+table RichText_Image {
+    id:MediaId (id: 0, required);
+    dimensions:PixelDimensions (id: 1, required);
+}
+
+table RichText_Anchor {
+    text:RichText (id: 0, required);
+    name:string (id: 1, required);
+}
+
+table RichText_Formula {
+    latex:string (id: 0, required);
+}
+
+table RichText_CustomEmoji {
+    fileId:long (id: 0);
+    alt:string (id: 1, required);
+}
+
+table RichText_AutoEmail {
+    text:RichText (id: 0, required);
+}
+
+table RichText_AutoPhone {
+    text:RichText (id: 0, required);
+}
+
+table RichText_AutoUrl {
+    text:RichText (id: 0, required);
+}
+
+table RichText_BankCard {
+    text:RichText (id: 0, required);
+}
+
+table RichText_TonAddress {
+    text:RichText (id: 0, required);
+}
+
+table RichText_BotCommand {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Cashtag {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Hashtag {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Mention {
+    text:RichText (id: 0, required);
+}
+
+table RichText_MentionName {
+    text:RichText (id: 0, required);
+    peerId:long (id: 1);
+}
+
+table RichText_Spoiler {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Date {
+    text:RichText (id: 0, required);
+    date:int (id: 1);
+    format:int = -1 (id: 2);
+}
+
+table RichText_TextButton {
+    button:InstantPageButton (id: 0, required);
+}
+
+// InstantPageButton and its action union live HERE rather than in InstantPageBlock.fbs on
+// purpose: RichText_TextButton needs them, and InstantPageBlock.fbs already includes this file,
+// so defining them there would create an include cycle. They reference nothing outside this
+// file, so this placement is cycle-free.
+//
+// The union has exactly the 10 ReplyMarkupButtonAction cases reachable from Api.InlineButtonType.
+// text / requestPhone / requestMap / setupPoll / requestPeer come only from Api.ButtonType and
+// cannot occur on a page button.
+union InstantPageButtonAction_Value {
+    InstantPageButtonAction_Url,
+    InstantPageButtonAction_UrlAuth,
+    InstantPageButtonAction_OpenWebView,
+    InstantPageButtonAction_Callback,
+    InstantPageButtonAction_OpenWebApp,
+    InstantPageButtonAction_Payment,
+    InstantPageButtonAction_SwitchInline,
+    InstantPageButtonAction_OpenUserProfile,
+    InstantPageButtonAction_CopyText,
+    InstantPageButtonAction_Disabled
+}
+
+table InstantPageButtonAction {
+    value:InstantPageButtonAction_Value (id: 1, required);
+}
+
+table InstantPageButtonAction_Url {
+    url:string (id: 0, required);
+}
+
+table InstantPageButtonAction_UrlAuth {
+    url:string (id: 0, required);
+    buttonId:int (id: 1);
+}
+
+table InstantPageButtonAction_OpenWebView {
+    url:string (id: 0, required);
+    simple:bool (id: 1);
+}
+
+table InstantPageButtonAction_Callback {
+    data:[ubyte] (id: 0, required);
+    requiresPassword:bool (id: 1);
+}
+
+table InstantPageButtonAction_OpenWebApp {}
+
+table InstantPageButtonAction_Payment {}
+
+table InstantPageButtonAction_SwitchInline {
+    query:string (id: 0, required);
+    samePeer:bool (id: 1);
+    peerTypes:int (id: 2);
+}
+
+table InstantPageButtonAction_OpenUserProfile {
+    peerId:long (id: 0);
+}
+
+table InstantPageButtonAction_CopyText {
+    payload:string (id: 0, required);
+}
+
+table InstantPageButtonAction_Disabled {}
+
+table InstantPageButton {
+    text:RichText (id: 0, required);
+    action:InstantPageButtonAction (id: 1, required);
+    color:int = -1 (id: 2);
+    // `richButtonStyle` link:flags.3. A defaulted trailing scalar, so buffers written before it
+    // existed read `false`. Scalars cannot be `required` in flatc.
+    isLink:bool = false (id: 3);
+}

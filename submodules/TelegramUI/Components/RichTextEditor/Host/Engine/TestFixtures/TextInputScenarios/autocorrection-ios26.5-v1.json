@@ -1,0 +1,2686 @@
+{
+  "family": "autocorrection",
+  "runtime": {
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "scenarios": [
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-accept-space",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-accept-punctuation",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": ".",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-accept-candidate",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-reject-precommit",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-undo-space",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-undo-punctuation",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": ".",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-undo-candidate",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress lantern waits.\nSecond block stays unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-accept-space",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-accept-punctuation",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": ".",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-accept-candidate",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-reject-precommit",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-undo-space",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-undo-punctuation",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": ".",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-undo-candidate",
+      "initial": {
+        "selection": {
+          "location": 14,
+          "length": 0
+        },
+        "text": "A quiet adress\nlantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 14,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 8,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-accept-space",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 15,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-accept-punctuation",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 15,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": ".",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-accept-candidate",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 15,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-reject-precommit",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-undo-space",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 15,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": " ",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-undo-punctuation",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 15,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": ".",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-undo-candidate",
+      "initial": {
+        "selection": {
+          "location": 21,
+          "length": 0
+        },
+        "text": "A quiet scene.\nadress lantern waits.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 2,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 2
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/IDAutocorrectionDecisionTestSupport.m",
+        "stockEvidence": ".autocorrection-task6-complete-matrix-green2",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 21,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "replace-range",
+          "text": "address",
+          "range": {
+            "location": 15,
+            "length": 6
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    }
+  ],
+  "schema": 1
+}

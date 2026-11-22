@@ -1,0 +1,3 @@
+mode         = .native
+extra_cflags = -march=native
+include ninja/clang

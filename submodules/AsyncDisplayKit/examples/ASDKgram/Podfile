@@ -1,9 +1,0 @@
-source 'https://github.com/CocoaPods/Specs.git'
-platform :ios, '9.0'
-target 'Sample' do
-  pod 'Texture/IGListKit', :path => '../..'
-  pod 'Texture/PINRemoteImage', :path => '../..'
-  pod 'Texture/Yoga', :path => '../..'
-  pod 'Texture/Video', :path => '../..'
-  pod 'Weaver', :git => 'git@github.com:TextureGroup/Weaver.git', :branch => 'master'
-end

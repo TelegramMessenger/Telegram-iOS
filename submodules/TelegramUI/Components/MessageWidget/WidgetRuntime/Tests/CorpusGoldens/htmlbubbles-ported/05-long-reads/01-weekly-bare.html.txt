@@ -1,0 +1,588 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card art intro" id="art">
+  <div class="hero">
+    <div class="kicker">Engineering · 9 min read</div>
+    <div class="title">Inside a 1&nbsp;MB browser: how litehtml paints your chat bubbles</div>
+    <div class="dek">No WebKit, no web views — just a C++ layout engine, CoreText and a few hundred lines of glue.</div>
+  </div>
+  <div class="body" id="body">
+    <div class="row" id="byline" style="margin: 10px 0 10px 0">
+      <span class="av" style="background-color: #ff6b35; width: 32px; height: 32px; line-height: 32px; border-radius: 16px; font-size: 12px; margin-right: 10px">SR</span>
+      <div class="grow"><b>Sam Rivera</b><div class="tiny muted">Staff engineer · October 7, 2026</div></div>
+      <span class="badge purple" style="margin-right: 4px">C++</span><span class="badge blue">macOS</span></div>
+
+    <div id="collapsed">
+      <p><span class="drop">E</span>very message in this app is a tiny web page. Not a web <i>view</i> — there is no browser process, no web engine and no network stack hiding behind the bubbles. Instead each message is handed to <b>litehtml</b>, a compact C++ library that understands HTML and CSS well enough to lay out documents, and then asks its host application to do the actual drawing. That split — <i>litehtml decides where things go, you decide how they look on screen</i> — is what makes it such a good fit for chat.</p>
+      <div class="more" id="more">Read more ▾</div>
+      <div class="tiny muted center" style="margin-top: 6px">7 sections · 9 min · one message</div>
+    </div>
+
+    <div id="opened" hidden="">
+      <div class="tool">
+        <span class="tb" id="tocBtn">☰ Contents</span>
+        <div class="prog grow"><div id="prog"></div></div>
+        <span class="tiny muted" id="left" style="margin-right: 4px">9 min left</span>
+        <span class="tb" data-font="-1">A−</span><span class="tb" data-font="1">A+</span></div>
+      <div class="toc" id="toc" hidden="">
+        <div class="e" data-sec="0"><span class="n">·</span><span class="grow">A tiny web page</span><span class="tiny muted"><span class="chk"></span>1 min</span></div>
+        <div class="e" data-sec="1"><span class="n">1</span><span class="grow">Parsing: from bytes to a tree</span><span class="tiny muted"><span class="chk"></span>1.5 min</span></div>
+        <div class="e" data-sec="2"><span class="n">2</span><span class="grow">Styling: the cascade, minus the drama</span><span class="tiny muted"><span class="chk"></span>1.5 min</span></div>
+        <div class="e" data-sec="3"><span class="n">3</span><span class="grow">Layout: boxes all the way down</span><span class="tiny muted"><span class="chk"></span>1.5 min</span></div>
+        <div class="e" data-sec="4"><span class="n">4</span><span class="grow">Painting: the container contract</span><span class="tiny muted"><span class="chk"></span>1.5 min</span></div>
+        <div class="e" data-sec="5"><span class="n">5</span><span class="grow">Fitting text into bubbles</span><span class="tiny muted"><span class="chk"></span>1 min</span></div>
+        <div class="e" data-sec="6"><span class="n">6</span><span class="grow">What's missing — and why that's fine</span><span class="tiny muted"><span class="chk"></span>1 min</span></div>
+      </div>
+      <h2 id="h2" hidden=""></h2>
+
+      <section class="sec" data-sec="0" data-min="1" data-title="A tiny web page">
+    <p><span class="drop">E</span>very message in this app is a tiny web page. Not a web <i>view</i> — there is no browser process, no web engine and no network stack hiding behind the bubbles. Instead each message is handed to <b>litehtml</b>, a compact C++ library that understands HTML and CSS well enough to lay out documents, and then asks its host application to do the actual drawing. That split — <i>litehtml decides where things go, you decide how they look on screen</i> — is what makes it such a good fit for chat.</p>
+    <p>This article walks through the whole journey of a message: from a string of HTML to pixels on a Retina display. Along the way we will look at what litehtml does for you, what it deliberately leaves out, and the handful of decisions that make HTML bubbles feel native instead of embedded.</p>
+      </section>
+
+      <section class="sec" data-sec="1" data-min="1.5" data-title="Parsing: from bytes to a tree" hidden="">
+    <p>litehtml does not ship its own HTML tokenizer. It bundles <b>gumbo</b>, Google's HTML5-compliant parser, which means malformed markup is repaired exactly the way a browser would repair it: unclosed paragraphs are closed, stray <code>&lt;/b&gt;</code> tags are ignored, and a <code>&lt;div&gt;</code> inside a <code>&lt;p&gt;</code> splits the paragraph in two. That matters in a chat app, where messages come from people (and bots) who do not run validators.</p>
+    <p>The gumbo tree is then converted into litehtml's own element classes — <code>el_div</code>, <code>el_text</code>, <code>el_image</code>, <code>el_table</code> and friends. Text is split into words and spaces at this stage, because the layout engine wraps text one word at a time. Every word is measured once by calling back into the host: <code>text_width("hello", font)</code>.</p>
+    <div class="fig"><div class="pipe" id="pipe">
+      <span class="box lit" style="--c: #8e8e93">HTML string</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #ff6b35">gumbo</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #ff9500">element tree</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #34c759">CSS cascade</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #30b0c7">render tree</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #007aff">layout</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #7f5af0">draw calls</span>
+      <span class="arr lit">→</span><span class="box lit" style="--c: #48484a">CoreGraphics</span></div>
+    <div class="figcap muted"><b>Figure 1.</b> The pipeline. Everything up to “draw calls” happens inside litehtml; the last step is our container. <a href="#" id="replay">↻ Replay</a></div></div>
+      </section>
+
+      <section class="sec" data-sec="2" data-min="1.5" data-title="Styling: the cascade, minus the drama" hidden="">
+    <p>Three stylesheets are applied to every bubble, in order. First the <b>master CSS</b> that ships with litehtml — the equivalent of a browser's user-agent stylesheet, which knows that <code>&lt;b&gt;</code> is bold and <code>&lt;ul&gt;</code> has bullets. Then our <b>user CSS</b>, generated per bubble: it sets the system font, the text colour for light or dark mode, link colours, code blocks, and the small utility kit (<code>.card</code>, <code>.btn</code>, <code>.badge</code>…) used by the cards in this demo. Finally the message's own <code>&lt;style&gt;</code> blocks and inline <code>style</code> attributes.</p>
+    <p>Selectors cover what you would expect in practice: descendant and child combinators, classes and IDs, attribute selectors, <code>:first-child</code>, <code>:nth-child(even)</code>, <code>:not()</code>, <code>:hover</code> and <code>:active</code>, plus <code>::before</code> and <code>::after</code> with generated content and CSS counters. Hover over the rows of the table in the next section to see <code>:hover</code> at work.</p>
+    <div class="pull">“litehtml decides where things go; you decide how they look on screen. That split is the whole trick.”<small class="muted">— the one sentence to remember from this article</small></div>
+      </section>
+
+      <section class="sec" data-sec="3" data-min="1.5" data-title="Layout: boxes all the way down" hidden="">
+    <p>After styling, litehtml builds a <b>render tree</b> of <code>render_block</code>, <code>render_inline</code>, <code>render_table</code> and <code>render_flex</code> items. Layout is a single call: <code>document::render(maxWidth)</code>. It positions every box, wraps every line, resolves percentages, floats and absolutely-positioned children, and returns the document's <i>natural</i> width — how wide it would like to be if nothing forced it to wrap.</p>
+    <p>That return value is exactly what a chat bubble needs. We render once at the maximum bubble width; if the natural width is smaller, we render again at that width and the bubble shrinks to hug its text. Because word widths were measured during parsing, re-layout is pure arithmetic and typically takes a small fraction of a millisecond.</p>
+    <table class="matrix">
+      <tbody><tr><th>Capability</th><th class="c">litehtml</th><th class="c">WKWebView</th><th class="c">Attributed string</th></tr>
+      <tr><td>Block, inline, floats, positioning</td><td class="c">✅</td><td class="c">✅</td><td class="c">—</td></tr>
+      <tr><td>Tables with rowspan / colspan</td><td class="c">✅</td><td class="c">✅</td><td class="c">⚠️ basic</td></tr>
+      <tr><td>Flexbox</td><td class="c">✅</td><td class="c">✅</td><td class="c">—</td></tr>
+      <tr><td>Linear / radial / conic gradients</td><td class="c">✅</td><td class="c">✅</td><td class="c">—</td></tr>
+      <tr><td>CSS grid, transforms, shadows</td><td class="c">—</td><td class="c">✅</td><td class="c">—</td></tr>
+      <tr><td>JavaScript</td><td class="c">⚠️ <span class="tiny muted">sandbox, HTML out</span></td><td class="c">✅</td><td class="c">—</td></tr>
+      <tr><td>Synchronous height for a list cell</td><td class="c">✅</td><td class="c">❌ async</td><td class="c">✅</td></tr>
+      <tr><td>Cost per message</td><td class="c">one C++ object</td><td class="c">a web process</td><td class="c">one string</td></tr>
+    </tbody></table>
+    <div class="tiny muted" style="margin-bottom: 8px">Table 1. Why not just use a web view? The last two rows are the answer for chat.</div>
+      </section>
+
+      <section class="sec" data-sec="4" data-min="1.5" data-title="Painting: the container contract" hidden="">
+    <p>litehtml never touches a pixel. To draw, it walks the render tree and calls methods on a <b>document container</b> — an abstract C++ class the host implements. There are about thirty of them, and they read like a to-do list for a 2D renderer:</p>
+<pre><code><span style="color: #af52de">class</span> <span style="color: #007aff">document_container</span> {
+  <span style="color: #8e8e93">// text</span>
+  uint_ptr <span style="color: #ff9500">create_font</span>(descr, doc, metrics);
+  pixel_t  <span style="color: #ff9500">text_width</span>(text, font);
+  <span style="color: #af52de">void</span>     <span style="color: #ff9500">draw_text</span>(hdc, text, font, color, pos);
+  <span style="color: #8e8e93">// boxes</span>
+  <span style="color: #af52de">void</span>     <span style="color: #ff9500">draw_borders</span>(hdc, borders, pos, root);
+  <span style="color: #af52de">void</span>     <span style="color: #ff9500">draw_solid_fill</span>(hdc, layer, color);
+  <span style="color: #af52de">void</span>     <span style="color: #ff9500">draw_image</span>(hdc, layer, url, base_url);
+  <span style="color: #af52de">void</span>     <span style="color: #ff9500">set_clip</span>(pos, radius);
+  <span style="color: #8e8e93">// … ~20 more: gradients, list markers, links</span>
+};</code></pre>
+    <p>Our implementation (<code>LHContainer.mm</code>) maps these onto Apple's APIs. Text goes through <b>CoreText</b>: every word becomes a <code>CTLine</code>, which gives us kerning, ligatures and — crucially — automatic font fallback, so emoji 🎉, Cyrillic, Japanese and Arabic all render even though the CSS asked for the system font. Shapes, borders and gradients are <b>CoreGraphics</b> paths; conic gradients map directly onto <code>CGContextDrawConicGradient</code>.</p>
+    <div class="note"><b>Note.</b> The same container renders to an on-screen <code>NSView</code> and to an off-screen bitmap. The <code>lhrender</code> command-line tool in this repo uses the bitmap path to turn any HTML file into a PNG — handy for testing messages without launching the app.</div>
+      </section>
+
+      <section class="sec" data-sec="5" data-min="1" data-title="Fitting text into bubbles" hidden="">
+    <p>The hardest part of the integration is not drawing, it is <i>agreeing</i>. litehtml asks for a font's ascent, descent, height and x-height, and then trusts those numbers when it stacks lines. If the container measures a word one way and draws it another, lines overlap or wrap one word too early. The fix is boring and strict: measure and draw with the identical <code>CTLine</code>, round the line height up once, and derive the descent from it so that <code>ascent + descent</code> is exactly the height litehtml thinks it is.</p>
+    <p>Images follow the same rule. litehtml asks for an image's size <i>during layout</i>, so the container must know it synchronously. In this MVP that means images come from <code>data:</code> URIs, SF Symbols (<code>sf:heart.fill</code>) or pictures the app draws at launch (<code>app:aurora</code>). Remote images would need an asynchronous load followed by a re-layout of the affected bubble — very doable, just not done yet.</p>
+    <div class="warn"><b>Watch out.</b> litehtml has no <code>overflow-wrap</code>. A 200-character URL without spaces will overflow its bubble; the bubble clips it. If you generate HTML from user text, insert <code>&lt;wbr&gt;</code> or zero-width spaces into very long tokens.</div>
+      </section>
+
+      <section class="sec" data-sec="6" data-min="1" data-title="What's missing — and why that's fine" hidden="">
+    <p>There is no CSS grid, no <code>box-shadow</code>, no <code>opacity</code>, no transforms and no CSS animations. There is no bidirectional text reordering, so Hebrew and Arabic words are shaped correctly but placed left-to-right. And litehtml itself never runs a line of JavaScript — which for a messaging app is a feature, not a bug: the layout engine cannot track you, mine cryptocurrency or rewrite the chat around it.</p>
+    <p>Interactivity lives next to the engine instead. A message may carry a script that runs in its own JavaScriptCore sandbox, with no network and a strict CPU budget. Its <code>render()</code> returns a fresh HTML string, litehtml lays it out again, and clicks on <code>data-action</code> elements call back into <code>onAction</code> — which is how this article turns pages, resizes its text and remembers what you have read.</p>
+    <div class="tip"><b>Try it.</b> Right-click this article and choose <i>View HTML Source</i>. It is one message: a <code>&lt;style&gt;</code> block, a two-line static fallback and a script whose <code>render()</code> returns only the section you are reading.</div>
+    <h2>Further reading</h2>
+    <div class="rel">
+      <a href="https://github.com/litehtml/litehtml"><div class="caps">GitHub</div><b>litehtml/litehtml</b><div class="tiny muted">The engine, with GTK, Windows and Haiku containers</div></a>
+      <a href="https://github.com/google/gumbo-parser" style="margin-right: 0"><div class="caps">GitHub</div><b>google/gumbo-parser</b><div class="tiny muted">The HTML5 parser litehtml bundles</div></a>
+    </div>
+    <div class="sep" style="margin: 14px 0 8px 0"></div>
+    <div class="fn muted">¹ “1&nbsp;MB” is the order of magnitude of the stripped LiteChat binary including litehtml and gumbo. ² Timings vary with message size; the first bubble also pays for CoreText warming up its font caches.</div>
+      </section>
+
+      <div id="feedback" hidden="">
+        <div style="margin-top: 12px">
+          <span class="fb" id="up"><span class="emo" id="thumb">👍</span> Helpful · <span id="likes">1,247</span></span>
+          <span class="fb" id="tldrBtn">Too long?</span></div>
+        <div class="tldr" id="tldr" hidden=""><b>TL;DR</b><ul><li>litehtml lays out HTML and CSS; CoreText and CoreGraphics draw it.</li><li>Layout is synchronous and cheap, so a bubble knows its height at once — no web process.</li><li>No grid, shadows or transforms; scripts run beside it in a sandbox and only return HTML.</li></ul></div>
+      </div>
+      <div class="pager">
+        <span class="pg" id="prev">▴ Collapse</span>
+        <span class="tiny muted" style="padding-top: 6px" id="pos">1 / 7</span>
+        <span class="pg" id="next">Part 1 ›</span></div>
+    </div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 639.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 639.75
+    div 1 1 360 637.75
+      div 19 17 324 133.85
+        div 19 17 324 14.3
+        div 19 37.3089 324 52.9
+        div 19 98.2141 324 52.65
+      div 19 170.85 324 451.9
+        div 19 180.85 324 57.35
+          span 19 193.525 23.1351 32
+          div 52.1351 180.85 190.865 57.35
+            b 52.1351 180.85 0 0
+            div 52.1351 204.1 190.865 34.1
+          span 251 201 24 17.05
+          span 295 201 40 17.05
+        div 19 248.2 324 374.55
+          p 19 248.2 324 302.25
+            span 19 253.2 8 50.31
+            i 19 248.2 0 0
+            b 19 248.2 0 0
+            i 19 248.2 0 0
+          div 27 568.45 308 23.25
+          div 19 605.7 324 17.05
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+          h2 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              span 0 0 0 0
+              i 0 0 0 0
+              b 0 0 0 0
+              i 0 0 0 0
+            p 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            p 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                b 0 0 0 0
+                a 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            p 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            div 0 0 0 0
+              small 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              i 0 0 0 0
+            p 0 0 0 0
+            table 0 0 0 0
+              tbody 0 0 0 0
+                tr 0 0 0 0
+                  th 0 0 0 0
+                  th 0 0 0 0
+                  th 0 0 0 0
+                  th 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                    span 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                tr 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+                  td 0 0 0 0
+            div 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              b 0 0 0 0
+            pre 0 0 0 0
+              code 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+            p 0 0 0 0
+              code 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              i 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            p 0 0 0 0
+              i 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+          section 0 0 0 0
+            p 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            p 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              i 0 0 0 0
+              code 0 0 0 0
+              code 0 0 0 0
+            h2 0 0 0 0
+            div 0 0 0 0
+              a 0 0 0 0
+                div 0 0 0 0
+                b 0 0 0 0
+                div 0 0 0 0
+              a 0 0 0 0
+                div 0 0 0 0
+                b 0 0 0 0
+                div 0 0 0 0
+            div 0 0 0 0
+            div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              ul 0 0 0 0
+                li 0 0 0 0
+                li 0 0 0 0
+                li 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+
+== paint
+root 362x639.75 items=155
+  solid-fill bounds=(0,0,362,640) layer=(border=(0,0,362,640),radius=(14,14,14,14,14,14,14,14),clip=(0,0,362,640),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,362,640) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,362,640) root=0
+  linear-gradient bounds=(1,1,360,166) layer=(border=(1,1,360,166),radius=(13,13,13,13,0,0,0,0),clip=(1,1,360,166),origin=(1,1,360,166),attachment=0,repeat=0,root=0) points=((0,#0b1b3aff,-),(0.3,#123c5aff,-),(0.55,#1a7a6eff,-),(0.78,#3fd0a0ff,-),(1,#7f5af0ff,-)) space=0 hue=0 start=(49.5,-47.5) end=(312.5,215.5)
+  solid-fill bounds=(19,194,23,32) layer=(border=(19,194,23,32),radius=(11.5676,11.5676,11.5676,11.5676,11.5676,11.5676,11.5676,11.5676),clip=(19,194,23,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff6b35ff
+  solid-fill bounds=(243,200,40,19) layer=(border=(243,200,40,19),radius=(9,9,9,9,9,9,9,9),clip=(243,200,40,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52de29
+  solid-fill bounds=(287,200,56,19) layer=(border=(287,200,56,19),radius=(9,9,9,9,9,9,9,9),clip=(287,200,56,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  solid-fill bounds=(19,560,324,40) layer=(border=(19,560,324,40),radius=(10,10,10,10,10,10,10,10),clip=(19,560,324,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f5af0ff
+  text bounds=(11,262,24,32) pos=(19,270,8,16) color=#7f5af0ff text="E" font=f1 glyphs=1 advance=8
+  text bounds=(11,9,104,32) pos=(19,17,88,16) color=#5ef2c4ff text="ENGINEERING" font=f2 glyphs=11 advance=88
+  text bounds=(107,9,32,32) pos=(115,17,16,16) color=#5ef2c4ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(131,9,24,32) pos=(139,17,8,16) color=#5ef2c4ff text="9" font=f2 glyphs=1 advance=8
+  text bounds=(147,9,40,32) pos=(155,17,24,16) color=#5ef2c4ff text="MIN" font=f2 glyphs=3 advance=24
+  text bounds=(179,9,48,32) pos=(187,17,32,16) color=#5ef2c4ff text="READ" font=f2 glyphs=4 advance=32
+  text bounds=(14.5676,194,32,32) pos=(22.5676,202,16,16) color=#ffffffff text="SR" font=f3 glyphs=2 advance=16
+  text bounds=(44.1351,176,40,32) pos=(52.1351,184,24,16) color=#000000ff text="Sam" font=f4 glyphs=3 advance=24
+  text bounds=(76.1351,176,64,32) pos=(84.1351,184,48,16) color=#000000ff text="Rivera" font=f4 glyphs=6 advance=48
+  text bounds=(44.1351,196,56,32) pos=(52.1351,204,40,16) color=#6e6e73ff text="Staff" font=f5 glyphs=5 advance=40
+  text bounds=(92.1351,196,80,32) pos=(100.135,204,64,16) color=#6e6e73ff text="engineer" font=f5 glyphs=8 advance=64
+  text bounds=(164.135,196,32,32) pos=(172.135,204,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(44.1351,213,72,32) pos=(52.1351,221,56,16) color=#6e6e73ff text="October" font=f5 glyphs=7 advance=56
+  text bounds=(108.135,213,32,32) pos=(116.135,221,16,16) color=#6e6e73ff text="7," font=f5 glyphs=2 advance=16
+  text bounds=(132.135,213,48,32) pos=(140.135,221,32,16) color=#6e6e73ff text="2026" font=f5 glyphs=4 advance=32
+  text bounds=(243,193,40,32) pos=(251,201,24,16) color=#af52deff text="C++" font=f6 glyphs=3 advance=24
+  text bounds=(287,193,56,32) pos=(295,201,40,16) color=#007affff text="macOS" font=f6 glyphs=5 advance=40
+  text bounds=(27,243,48,32) pos=(35,251,32,16) color=#000000ff text="very" font=f7 glyphs=4 advance=32
+  text bounds=(67,243,72,32) pos=(75,251,56,16) color=#000000ff text="message" font=f7 glyphs=7 advance=56
+  text bounds=(131,243,32,32) pos=(139,251,16,16) color=#000000ff text="in" font=f7 glyphs=2 advance=16
+  text bounds=(155,243,48,32) pos=(163,251,32,16) color=#000000ff text="this" font=f7 glyphs=4 advance=32
+  text bounds=(195,243,40,32) pos=(203,251,24,16) color=#000000ff text="app" font=f7 glyphs=3 advance=24
+  text bounds=(227,243,32,32) pos=(235,251,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(251,243,24,32) pos=(259,251,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(267,243,48,32) pos=(275,251,32,16) color=#000000ff text="tiny" font=f7 glyphs=4 advance=32
+  text bounds=(307,243,40,32) pos=(315,251,24,16) color=#000000ff text="web" font=f7 glyphs=3 advance=24
+  text bounds=(27,266,56,32) pos=(35,274,40,16) color=#000000ff text="page." font=f7 glyphs=5 advance=40
+  text bounds=(75,266,40,32) pos=(83,274,24,16) color=#000000ff text="Not" font=f7 glyphs=3 advance=24
+  text bounds=(107,266,24,32) pos=(115,274,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(123,266,40,32) pos=(131,274,24,16) color=#000000ff text="web" font=f7 glyphs=3 advance=24
+  text bounds=(155,266,48,32) pos=(163,274,32,16) color=#000000ff text="view" font=f8 glyphs=4 advance=32
+  text bounds=(195,266,40,32) pos=(203,274,24,16) color=#000000ff text="—" font=f7 glyphs=3 advance=24
+  text bounds=(227,266,56,32) pos=(235,274,40,16) color=#000000ff text="there" font=f7 glyphs=5 advance=40
+  text bounds=(275,266,32,32) pos=(283,274,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(299,266,32,32) pos=(307,274,16,16) color=#000000ff text="no" font=f7 glyphs=2 advance=16
+  text bounds=(27,290,72,32) pos=(35,298,56,16) color=#000000ff text="browser" font=f7 glyphs=7 advance=56
+  text bounds=(91,290,80,32) pos=(99,298,64,16) color=#000000ff text="process," font=f7 glyphs=8 advance=64
+  text bounds=(163,290,32,32) pos=(171,298,16,16) color=#000000ff text="no" font=f7 glyphs=2 advance=16
+  text bounds=(187,290,40,32) pos=(195,298,24,16) color=#000000ff text="web" font=f7 glyphs=3 advance=24
+  text bounds=(219,290,64,32) pos=(227,298,48,16) color=#000000ff text="engine" font=f7 glyphs=6 advance=48
+  text bounds=(275,290,40,32) pos=(283,298,24,16) color=#000000ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(307,290,32,32) pos=(315,298,16,16) color=#000000ff text="no" font=f7 glyphs=2 advance=16
+  text bounds=(11,313,72,32) pos=(19,321,56,16) color=#000000ff text="network" font=f7 glyphs=7 advance=56
+  text bounds=(75,313,56,32) pos=(83,321,40,16) color=#000000ff text="stack" font=f7 glyphs=5 advance=40
+  text bounds=(123,313,64,32) pos=(131,321,48,16) color=#000000ff text="hiding" font=f7 glyphs=6 advance=48
+  text bounds=(179,313,64,32) pos=(187,321,48,16) color=#000000ff text="behind" font=f7 glyphs=6 advance=48
+  text bounds=(235,313,40,32) pos=(243,321,24,16) color=#000000ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(267,313,80,32) pos=(275,321,64,16) color=#000000ff text="bubbles." font=f7 glyphs=8 advance=64
+  text bounds=(11,336,72,32) pos=(19,344,56,16) color=#000000ff text="Instead" font=f7 glyphs=7 advance=56
+  text bounds=(75,336,48,32) pos=(83,344,32,16) color=#000000ff text="each" font=f7 glyphs=4 advance=32
+  text bounds=(115,336,72,32) pos=(123,344,56,16) color=#000000ff text="message" font=f7 glyphs=7 advance=56
+  text bounds=(179,336,32,32) pos=(187,344,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(203,336,64,32) pos=(211,344,48,16) color=#000000ff text="handed" font=f7 glyphs=6 advance=48
+  text bounds=(259,336,32,32) pos=(267,344,16,16) color=#000000ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(11,359,80,32) pos=(19,367,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(75,359,24,32) pos=(83,367,8,16) color=#000000ff text="," font=f7 glyphs=1 advance=8
+  text bounds=(91,359,24,32) pos=(99,367,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(107,359,72,32) pos=(115,367,56,16) color=#000000ff text="compact" font=f7 glyphs=7 advance=56
+  text bounds=(171,359,40,32) pos=(179,367,24,16) color=#000000ff text="C++" font=f7 glyphs=3 advance=24
+  text bounds=(203,359,72,32) pos=(211,367,56,16) color=#000000ff text="library" font=f7 glyphs=7 advance=56
+  text bounds=(267,359,48,32) pos=(275,367,32,16) color=#000000ff text="that" font=f7 glyphs=4 advance=32
+  text bounds=(11,383,104,32) pos=(19,391,88,16) color=#000000ff text="understands" font=f7 glyphs=11 advance=88
+  text bounds=(107,383,48,32) pos=(115,391,32,16) color=#000000ff text="HTML" font=f7 glyphs=4 advance=32
+  text bounds=(147,383,40,32) pos=(155,391,24,16) color=#000000ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(179,383,40,32) pos=(187,391,24,16) color=#000000ff text="CSS" font=f7 glyphs=3 advance=24
+  text bounds=(211,383,48,32) pos=(219,391,32,16) color=#000000ff text="well" font=f7 glyphs=4 advance=32
+  text bounds=(251,383,64,32) pos=(259,391,48,16) color=#000000ff text="enough" font=f7 glyphs=6 advance=48
+  text bounds=(307,383,32,32) pos=(315,391,16,16) color=#000000ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(11,406,40,32) pos=(19,414,24,16) color=#000000ff text="lay" font=f7 glyphs=3 advance=24
+  text bounds=(43,406,40,32) pos=(51,414,24,16) color=#000000ff text="out" font=f7 glyphs=3 advance=24
+  text bounds=(75,406,96,32) pos=(83,414,80,16) color=#000000ff text="documents," font=f7 glyphs=10 advance=80
+  text bounds=(163,406,40,32) pos=(171,414,24,16) color=#000000ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(195,406,48,32) pos=(203,414,32,16) color=#000000ff text="then" font=f7 glyphs=4 advance=32
+  text bounds=(235,406,48,32) pos=(243,414,32,16) color=#000000ff text="asks" font=f7 glyphs=4 advance=32
+  text bounds=(275,406,40,32) pos=(283,414,24,16) color=#000000ff text="its" font=f7 glyphs=3 advance=24
+  text bounds=(11,429,48,32) pos=(19,437,32,16) color=#000000ff text="host" font=f7 glyphs=4 advance=32
+  text bounds=(51,429,104,32) pos=(59,437,88,16) color=#000000ff text="application" font=f7 glyphs=11 advance=88
+  text bounds=(147,429,32,32) pos=(155,437,16,16) color=#000000ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(171,429,32,32) pos=(179,437,16,16) color=#000000ff text="do" font=f7 glyphs=2 advance=16
+  text bounds=(195,429,40,32) pos=(203,437,24,16) color=#000000ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(227,429,64,32) pos=(235,437,48,16) color=#000000ff text="actual" font=f7 glyphs=6 advance=48
+  text bounds=(11,452,80,32) pos=(19,460,64,16) color=#000000ff text="drawing." font=f7 glyphs=8 advance=64
+  text bounds=(83,452,48,32) pos=(91,460,32,16) color=#000000ff text="That" font=f7 glyphs=4 advance=32
+  text bounds=(123,452,56,32) pos=(131,460,40,16) color=#000000ff text="split" font=f7 glyphs=5 advance=40
+  text bounds=(171,452,40,32) pos=(179,460,24,16) color=#000000ff text="—" font=f7 glyphs=3 advance=24
+  text bounds=(203,452,80,32) pos=(211,460,64,16) color=#000000ff text="litehtml" font=f8 glyphs=8 advance=64
+  text bounds=(275,452,72,32) pos=(283,460,56,16) color=#000000ff text="decides" font=f8 glyphs=7 advance=56
+  text bounds=(11,476,56,32) pos=(19,484,40,16) color=#000000ff text="where" font=f8 glyphs=5 advance=40
+  text bounds=(59,476,64,32) pos=(67,484,48,16) color=#000000ff text="things" font=f8 glyphs=6 advance=48
+  text bounds=(115,476,40,32) pos=(123,484,24,16) color=#000000ff text="go," font=f8 glyphs=3 advance=24
+  text bounds=(147,476,40,32) pos=(155,484,24,16) color=#000000ff text="you" font=f8 glyphs=3 advance=24
+  text bounds=(179,476,64,32) pos=(187,484,48,16) color=#000000ff text="decide" font=f8 glyphs=6 advance=48
+  text bounds=(235,476,40,32) pos=(243,484,24,16) color=#000000ff text="how" font=f8 glyphs=3 advance=24
+  text bounds=(267,476,48,32) pos=(275,484,32,16) color=#000000ff text="they" font=f8 glyphs=4 advance=32
+  text bounds=(11,499,48,32) pos=(19,507,32,16) color=#000000ff text="look" font=f8 glyphs=4 advance=32
+  text bounds=(51,499,32,32) pos=(59,507,16,16) color=#000000ff text="on" font=f8 glyphs=2 advance=16
+  text bounds=(75,499,64,32) pos=(83,507,48,16) color=#000000ff text="screen" font=f8 glyphs=6 advance=48
+  text bounds=(131,499,40,32) pos=(139,507,24,16) color=#000000ff text="—" font=f7 glyphs=3 advance=24
+  text bounds=(163,499,32,32) pos=(171,507,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(187,499,48,32) pos=(195,507,32,16) color=#000000ff text="what" font=f7 glyphs=4 advance=32
+  text bounds=(227,499,56,32) pos=(235,507,40,16) color=#000000ff text="makes" font=f7 glyphs=5 advance=40
+  text bounds=(275,499,32,32) pos=(283,507,16,16) color=#000000ff text="it" font=f7 glyphs=2 advance=16
+  text bounds=(299,499,48,32) pos=(307,507,32,16) color=#000000ff text="such" font=f7 glyphs=4 advance=32
+  text bounds=(11,522,24,32) pos=(19,530,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(27,522,48,32) pos=(35,530,32,16) color=#000000ff text="good" font=f7 glyphs=4 advance=32
+  text bounds=(67,522,40,32) pos=(75,530,24,16) color=#000000ff text="fit" font=f7 glyphs=3 advance=24
+  text bounds=(99,522,40,32) pos=(107,530,24,16) color=#000000ff text="for" font=f7 glyphs=3 advance=24
+  text bounds=(131,522,56,32) pos=(139,530,40,16) color=#000000ff text="chat." font=f7 glyphs=5 advance=40
+  text bounds=(121,563,48,32) pos=(129,571,32,16) color=#ffffffff text="Read" font=f9 glyphs=4 advance=32
+  text bounds=(161,563,48,32) pos=(169,571,32,16) color=#ffffffff text="more" font=f9 glyphs=4 advance=32
+  text bounds=(201,563,40,32) pos=(209,571,24,16) color=#ffffffff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(37,598,24,32) pos=(45,606,8,16) color=#6e6e73ff text="7" font=f5 glyphs=1 advance=8
+  text bounds=(53,598,80,32) pos=(61,606,64,16) color=#6e6e73ff text="sections" font=f5 glyphs=8 advance=64
+  text bounds=(125,598,32,32) pos=(133,606,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(149,598,24,32) pos=(157,606,8,16) color=#6e6e73ff text="9" font=f5 glyphs=1 advance=8
+  text bounds=(165,598,40,32) pos=(173,606,24,16) color=#6e6e73ff text="min" font=f5 glyphs=3 advance=24
+  text bounds=(197,598,32,32) pos=(205,606,16,16) color=#6e6e73ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(221,598,40,32) pos=(229,606,24,16) color=#6e6e73ff text="one" font=f5 glyphs=3 advance=24
+  text bounds=(253,598,72,32) pos=(261,606,56,16) color=#6e6e73ff text="message" font=f5 glyphs=7 advance=56
+  group opacity=0.9994 matrix=(1,0,0,1,0,0) backface=0 bounds=(9,27.3089,336,67.45) exact=1
+    text bounds=(11,34,64,32) pos=(19,42,48,16) color=#ffffffff text="Inside" font=f10 glyphs=6 advance=48
+    text bounds=(67,34,24,32) pos=(75,42,8,16) color=#ffffffff text="a" font=f10 glyphs=1 advance=8
+    text bounds=(83,34,56,32) pos=(91,42,40,16) color=#ffffffff text="1 MB" font=f10 glyphs=5 advance=40
+    text bounds=(131,34,80,32) pos=(139,42,64,16) color=#ffffffff text="browser:" font=f10 glyphs=8 advance=64
+    text bounds=(203,34,40,32) pos=(211,42,24,16) color=#ffffffff text="how" font=f10 glyphs=3 advance=24
+    text bounds=(235,34,80,32) pos=(243,42,64,16) color=#ffffffff text="litehtml" font=f10 glyphs=8 advance=64
+    text bounds=(11,61,64,32) pos=(19,69,48,16) color=#ffffffff text="paints" font=f10 glyphs=6 advance=48
+    text bounds=(67,61,48,32) pos=(75,69,32,16) color=#ffffffff text="your" font=f10 glyphs=4 advance=32
+    text bounds=(107,61,48,32) pos=(115,69,32,16) color=#ffffffff text="chat" font=f10 glyphs=4 advance=32
+    text bounds=(147,61,72,32) pos=(155,69,56,16) color=#ffffffff text="bubbles" font=f10 glyphs=7 advance=56
+  group opacity=0.8495 matrix=(1,0,0,1,0,0) backface=0 bounds=(9,88.2141,336,71.1) exact=1
+    text bounds=(11,90,32,32) pos=(19,98,16,16) color=#ffffffff text="No" font=f11 glyphs=2 advance=16
+    text bounds=(35,90,72,32) pos=(43,98,56,16) color=#ffffffff text="WebKit," font=f11 glyphs=7 advance=56
+    text bounds=(99,90,32,32) pos=(107,98,16,16) color=#ffffffff text="no" font=f11 glyphs=2 advance=16
+    text bounds=(123,90,40,32) pos=(131,98,24,16) color=#ffffffff text="web" font=f11 glyphs=3 advance=24
+    text bounds=(155,90,56,32) pos=(163,98,40,16) color=#ffffffff text="views" font=f11 glyphs=5 advance=40
+    text bounds=(203,90,40,32) pos=(211,98,24,16) color=#ffffffff text="—" font=f11 glyphs=3 advance=24
+    text bounds=(235,90,48,32) pos=(243,98,32,16) color=#ffffffff text="just" font=f11 glyphs=4 advance=32
+    text bounds=(275,90,24,32) pos=(283,98,8,16) color=#ffffffff text="a" font=f11 glyphs=1 advance=8
+    text bounds=(291,90,40,32) pos=(299,98,24,16) color=#ffffffff text="C++" font=f11 glyphs=3 advance=24
+    text bounds=(11,108,64,32) pos=(19,116,48,16) color=#ffffffff text="layout" font=f11 glyphs=6 advance=48
+    text bounds=(67,108,72,32) pos=(75,116,56,16) color=#ffffffff text="engine," font=f11 glyphs=7 advance=56
+    text bounds=(131,108,80,32) pos=(139,116,64,16) color=#ffffffff text="CoreText" font=f11 glyphs=8 advance=64
+    text bounds=(203,108,40,32) pos=(211,116,24,16) color=#ffffffff text="and" font=f11 glyphs=3 advance=24
+    text bounds=(235,108,24,32) pos=(243,116,8,16) color=#ffffffff text="a" font=f11 glyphs=1 advance=8
+    text bounds=(251,108,40,32) pos=(259,116,24,16) color=#ffffffff text="few" font=f11 glyphs=3 advance=24
+    text bounds=(11,125,72,32) pos=(19,133,56,16) color=#ffffffff text="hundred" font=f11 glyphs=7 advance=56
+    text bounds=(75,125,56,32) pos=(83,133,40,16) color=#ffffffff text="lines" font=f11 glyphs=5 advance=40
+    text bounds=(123,125,32,32) pos=(131,133,16,16) color=#ffffffff text="of" font=f11 glyphs=2 advance=16
+    text bounds=(147,125,56,32) pos=(155,133,40,16) color=#ffffffff text="glue." font=f11 glyphs=5 advance=40
+
+== fonts
+f1 (family="serif",size=58.5,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=15,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=15,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=23,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=13.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

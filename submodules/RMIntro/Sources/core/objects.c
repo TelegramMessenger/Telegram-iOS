@@ -21,6 +21,9 @@
 #include <stdlib.h>
 #include "animations.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 float scale_factor;
 int width, height;
 int y_offset_absolute;
@@ -463,7 +466,7 @@ void vec4_log(__unused vec4 M)
 
 void draw_shape(const Shape* shape, mat4x4 view_projection_matrix)
 {
-    draw_colored_shape(shape, view_projection_matrix, shape->color);
+    draw_colored_shape(shape, view_projection_matrix, (float *)shape->color);
 }
 
 void draw_colored_shape(const Shape* shape, mat4x4 view_projection_matrix, vec4 color) {
@@ -1325,3 +1328,5 @@ void change_rounded_rectangle_stroked(Shape* shape, CSize size, float radius, __
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 }
+
+#pragma clang diagnostic pop

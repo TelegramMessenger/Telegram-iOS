@@ -1,0 +1,451 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad pr" id="root">
+  <div class="row" id="headOpen"><svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px" aria-hidden="true"><circle cx="4.5" cy="3.5" r="2" fill="none" stroke="#34c759" stroke-width="1.6"></circle><circle cx="4.5" cy="14.5" r="2" fill="none" stroke="#34c759" stroke-width="1.6"></circle><circle cx="13.5" cy="14.5" r="2" fill="none" stroke="#34c759" stroke-width="1.6"></circle><path d="M4.5 5.5v7M13.5 12.5V8a3 3 0 0 0-3-3H8.5" fill="none" stroke="#34c759" stroke-width="1.6" stroke-linecap="round"></path><path d="M10.5 2.8L8.3 5l2.2 2.2" fill="none" stroke="#34c759" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="badge green" style="margin-right: 8px">OPEN</span><span class="muted small grow">#128 · opened 2 hours ago by <b class="fg">leo</b></span></div>
+  <div class="row" id="headMerged" hidden=""><svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px" aria-hidden="true"><circle cx="4.5" cy="3.5" r="2" fill="none" stroke="#af52de" stroke-width="1.6"></circle><circle cx="4.5" cy="14.5" r="2" fill="none" stroke="#af52de" stroke-width="1.6"></circle><circle cx="13.5" cy="9" r="2" fill="none" stroke="#af52de" stroke-width="1.6"></circle><path d="M4.5 5.5v7M4.5 6a4 4 0 0 0 4 4h3" fill="none" stroke="#af52de" stroke-width="1.6" stroke-linecap="round"></path></svg><span class="badge purple" id="mergedBadge" style="margin-right: 8px">MERGED</span><span class="muted small grow">#128 · merged just now by <b class="fg">leo</b></span></div>
+  <div class="ttl">Render chat bubbles with litehtml instead of NSAttributedString</div>
+  <div class="small"><span class="br">feature/html-bubbles</span> <span class="muted">→</span> <span class="br">main</span>
+    <span class="muted" style="margin-left: 6px">14 files ·</span> <span class="add">+<span id="add">411</span></span> <span class="del">−<span id="del">87</span></span><span class="blocks" id="blocks"><span style="background-color: rgba(52,199,89,1.000);"></span><span style="background-color: rgba(52,199,89,1.000);"></span><span style="background-color: rgba(52,199,89,1.000);"></span><span style="background-color: rgba(52,199,89,1.000);"></span><span style="background-color: rgba(253,60,49,0.990);"></span></span></div>
+  <div style="margin-top: 8px"><span class="badge purple">rendering</span> <span class="badge blue">macOS</span> <span class="badge orange" id="perf">needs-perf-review</span></div>
+  <div class="rv">
+    <span class="rvw"><span class="av" style="background-color: #ff9500">RS</span>Rin&nbsp;<span class="t-green">✓ approved</span></span>
+    <span class="rvw"><span class="av" style="background-color: #007aff">ME</span>You&nbsp;<span id="meState" class="t-orange">● pending</span></span>
+    <span class="rvw"><span class="av" style="background-color: #af52de">MC</span>Maya&nbsp;<span class="muted">💬 2</span></span>
+  </div>
+  <div class="hd"><span class="caps">Checks</span><span class="lnk" id="rerun" data-action="rerun">↻ Re-run all</span></div>
+  <div id="checks"><div class="chk done"><span class="ic">
+  <svg class="ok-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#34c759"></circle><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <svg class="warn-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l7 12.5H1z" fill="#ff9500" stroke="#ff9500" stroke-width="1" stroke-linejoin="round"></path><path d="M8 6v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"></path><circle cx="8" cy="12" r="1" fill="#fff"></circle></svg>
+  <svg class="spin" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#8e8e93" stroke-opacity="0.3" stroke-width="2"></circle><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round"></path></svg>
+  <svg class="clock-ic" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#8e8e93"></circle><path d="M8 4v4.3l2.8 1.7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  </span><b>build</b><span class="d muted grow">macOS 14 · arm64 + x86_64 · 3m 41s</span><div class="cbar" hidden=""><div style="width: 0%"></div></div></div><div class="chk done"><span class="ic">
+  <svg class="ok-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#34c759"></circle><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <svg class="warn-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l7 12.5H1z" fill="#ff9500" stroke="#ff9500" stroke-width="1" stroke-linejoin="round"></path><path d="M8 6v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"></path><circle cx="8" cy="12" r="1" fill="#fff"></circle></svg>
+  <svg class="spin" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#8e8e93" stroke-opacity="0.3" stroke-width="2"></circle><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round"></path></svg>
+  <svg class="clock-ic" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#8e8e93"></circle><path d="M8 4v4.3l2.8 1.7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  </span><b>unit-tests</b><span class="d muted grow">412 passed · 3 skipped · 1m 55s</span><div class="cbar" hidden=""><div style="width: 0%"></div></div></div><div class="chk done warn"><span class="ic">
+  <svg class="ok-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#34c759"></circle><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <svg class="warn-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l7 12.5H1z" fill="#ff9500" stroke="#ff9500" stroke-width="1" stroke-linejoin="round"></path><path d="M8 6v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"></path><circle cx="8" cy="12" r="1" fill="#fff"></circle></svg>
+  <svg class="spin" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#8e8e93" stroke-opacity="0.3" stroke-width="2"></circle><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round"></path></svg>
+  <svg class="clock-ic" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#8e8e93"></circle><path d="M8 4v4.3l2.8 1.7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  </span><b>lint</b><span class="d muted grow">2 warnings in LHContainer.mm</span><div class="cbar" hidden=""><div style="width: 0%"></div></div></div><div class="chk running"><span class="ic">
+  <svg class="ok-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#34c759"></circle><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <svg class="warn-ic" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l7 12.5H1z" fill="#ff9500" stroke="#ff9500" stroke-width="1" stroke-linejoin="round"></path><path d="M8 6v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"></path><circle cx="8" cy="12" r="1" fill="#fff"></circle></svg>
+  <svg class="spin" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#8e8e93" stroke-opacity="0.3" stroke-width="2"></circle><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round"></path></svg>
+  <svg class="clock-ic" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#8e8e93"></circle><path d="M8 4v4.3l2.8 1.7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  </span><b>perf-benchmark</b><span class="d muted grow">running · 39%</span><div class="cbar"><div style="width: 39.3%;"></div></div></div></div>
+  <div class="merge" id="mergeBox" style="background-color: rgba(255,149,0,0.080); border-color: rgba(255,149,0,0.300);">
+    <b id="mTitle" style="color: rgb(255,149,0);">⏳ Waiting for 1 check</b><div class="tiny muted" id="mSub">Merging unlocks when every required check has run</div>
+    <div class="row" style="margin-top: 8px"><span class="seg" id="seg"><span data-action="strat" data-value="0" class="on">Squash</span><span data-action="strat" data-value="1">Merge</span><span data-action="strat" data-value="2">Rebase</span></span><span class="grow"></span>
+      <button class="go" id="mergeBtn" data-action="merge" hidden="">Squash and merge</button>
+      <span class="off" id="mergeOff">Squash and merge</span>
+      <span class="off" id="mergingOff" hidden=""><svg class="spin" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#8e8e93" stroke-opacity="0.3" stroke-width="2"></circle><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round"></path></svg>Merging… <span id="mergePct">0</span>%</span>
+    </div>
+  </div>
+  <div class="merge" id="mergedBox" hidden="" style="background-color: rgba(175,82,222,0.10); border-color: rgba(175,82,222,0.4)">
+    <div class="row"><b class="t-purple grow">✓ Merged into main</b><span class="tiny muted"><span id="stratName">squash</span> · a1b2c3d</span></div>
+    <div class="tiny muted" style="margin-top: 2px">Branch <span class="br">feature/html-bubbles</span> was deleted</div>
+    <div class="small" style="margin-top: 8px"><span id="deploying">🚚 Deploying to staging… <b><span id="deployPct">0</span>%</b></span><span id="deployed" hidden="">🚀 <b>Live on staging</b> · staging.litechat.dev</span></div>
+    <div class="dbar"><div id="dbar" style="width: 0%"></div></div>
+  </div>
+  <div class="panel small" id="noteBox" hidden="" style="margin-top: 8px"><b>You</b> requested changes: <span id="noteTxt"></span> 🙏</div>
+  <div class="panel" id="actCompose" hidden="" style="margin-top: 10px"><b class="small">Request changes</b> <span class="tiny muted">· pick a comment</span><div id="reasons"><span class="rs on" data-action="reason" data-value="0">Add a test for the shrink-to-fit epsilon</span><span class="rs" data-action="reason" data-value="1">Fix the 2 lint warnings first</span><span class="rs" data-action="reason" data-value="2">Split the renderer swap into its own PR</span></div>
+    <div class="row" style="margin-top: 10px"><button class="bad" data-action="submit" style="margin-right: 6px">Submit review</button><button data-action="compose">Cancel</button></div></div>
+  <div class="row" style="margin-top: 10px" id="actMain">
+    <span id="aPending"><button class="ok" data-action="approve" style="margin-right: 6px">✓ Approve</button><button data-action="compose">Request changes</button></span>
+    <span id="aApproved" hidden=""><b class="small t-green" style="margin-right: 6px">✓ You approved</b><span class="lnk" data-action="dismiss">Undo</span></span>
+    <span id="aChanges" hidden=""><button class="ok" data-action="approve" style="margin-right: 6px">Approve instead</button><span class="lnk" data-action="dismiss">Dismiss review</span></span>
+    <span id="aMerging" class="small muted" hidden="">Merging into main…</span>
+    <span id="aMerged" hidden=""><button data-action="undo">↶ Undo merge</button></span>
+    <span class="grow"></span><a class="btn" href="https://github.com/litehtml/litehtml">GitHub ↗</a>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 522.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 522.8
+    div 15 13 360 496.8
+      div 15 13 360 18
+        svg 15 13 18 18
+          circle 0 0 0 0
+          circle 0 0 0 0
+          circle 0 0 0 0
+          path 0 0 0 0
+          path 0 0 0 0
+        span 49 14.85 32 14.3
+        span 97 14.2 278 15.6
+          b 97 14.2 0 0
+      div 0 0 0 0
+        svg 0 0 0 0
+          circle 0 0 0 0
+          circle 0 0 0 0
+          circle 0 0 0 0
+          path 0 0 0 0
+        span 0 0 0 0
+        span 0 0 0 0
+          b 0 0 0 0
+      div 15 37 360 40
+      div 15 81 360 31.2
+        span 15 81 0 0
+        span 15 81 0 0
+        span 15 81 0 0
+        span 15 81 0 0
+        span 15 81 0 0
+          span 15 81 0 0
+        span 15 81 0 0
+          span 15 81 0 0
+        span 99 101.6 45 8
+          span 99 101.6 8 8
+          span 108 101.6 8 8
+          span 117 101.6 8 8
+          span 126 101.6 8 8
+          span 135 101.6 8 8
+      div 15 120.2 360 18.2
+        span 23 121.2 72 14.3
+        span 119 121.2 40 14.3
+        span 183 121.2 136 14.3
+      div 15 144.4 360 28
+        span 15 142.8 133 31.2
+          span 15 146.4 17.6 24
+          span 77.6 142.8 70.4 31.2
+        span 160 142.8 125 31.2
+          span 160 146.4 17.1429 24
+          span 222.143 142.8 62.8571 31.2
+        span 297 142.8 109 31.2
+          span 297 146.4 18.6667 24
+          span 368.667 142.8 37.3333 31.2
+      div 15 178.4 360 17.6
+        span 15 180.05 48 14.3
+        span 257 179.4 112 15.6
+      div 15 199 360 116
+        div 15 200 360 28
+          span 15 206 16 16
+            svg 15.5 206.5 15 15
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 30.5 214 0 0
+              path 0 0 0 0
+              path 0 0 0 0
+              circle 0 0 0 0
+            svg 30.5 214 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 30.5 214 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+          b 39 205.875 40 16.25
+          span 85 205.875 290 16.25
+          div 0 0 0 0
+            div 0 0 0 0
+        div 15 229 360 28
+          span 15 235 15.3778 16
+            svg 15.1889 235.5 15 15
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 30.1889 243 0 0
+              path 0 0 0 0
+              path 0 0 0 0
+              circle 0 0 0 0
+            svg 30.1889 243 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 30.1889 243 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+          b 38.3778 226.75 76.8889 32.5
+          span 121.267 226.75 253.733 32.5
+          div 0 0 0 0
+            div 0 0 0 0
+        div 15 258 360 28
+          span 15 264 16 16
+            svg 15.5 272 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 15.5 264.5 15 15
+              path 0 0 0 0
+              path 0 0 0 0
+              circle 0 0 0 0
+            svg 30.5 272 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 30.5 272 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+          b 39 263.875 32 16.25
+          span 77 263.875 298 16.25
+          div 0 0 0 0
+            div 0 0 0 0
+        div 15 287 360 28
+          span 15 293 16 16
+            svg 15 301 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 15 301 0 0
+              path 0 0 0 0
+              path 0 0 0 0
+              circle 0 0 0 0
+            svg 15 293 16 16
+              circle 0 0 0 0
+              path 0 0 0 0
+            svg 31 301 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+          b 39 292.875 112 16.25
+          span 157 292.875 158 16.25
+          div 315 299 60 4
+            div 315 299 23.58 4
+      div 28 334 334 101.2
+        b 28 334 0 0
+        div 28 352.2 334 28.6
+        div 28 388.8 334 46.4
+          span 30 393.05 179.282 37.9
+            span 38 395.05 48 14.95
+            span 102 395.05 40 14.95
+            span 38 414 48 14.95
+          span 211.282 412 0 0
+          button 0 0 0 0
+          span 224.282 393.8 124.718 36.4
+          span 0 0 0 0
+            svg 0 0 0 0
+              circle 0 0 0 0
+              path 0 0 0 0
+            span 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          b 0 0 0 0
+          span 0 0 0 0
+            span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+            b 0 0 0 0
+              span 0 0 0 0
+          span 0 0 0 0
+            b 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+      div 0 0 0 0
+        b 0 0 0 0
+        span 0 0 0 0
+      div 0 0 0 0
+        b 0 0 0 0
+        span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          button 0 0 0 0
+          button 0 0 0 0
+      div 15 456.2 360 53.6
+        span 15 456.2 255.237 53.6
+          button 28 461.2 88 16.8
+          button 28 488 120 16.8
+        span 0 0 0 0
+          b 0 0 0 0
+          span 0 0 0 0
+        span 0 0 0 0
+          button 0 0 0 0
+          span 0 0 0 0
+        span 0 0 0 0
+        span 0 0 0 0
+          button 0 0 0 0
+        span 270.237 483 0 0
+        a 284.237 464.8 76.763 36.4
+
+== paint
+root 418x522.8 items=159
+  solid-fill bounds=(0,0,390,523) layer=(border=(0,0,390,523),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,523),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,523) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,523) root=0
+  set-clip bounds=(15,13,18,18) pos=(15,13,18,18) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15,13,18,18)
+    group opacity=1 matrix=(1,0,0,1,15,13) backface=0 bounds=(0,0,18,18) exact=0
+      path bounds=(-1.7,-2.7,12.4,12.4) ops=(0,3,3,3,3,4) points=(6.5,3.5,6.5,4.60457,5.60457,5.5,4.5,5.5,3.39543,5.5,2.5,4.60457,2.5,3.5,2.5,2.39543,3.39543,1.5,4.5,1.5,5.60457,1.5,6.5,2.39543,6.5,3.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#34c759ff stroke-width=1.6 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-1.7,8.3,12.4,12.4) ops=(0,3,3,3,3,4) points=(6.5,14.5,6.5,15.6046,5.60457,16.5,4.5,16.5,3.39543,16.5,2.5,15.6046,2.5,14.5,2.5,13.3954,3.39543,12.5,4.5,12.5,5.60457,12.5,6.5,13.3954,6.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#34c759ff stroke-width=1.6 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(7.3,8.3,12.4,12.4) ops=(0,3,3,3,3,4) points=(15.5,14.5,15.5,15.6046,14.6046,16.5,13.5,16.5,12.3954,16.5,11.5,15.6046,11.5,14.5,11.5,13.3954,12.3954,12.5,13.5,12.5,14.6046,12.5,15.5,13.3954,15.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#34c759ff stroke-width=1.6 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(0.3,0.8,17.4,15.9) ops=(0,1,0,1,3,1) points=(4.5,5.5,4.5,12.5,13.5,12.5,13.5,8,13.5,6.34315,12.1569,5,10.5,5,8.5,5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#34c759ff stroke-width=1.6 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(4.1,-1.4,10.6,12.8) ops=(0,1,1) points=(10.5,2.8,8.3,5,10.5,7.2) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#34c759ff stroke-width=1.6 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(41,14,48,16) layer=(border=(41,14,48,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(41,14,48,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  solid-fill bounds=(15,146,18,24) layer=(border=(15,146,18,24),radius=(8.8,8.8,8.8,8.8,8.8,8.8,8.8,8.8),clip=(15,146,18,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(160,146,17,24) layer=(border=(160,146,17,24),radius=(8.57143,8.57143,8.57143,8.57143,8.57143,8.57143,8.57143,8.57143),clip=(160,146,17,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(297,146,19,24) layer=(border=(297,146,19,24),radius=(9.33333,9.33333,9.33333,9.33333,9.33333,9.33333,9.33333,9.33333),clip=(297,146,19,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  borders bounds=(15,199,360,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f26),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,199,360,29) root=0
+  set-clip bounds=(15.5,206.5,15,15) pos=(15.5,206.5,15,15) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15.5,206.5,15,15)
+    group opacity=1 matrix=(0.9375,0,0,0.9375,15.5,206.5) backface=0 bounds=(0,0,16,16) exact=0
+      path bounds=(0,0,16,16) ops=(0,3,3,3,3,4) points=(15,8,15,11.866,11.866,15,8,15,4.13401,15,1,11.866,1,8,1,4.13401,4.13401,1,8,1,11.866,1,15,4.13401,15,8) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-0.0999999,1.1,16.2,14) ops=(0,1,1) points=(4.5,8.2,6.8,10.5,11.5,5.7) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=1.8 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,228,360,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f26),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,228,360,29) root=0
+  set-clip bounds=(15.1889,235.5,15,15) pos=(15.1889,235.5,15,15) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15.1889,235.5,15,15)
+    group opacity=1 matrix=(0.9375,0,0,0.9375,15.1889,235.5) backface=0 bounds=(0,0,16,16) exact=0
+      path bounds=(0,0,16,16) ops=(0,3,3,3,3,4) points=(15,8,15,11.866,11.866,15,8,15,4.13401,15,1,11.866,1,8,1,4.13401,4.13401,1,8,1,11.866,1,15,4.13401,15,8) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-0.0999999,1.1,16.2,14) ops=(0,1,1) points=(4.5,8.2,6.8,10.5,11.5,5.7) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=1.8 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,257,360,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f26),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,257,360,29) root=0
+  set-clip bounds=(15.5,264.5,15,15) pos=(15.5,264.5,15,15) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15.5,264.5,15,15)
+    group opacity=1 matrix=(0.9375,0,0,0.9375,15.5,264.5) backface=0 bounds=(0,0,16,16) exact=0
+      path bounds=(-2,-1.5,20,18.5) ops=(0,1,1,4) points=(8,1.5,15,14,1,14) fill=1 fill-color=#ff9500ff evenodd=0 stroke=1 stroke-color=#ff9500ff stroke-width=1 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(3.8,1.8,8.4,12) ops=(0,1) points=(8,6,8,9.6) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=1.6 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(6,10,4,4) ops=(0,3,3,3,3,4) points=(9,12,9,12.5523,8.55229,13,8,13,7.44772,13,7,12.5523,7,12,7,11.4477,7.44772,11,8,11,8.55229,11,9,11.4477,9,12) fill=1 fill-color=#ffffffff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,286,360,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f26),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,286,360,29) root=0
+  group opacity=1 matrix=(0.583744,0.811938,-0.811938,0.583744,253.967,106.619) backface=0 bounds=(15,293,16,16) exact=0
+    set-clip bounds=(15,293,16,16) pos=(15,293,16,16) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(15,293,16,16)
+      group opacity=1 matrix=(1,0,0,1,15,293) backface=0 bounds=(0,0,16,16) exact=0
+        path bounds=(-3,-3,22,22) ops=(0,3,3,3,3,4) points=(14,8,14,11.3137,11.3137,14,8,14,4.68629,14,2,11.3137,2,8,2,4.68629,4.68629,2,8,2,11.3137,2,14,4.68629,14,8) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e934d stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(3,-3,16,16) ops=(0,3) points=(8,2,11.3137,2,14,4.68629,14,8) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#0a84ffff stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(315,299,60,4) layer=(border=(315,299,60,4),radius=(2,2,2,2,2,2,2,2),clip=(315,299,60,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f33
+  solid-fill bounds=(315,299,24,4) layer=(border=(315,299,24,4),radius=(2,2,2,2,2,2,2,2),clip=(315,299,24,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0a84ffff
+  solid-fill bounds=(15,323,360,123) layer=(border=(15,323,360,123),radius=(10,10,10,10,10,10,10,10),clip=(15,323,360,123),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950014
+  borders bounds=(15,323,360,123) borders=(left=(1,4,#ff95004d),top=(1,4,#ff95004d),right=(1,4,#ff95004d),bottom=(1,4,#ff95004d),radius=(10,10,10,10,10,10,10,10)) pos=(15,323,360,123) root=0
+  solid-fill bounds=(28,391,183,42) layer=(border=(28,391,183,42),radius=(8,8,8,8,8,8,8,8),clip=(28,391,183,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(211,389,151,46) layer=(border=(211,389,151,46),radius=(9,9,9,9,9,9,9,9),clip=(211,389,151,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(270,459,105,48) layer=(border=(270,459,105,48),radius=(9,9,9,9,9,9,9,9),clip=(270,459,105,48),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(41,7,48,32) pos=(49,15,32,16) color=#34c759ff text="OPEN" font=f1 glyphs=4 advance=32
+  text bounds=(89,6,48,32) pos=(97,14,32,16) color=#6e6e73ff text="#128" font=f2 glyphs=4 advance=32
+  text bounds=(129,6,32,32) pos=(137,14,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(153,6,64,32) pos=(161,14,48,16) color=#6e6e73ff text="opened" font=f2 glyphs=6 advance=48
+  text bounds=(209,6,24,32) pos=(217,14,8,16) color=#6e6e73ff text="2" font=f2 glyphs=1 advance=8
+  text bounds=(225,6,56,32) pos=(233,14,40,16) color=#6e6e73ff text="hours" font=f2 glyphs=5 advance=40
+  text bounds=(273,6,40,32) pos=(281,14,24,16) color=#6e6e73ff text="ago" font=f2 glyphs=3 advance=24
+  text bounds=(305,6,32,32) pos=(313,14,16,16) color=#6e6e73ff text="by" font=f2 glyphs=2 advance=16
+  text bounds=(329,6,40,32) pos=(337,14,24,16) color=#000000ff text="leo" font=f3 glyphs=3 advance=24
+  text bounds=(7,31,64,32) pos=(15,39,48,16) color=#000000ff text="Render" font=f4 glyphs=6 advance=48
+  text bounds=(63,31,48,32) pos=(71,39,32,16) color=#000000ff text="chat" font=f4 glyphs=4 advance=32
+  text bounds=(103,31,72,32) pos=(111,39,56,16) color=#000000ff text="bubbles" font=f4 glyphs=7 advance=56
+  text bounds=(167,31,48,32) pos=(175,39,32,16) color=#000000ff text="with" font=f4 glyphs=4 advance=32
+  text bounds=(207,31,80,32) pos=(215,39,64,16) color=#000000ff text="litehtml" font=f4 glyphs=8 advance=64
+  text bounds=(279,31,72,32) pos=(287,39,56,16) color=#000000ff text="instead" font=f4 glyphs=7 advance=56
+  text bounds=(343,31,32,32) pos=(351,39,16,16) color=#000000ff text="of" font=f4 glyphs=2 advance=16
+  text bounds=(7,51,160,32) pos=(15,59,144,16) color=#000000ff text="NSAttributedString" font=f4 glyphs=18 advance=144
+  solid-fill bounds=(15,80,172,18) layer=(border=(15,80,172,18),radius=(6,6,6,6,6,6,6,6),clip=(15,80,172,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff1f
+  text bounds=(13,73,120,32) pos=(21,81,104,16) color=#007affff text="feature/html-" font=f5 glyphs=13 advance=104
+  text bounds=(117,73,72,32) pos=(125,81,56,16) color=#007affff text="bubbles" font=f5 glyphs=7 advance=56
+  text bounds=(187,73,40,32) pos=(195,81,24,16) color=#6e6e73ff text="→" font=f2 glyphs=3 advance=24
+  solid-fill bounds=(227,80,44,18) layer=(border=(227,80,44,18),radius=(6,6,6,6,6,6,6,6),clip=(227,80,44,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff1f
+  text bounds=(225,73,48,32) pos=(233,81,32,16) color=#007affff text="main" font=f5 glyphs=4 advance=32
+  text bounds=(277,73,32,32) pos=(285,81,16,16) color=#6e6e73ff text="14" font=f2 glyphs=2 advance=16
+  text bounds=(301,73,56,32) pos=(309,81,40,16) color=#6e6e73ff text="files" font=f2 glyphs=5 advance=40
+  text bounds=(349,73,32,32) pos=(357,81,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(7,89,24,32) pos=(15,97,8,16) color=#34c759ff text="+" font=f6 glyphs=1 advance=8
+  text bounds=(15,89,40,32) pos=(23,97,24,16) color=#34c759ff text="411" font=f6 glyphs=3 advance=24
+  text bounds=(47,89,40,32) pos=(55,97,24,16) color=#ff3b30ff text="−" font=f6 glyphs=3 advance=24
+  text bounds=(71,89,32,32) pos=(79,97,16,16) color=#ff3b30ff text="87" font=f6 glyphs=2 advance=16
+  solid-fill bounds=(99,102,8,8) layer=(border=(99,102,8,8),radius=(2,2,2,2,2,2,2,2),clip=(99,102,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(108,102,8,8) layer=(border=(108,102,8,8),radius=(2,2,2,2,2,2,2,2),clip=(108,102,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(117,102,8,8) layer=(border=(117,102,8,8),radius=(2,2,2,2,2,2,2,2),clip=(117,102,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(126,102,8,8) layer=(border=(126,102,8,8),radius=(2,2,2,2,2,2,2,2),clip=(126,102,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(135,102,8,8) layer=(border=(135,102,8,8),radius=(2,2,2,2,2,2,2,2),clip=(135,102,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fd3c31fc
+  solid-fill bounds=(15,120,88,17) layer=(border=(15,120,88,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(15,120,88,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52de29
+  text bounds=(15,113,88,32) pos=(23,121,72,16) color=#af52deff text="rendering" font=f1 glyphs=9 advance=72
+  solid-fill bounds=(111,120,56,17) layer=(border=(111,120,56,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(111,120,56,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  text bounds=(111,113,56,32) pos=(119,121,40,16) color=#007affff text="macOS" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(175,120,152,17) layer=(border=(175,120,152,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(175,120,152,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  text bounds=(175,113,64,32) pos=(183,121,48,16) color=#ff9500ff text="needs-" font=f1 glyphs=6 advance=48
+  text bounds=(223,113,56,32) pos=(231,121,40,16) color=#ff9500ff text="perf-" font=f1 glyphs=5 advance=40
+  text bounds=(263,113,64,32) pos=(271,121,48,16) color=#ff9500ff text="review" font=f1 glyphs=6 advance=48
+  text bounds=(7.8,142,32,32) pos=(15.8,150,16,16) color=#ffffffff text="RS" font=f7 glyphs=2 advance=16
+  text bounds=(29.6,143,56,32) pos=(37.6,151,40,16) color=#000000ff text="Rin " font=f2 glyphs=5 advance=40
+  text bounds=(69.6,135,40,32) pos=(77.6,143,24,16) color=#34c759ff text="✓" font=f2 glyphs=3 advance=24
+  text bounds=(69.6,150,80,32) pos=(77.6,158,64,16) color=#34c759ff text="approved" font=f2 glyphs=8 advance=64
+  text bounds=(152.571,142,32,32) pos=(160.571,150,16,16) color=#ffffffff text="ME" font=f7 glyphs=2 advance=16
+  text bounds=(174.143,143,56,32) pos=(182.143,151,40,16) color=#000000ff text="You " font=f2 glyphs=5 advance=40
+  text bounds=(214.143,135,40,32) pos=(222.143,143,24,16) color=#ff9500ff text="●" font=f2 glyphs=3 advance=24
+  text bounds=(214.143,150,72,32) pos=(222.143,158,56,16) color=#ff9500ff text="pending" font=f2 glyphs=7 advance=56
+  text bounds=(290.333,142,32,32) pos=(298.333,150,16,16) color=#ffffffff text="MC" font=f7 glyphs=2 advance=16
+  text bounds=(312.667,143,64,32) pos=(320.667,151,48,16) color=#000000ff text="Maya " font=f2 glyphs=6 advance=48
+  text bounds=(360.667,135,48,32) pos=(368.667,143,32,16) color=#6e6e73ff text="💬" font=f2 glyphs=4 advance=32
+  text bounds=(360.667,150,24,32) pos=(368.667,158,8,16) color=#6e6e73ff text="2" font=f2 glyphs=1 advance=8
+  text bounds=(7,172,64,32) pos=(15,180,48,16) color=#6e6e73ff text="CHECKS" font=f1 glyphs=6 advance=48
+  text bounds=(249,171,40,32) pos=(257,179,24,16) color=#007affff text="↻" font=f3 glyphs=3 advance=24
+  text bounds=(281,171,40,32) pos=(289,179,24,16) color=#007affff text="Re-" font=f3 glyphs=3 advance=24
+  text bounds=(305,171,40,32) pos=(313,179,24,16) color=#007affff text="run" font=f3 glyphs=3 advance=24
+  text bounds=(337,171,40,32) pos=(345,179,24,16) color=#007affff text="all" font=f3 glyphs=3 advance=24
+  text bounds=(31,198,56,32) pos=(39,206,40,16) color=#000000ff text="build" font=f8 glyphs=5 advance=40
+  text bounds=(77,198,56,32) pos=(85,206,40,16) color=#6e6e73ff text="macOS" font=f9 glyphs=5 advance=40
+  text bounds=(125,198,32,32) pos=(133,206,16,16) color=#6e6e73ff text="14" font=f9 glyphs=2 advance=16
+  text bounds=(149,198,32,32) pos=(157,206,16,16) color=#6e6e73ff text="·" font=f9 glyphs=2 advance=16
+  text bounds=(173,198,56,32) pos=(181,206,40,16) color=#6e6e73ff text="arm64" font=f9 glyphs=5 advance=40
+  text bounds=(221,198,24,32) pos=(229,206,8,16) color=#6e6e73ff text="+" font=f9 glyphs=1 advance=8
+  text bounds=(237,198,64,32) pos=(245,206,48,16) color=#6e6e73ff text="x86_64" font=f9 glyphs=6 advance=48
+  text bounds=(293,198,32,32) pos=(301,206,16,16) color=#6e6e73ff text="·" font=f9 glyphs=2 advance=16
+  text bounds=(317,198,32,32) pos=(325,206,16,16) color=#6e6e73ff text="3m" font=f9 glyphs=2 advance=16
+  text bounds=(341,198,40,32) pos=(349,206,24,16) color=#6e6e73ff text="41s" font=f9 glyphs=3 advance=24
+  text bounds=(30.3778,219,56,32) pos=(38.3778,227,40,16) color=#000000ff text="unit-" font=f8 glyphs=5 advance=40
+  text bounds=(30.3778,235,56,32) pos=(38.3778,243,40,16) color=#000000ff text="tests" font=f8 glyphs=5 advance=40
+  text bounds=(113.267,219,40,32) pos=(121.267,227,24,16) color=#6e6e73ff text="412" font=f9 glyphs=3 advance=24
+  text bounds=(145.267,219,64,32) pos=(153.267,227,48,16) color=#6e6e73ff text="passed" font=f9 glyphs=6 advance=48
+  text bounds=(201.267,219,32,32) pos=(209.267,227,16,16) color=#6e6e73ff text="·" font=f9 glyphs=2 advance=16
+  text bounds=(225.267,219,24,32) pos=(233.267,227,8,16) color=#6e6e73ff text="3" font=f9 glyphs=1 advance=8
+  text bounds=(241.267,219,72,32) pos=(249.267,227,56,16) color=#6e6e73ff text="skipped" font=f9 glyphs=7 advance=56
+  text bounds=(305.267,219,32,32) pos=(313.267,227,16,16) color=#6e6e73ff text="·" font=f9 glyphs=2 advance=16
+  text bounds=(329.267,219,32,32) pos=(337.267,227,16,16) color=#6e6e73ff text="1m" font=f9 glyphs=2 advance=16
+  text bounds=(113.267,235,40,32) pos=(121.267,243,24,16) color=#6e6e73ff text="55s" font=f9 glyphs=3 advance=24
+  text bounds=(31,256,48,32) pos=(39,264,32,16) color=#000000ff text="lint" font=f8 glyphs=4 advance=32
+  text bounds=(69,256,24,32) pos=(77,264,8,16) color=#6e6e73ff text="2" font=f9 glyphs=1 advance=8
+  text bounds=(85,256,80,32) pos=(93,264,64,16) color=#6e6e73ff text="warnings" font=f9 glyphs=8 advance=64
+  text bounds=(157,256,32,32) pos=(165,264,16,16) color=#6e6e73ff text="in" font=f9 glyphs=2 advance=16
+  text bounds=(181,256,128,32) pos=(189,264,112,16) color=#6e6e73ff text="LHContainer.mm" font=f9 glyphs=14 advance=112
+  text bounds=(31,285,56,32) pos=(39,293,40,16) color=#000000ff text="perf-" font=f8 glyphs=5 advance=40
+  text bounds=(71,285,88,32) pos=(79,293,72,16) color=#000000ff text="benchmark" font=f8 glyphs=9 advance=72
+  text bounds=(149,285,72,32) pos=(157,293,56,16) color=#6e6e73ff text="running" font=f9 glyphs=7 advance=56
+  text bounds=(213,285,32,32) pos=(221,293,16,16) color=#6e6e73ff text="·" font=f9 glyphs=2 advance=16
+  text bounds=(237,285,40,32) pos=(245,293,24,16) color=#6e6e73ff text="39%" font=f9 glyphs=3 advance=24
+  text bounds=(20,327,40,32) pos=(28,335,24,16) color=#ff9500ff text="⏳" font=f10 glyphs=3 advance=24
+  text bounds=(52,327,72,32) pos=(60,335,56,16) color=#ff9500ff text="Waiting" font=f10 glyphs=7 advance=56
+  text bounds=(116,327,40,32) pos=(124,335,24,16) color=#ff9500ff text="for" font=f10 glyphs=3 advance=24
+  text bounds=(148,327,24,32) pos=(156,335,8,16) color=#ff9500ff text="1" font=f10 glyphs=1 advance=8
+  text bounds=(164,327,56,32) pos=(172,335,40,16) color=#ff9500ff text="check" font=f10 glyphs=5 advance=40
+  text bounds=(20,344,72,32) pos=(28,352,56,16) color=#6e6e73ff text="Merging" font=f11 glyphs=7 advance=56
+  text bounds=(84,344,72,32) pos=(92,352,56,16) color=#6e6e73ff text="unlocks" font=f11 glyphs=7 advance=56
+  text bounds=(148,344,48,32) pos=(156,352,32,16) color=#6e6e73ff text="when" font=f11 glyphs=4 advance=32
+  text bounds=(188,344,56,32) pos=(196,352,40,16) color=#6e6e73ff text="every" font=f11 glyphs=5 advance=40
+  text bounds=(236,344,80,32) pos=(244,352,64,16) color=#6e6e73ff text="required" font=f11 glyphs=8 advance=64
+  text bounds=(308,344,56,32) pos=(316,352,40,16) color=#6e6e73ff text="check" font=f11 glyphs=5 advance=40
+  text bounds=(20,359,40,32) pos=(28,367,24,16) color=#6e6e73ff text="has" font=f11 glyphs=3 advance=24
+  text bounds=(52,359,40,32) pos=(60,367,24,16) color=#6e6e73ff text="run" font=f11 glyphs=3 advance=24
+  solid-fill bounds=(30,393,64,19) layer=(border=(30,393,64,19),radius=(6,6,6,6,6,6,6,6),clip=(30,393,64,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  text bounds=(30,387,64,32) pos=(38,395,48,16) color=#1c1c1eff text="Squash" font=f12 glyphs=6 advance=48
+  text bounds=(94,387,56,32) pos=(102,395,40,16) color=#000000ff text="Merge" font=f12 glyphs=5 advance=40
+  text bounds=(30,406,64,32) pos=(38,414,48,16) color=#000000ff text="Rebase" font=f12 glyphs=6 advance=48
+  text bounds=(216.282,387,64,32) pos=(224.282,395,48,16) color=#8e8e93ff text="Squash" font=f10 glyphs=6 advance=48
+  text bounds=(272.282,387,40,32) pos=(280.282,395,24,16) color=#8e8e93ff text="and" font=f10 glyphs=3 advance=24
+  text bounds=(216.282,405,56,32) pos=(224.282,413,40,16) color=#8e8e93ff text="merge" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(15,456,114,27) layer=(border=(15,456,114,27),radius=(8,8,8,8,8,8,8,8),clip=(15,456,114,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(20,453,40,32) pos=(28,461,24,16) color=#ffffffff text="✓" font=f10 glyphs=3 advance=24
+  text bounds=(52,453,72,32) pos=(60,461,56,16) color=#ffffffff text="Approve" font=f10 glyphs=7 advance=56
+  solid-fill bounds=(15,483,146,27) layer=(border=(15,483,146,27),radius=(8,8,8,8,8,8,8,8),clip=(15,483,146,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(20,480,72,32) pos=(28,488,56,16) color=#000000ff text="Request" font=f10 glyphs=7 advance=56
+  text bounds=(84,480,72,32) pos=(92,488,56,16) color=#000000ff text="changes" font=f10 glyphs=7 advance=56
+  text bounds=(290.618,458,64,32) pos=(298.618,466,48,16) color=#000000ff text="GitHub" font=f13 glyphs=6 advance=48
+  text bounds=(302.618,476,40,32) pos=(310.618,484,24,16) color=#000000ff text="↗" font=f13 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=16,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=12.5,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=12.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="system-ui,sans-serif",size=11.5,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f13 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(-2147483648,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

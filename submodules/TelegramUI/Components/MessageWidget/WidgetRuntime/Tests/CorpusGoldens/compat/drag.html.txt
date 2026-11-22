@@ -1,0 +1,36 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div id="area"><div class="box" id="box" style="left:20px;top:20px">drag me</div></div>
+<div id="pos">x: 20, y: 20</div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 230.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 206.2
+    div 14 14 332 180
+      div 34 34 60 60
+    div 12 202 336 16.2
+
+== paint
+root 360x230.2 items=9
+  solid-fill bounds=(0,0,360,230) layer=(border=(0,0,360,230),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,230),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(4,194,32,32) pos=(12,202,16,16) color=#666666ff text="x:" font=f1 glyphs=2 advance=16
+  text bounds=(28,194,40,32) pos=(36,202,24,16) color=#666666ff text="20," font=f1 glyphs=3 advance=24
+  text bounds=(60,194,32,32) pos=(68,202,16,16) color=#666666ff text="y:" font=f1 glyphs=2 advance=16
+  text bounds=(84,194,32,32) pos=(92,202,16,16) color=#666666ff text="20" font=f1 glyphs=2 advance=16
+  borders bounds=(12,12,336,184) borders=(left=(2,3,#cbd5e1ff),top=(2,3,#cbd5e1ff),right=(2,3,#cbd5e1ff),bottom=(2,3,#cbd5e1ff),radius=(10,10,10,10,10,10,10,10)) pos=(12,12,336,184) root=0
+  solid-fill bounds=(34,34,60,60) layer=(border=(34,34,60,60),radius=(10,10,10,10,10,10,10,10),clip=(34,34,60,60),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(28,48,48,32) pos=(36,56,32,16) color=#ffffffff text="drag" font=f2 glyphs=4 advance=32
+  text bounds=(68,48,32,32) pos=(76,56,16,16) color=#ffffffff text="me" font=f2 glyphs=2 advance=16
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

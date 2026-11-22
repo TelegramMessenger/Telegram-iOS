@@ -1,0 +1,55 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>Long words: Supercalifragilisticexpialidocious-Pneumonoultramicroscopicsilicovolcanoconiosis-Hippopotomonstrosesquippedaliophobia</p>
+<p>Long URL: https://example.com/a/really/long/url/that/has/no/spaces/at/all?and=keeps&amp;going=forever</p>
+<p style="font-size: 12px; color: #8e8e93">↑ litehtml has no <code>overflow-wrap</code>, so unbreakable runs overflow; the bubble clips them.</p>
+</body></html>
+
+== layout
+html 0 0 360 191.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 191.5
+    p 0 0 360 72.8
+    p 0 80.8 360 54.6
+    p 0 143.4 360 48.1
+      code 0 143.4 0 0
+
+== paint
+root 360x191.9 items=27
+  text bounds=(-8,-7,48,32) pos=(0,1,32,16) color=#000000ff text="Long" font=f1 glyphs=4 advance=32
+  text bounds=(32,-7,64,32) pos=(40,1,48,16) color=#000000ff text="words:" font=f1 glyphs=6 advance=48
+  text bounds=(-8,11,296,32) pos=(0,19,280,16) color=#000000ff text="Supercalifragilisticexpialidocious-" font=f1 glyphs=35 advance=280
+  text bounds=(-8,29,376,32) pos=(0,37,360,16) color=#000000ff text="Pneumonoultramicroscopicsilicovolcanoconiosis" font=f1 glyphs=45 advance=360
+  text bounds=(-8,48,24,32) pos=(0,56,8,16) color=#000000ff text="-" font=f1 glyphs=1 advance=8
+  text bounds=(0,48,304,32) pos=(8,56,288,16) color=#000000ff text="Hippopotomonstrosesquippedaliophobia" font=f1 glyphs=36 advance=288
+  text bounds=(-8,74,48,32) pos=(0,82,32,16) color=#000000ff text="Long" font=f1 glyphs=4 advance=32
+  text bounds=(32,74,48,32) pos=(40,82,32,16) color=#000000ff text="URL:" font=f1 glyphs=4 advance=32
+  text bounds=(-8,92,376,32) pos=(0,100,360,16) color=#000000ff text="https://example.com/a/really/long/url/that/ha" font=f1 glyphs=45 advance=360
+  text bounds=(-8,110,168,32) pos=(0,118,152,16) color=#000000ff text="s/no/spaces/at/all?" font=f1 glyphs=19 advance=152
+  text bounds=(144,110,200,32) pos=(152,118,184,16) color=#000000ff text="and=keeps&going=forever" font=f1 glyphs=23 advance=184
+  text bounds=(-8,135,40,32) pos=(0,143,24,16) color=#8e8e93ff text="↑" font=f2 glyphs=3 advance=24
+  text bounds=(24,135,80,32) pos=(32,143,64,16) color=#8e8e93ff text="litehtml" font=f2 glyphs=8 advance=64
+  text bounds=(96,135,40,32) pos=(104,143,24,16) color=#8e8e93ff text="has" font=f2 glyphs=3 advance=24
+  text bounds=(128,135,32,32) pos=(136,143,16,16) color=#8e8e93ff text="no" font=f2 glyphs=2 advance=16
+  solid-fill bounds=(160,142,112,18) layer=(border=(160,142,112,18),radius=(4,4,4,4,4,4,4,4),clip=(160,142,112,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(156,135,88,32) pos=(164,143,72,16) color=#8e8e93ff text="overflow-" font=f3 glyphs=9 advance=72
+  text bounds=(228,135,48,32) pos=(236,143,32,16) color=#8e8e93ff text="wrap" font=f3 glyphs=4 advance=32
+  text bounds=(264,135,24,32) pos=(272,143,8,16) color=#8e8e93ff text="," font=f2 glyphs=1 advance=8
+  text bounds=(280,135,32,32) pos=(288,143,16,16) color=#8e8e93ff text="so" font=f2 glyphs=2 advance=16
+  text bounds=(-8,152,104,32) pos=(0,160,88,16) color=#8e8e93ff text="unbreakable" font=f2 glyphs=11 advance=88
+  text bounds=(88,152,48,32) pos=(96,160,32,16) color=#8e8e93ff text="runs" font=f2 glyphs=4 advance=32
+  text bounds=(128,152,88,32) pos=(136,160,72,16) color=#8e8e93ff text="overflow;" font=f2 glyphs=9 advance=72
+  text bounds=(208,152,40,32) pos=(216,160,24,16) color=#8e8e93ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(240,152,64,32) pos=(248,160,48,16) color=#8e8e93ff text="bubble" font=f2 glyphs=6 advance=48
+  text bounds=(296,152,56,32) pos=(304,160,40,16) color=#8e8e93ff text="clips" font=f2 glyphs=5 advance=40
+  text bounds=(-8,168,56,32) pos=(0,176,40,16) color=#8e8e93ff text="them." font=f2 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

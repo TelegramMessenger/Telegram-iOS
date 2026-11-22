@@ -1,0 +1,166 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Price filter</title>
+<style></style>
+</head><body><p class="ta"><code>touch-action: pan-y</code> · slide a thumb or the track sideways; up or down scrolls the chat</p>
+<h3>Hotels in Lisbon, per night</h3>
+<p id="val">€60 – €180</p>
+<div id="hist"><i style="height: 60%; opacity: 0.25;"></i><i style="height: 51%; opacity: 0.25;"></i><i style="height: 42%; opacity: 0.25;"></i><i style="height: 33%; opacity: 0.25;"></i><i style="height: 33%; opacity: 1;"></i><i style="height: 33%; opacity: 1;"></i><i style="height: 33%; opacity: 1;"></i><i style="height: 24%; opacity: 1;"></i><i style="height: 42%; opacity: 1;"></i><i style="height: 24%; opacity: 1;"></i><i style="height: 15%; opacity: 1;"></i><i style="height: 24%; opacity: 1;"></i><i style="height: 24%; opacity: 1;"></i><i style="height: 6%; opacity: 1;"></i><i style="height: 24%; opacity: 1;"></i><i style="height: 24%; opacity: 1;"></i><i style="height: 15%; opacity: 0.25;"></i><i style="height: 15%; opacity: 0.25;"></i><i style="height: 15%; opacity: 0.25;"></i><i style="height: 24%; opacity: 0.25;"></i><i style="height: 6%; opacity: 0.25;"></i><i style="height: 15%; opacity: 0.25;"></i><i style="height: 6%; opacity: 0.25;"></i><i style="height: 6%; opacity: 0.25;"></i><i style="height: 24%; opacity: 0.25;"></i><i style="height: 24%; opacity: 0.25;"></i><i style="height: 15%; opacity: 0.25;"></i><i style="height: 51%; opacity: 0.25;"></i></div>
+<div id="sl"><div id="tk0"></div><div id="fill" style="left: 14.285714285714286%; width: 42.85714285714286%;"></div><div class="th" id="a" style="left: 14.285714285714286%;"></div><div class="th" id="b" style="left: 57.142857142857146%;"></div></div>
+<div class="ends"><span>€20</span><span>€300</span></div>
+<p class="st"><span id="n">26 of 60 hotels</span> · presses taken by the chat: <b id="tk">0</b></p>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 308.15
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 292.15
+    p 12 8 336 52.65
+      code 12 8 0 0
+    h3 12 68.65 336 22.5
+    p 12 93.15 336 29.7
+    div 20 132.85 320 50
+      i 20 152.85 9.5 30
+      i 31.5 157.35 9.5 25.5
+      i 43 161.85 9.5 21
+      i 54.5 166.35 9.5 16.5
+      i 66 166.35 9.5 16.5
+      i 77.5 166.35 9.5 16.5
+      i 89 166.35 9.5 16.5
+      i 100.5 170.85 9.5 12
+      i 112 161.85 9.5 21
+      i 123.5 170.85 9.5 12
+      i 135 175.35 9.5 7.5
+      i 146.5 170.85 9.5 12
+      i 158 170.85 9.5 12
+      i 169.5 179.85 9.5 3
+      i 181 170.85 9.5 12
+      i 192.5 170.85 9.5 12
+      i 204 175.35 9.5 7.5
+      i 215.5 175.35 9.5 7.5
+      i 227 175.35 9.5 7.5
+      i 238.5 170.85 9.5 12
+      i 250 179.85 9.5 3
+      i 261.5 175.35 9.5 7.5
+      i 273 179.85 9.5 3
+      i 284.5 179.85 9.5 3
+      i 296 170.85 9.5 12
+      i 307.5 170.85 9.5 12
+      i 319 175.35 9.5 7.5
+      i 330.5 157.35 9.5 25.5
+    div 20 188.85 320 48
+      div 20 210.85 320 4
+      div 65.7143 210.85 137.143 4
+      div 51.7143 198.85 28 28
+      div 188.857 198.85 28 28
+    div 20 240.85 320 16.2
+      span 20 240.85 40 16.2
+      span 292 240.85 48 16.2
+    p 12 265.05 336 35.1
+      span 12 265.05 0 0
+      b 12 265.05 0 0
+
+== paint
+root 360x308.15 items=73
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(18,150.85,13.5,34) exact=1
+    solid-fill bounds=(20,153,10,30) layer=(border=(20,153,10,30),radius=(2,2,2,2,0,0,0,0),clip=(20,153,10,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(29.5,155.35,13.5,29.5) exact=1
+    solid-fill bounds=(32,157,9,26) layer=(border=(32,157,9,26),radius=(2,2,2,2,0,0,0,0),clip=(32,157,9,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(41,159.85,13.5,25) exact=1
+    solid-fill bounds=(43,162,10,21) layer=(border=(43,162,10,21),radius=(2,2,2,2,0,0,0,0),clip=(43,162,10,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(52.5,164.35,13.5,20.5) exact=1
+    solid-fill bounds=(55,166,9,17) layer=(border=(55,166,9,17),radius=(2,2,2,2,0,0,0,0),clip=(55,166,9,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(66,166,10,17) layer=(border=(66,166,10,17),radius=(2,2,2,2,0,0,0,0),clip=(66,166,10,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(78,166,9,17) layer=(border=(78,166,9,17),radius=(2,2,2,2,0,0,0,0),clip=(78,166,9,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(89,166,10,17) layer=(border=(89,166,10,17),radius=(2,2,2,2,0,0,0,0),clip=(89,166,10,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(101,171,9,12) layer=(border=(101,171,9,12),radius=(2,2,2,2,0,0,0,0),clip=(101,171,9,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(112,162,10,21) layer=(border=(112,162,10,21),radius=(2,2,2,2,0,0,0,0),clip=(112,162,10,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(124,171,9,12) layer=(border=(124,171,9,12),radius=(2,2,2,2,0,0,0,0),clip=(124,171,9,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(135,175,10,8) layer=(border=(135,175,10,8),radius=(2,2,2,2,0,0,0,0),clip=(135,175,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(147,171,9,12) layer=(border=(147,171,9,12),radius=(2,2,2,2,0,0,0,0),clip=(147,171,9,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(158,171,10,12) layer=(border=(158,171,10,12),radius=(2,2,2,2,0,0,0,0),clip=(158,171,10,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(170,180,9,3) layer=(border=(170,180,9,3),radius=(1.5,1.5,1.5,1.5,0,0,0,0),clip=(170,180,9,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(181,171,10,12) layer=(border=(181,171,10,12),radius=(2,2,2,2,0,0,0,0),clip=(181,171,10,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(193,171,9,12) layer=(border=(193,171,9,12),radius=(2,2,2,2,0,0,0,0),clip=(193,171,9,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(202,173.35,13.5,11.5) exact=1
+    solid-fill bounds=(204,175,10,8) layer=(border=(204,175,10,8),radius=(2,2,2,2,0,0,0,0),clip=(204,175,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(213.5,173.35,13.5,11.5) exact=1
+    solid-fill bounds=(216,175,9,8) layer=(border=(216,175,9,8),radius=(2,2,2,2,0,0,0,0),clip=(216,175,9,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(225,173.35,13.5,11.5) exact=1
+    solid-fill bounds=(227,175,10,8) layer=(border=(227,175,10,8),radius=(2,2,2,2,0,0,0,0),clip=(227,175,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(236.5,168.85,13.5,16) exact=1
+    solid-fill bounds=(239,171,9,12) layer=(border=(239,171,9,12),radius=(2,2,2,2,0,0,0,0),clip=(239,171,9,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(248,177.85,13.5,7) exact=1
+    solid-fill bounds=(250,180,10,3) layer=(border=(250,180,10,3),radius=(1.5,1.5,1.5,1.5,0,0,0,0),clip=(250,180,10,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(259.5,173.35,13.5,11.5) exact=1
+    solid-fill bounds=(262,175,9,8) layer=(border=(262,175,9,8),radius=(2,2,2,2,0,0,0,0),clip=(262,175,9,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(271,177.85,13.5,7) exact=1
+    solid-fill bounds=(273,180,10,3) layer=(border=(273,180,10,3),radius=(1.5,1.5,1.5,1.5,0,0,0,0),clip=(273,180,10,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(282.5,177.85,13.5,7) exact=1
+    solid-fill bounds=(285,180,9,3) layer=(border=(285,180,9,3),radius=(1.5,1.5,1.5,1.5,0,0,0,0),clip=(285,180,9,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(294,168.85,13.5,16) exact=1
+    solid-fill bounds=(296,171,10,12) layer=(border=(296,171,10,12),radius=(2,2,2,2,0,0,0,0),clip=(296,171,10,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(305.5,168.85,13.5,16) exact=1
+    solid-fill bounds=(308,171,9,12) layer=(border=(308,171,9,12),radius=(2,2,2,2,0,0,0,0),clip=(308,171,9,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(317,173.35,13.5,11.5) exact=1
+    solid-fill bounds=(319,175,10,8) layer=(border=(319,175,10,8),radius=(2,2,2,2,0,0,0,0),clip=(319,175,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.25 matrix=(1,0,0,1,0,0) backface=0 bounds=(328.5,155.35,13.5,29.5) exact=1
+    solid-fill bounds=(331,157,9,26) layer=(border=(331,157,9,26),radius=(2,2,2,2,0,0,0,0),clip=(331,157,9,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  text bounds=(4,0,64,32) pos=(12,8,48,16) color=#707579ff text="touch-" font=f1 glyphs=6 advance=48
+  text bounds=(52,0,72,32) pos=(60,8,56,16) color=#707579ff text="action:" font=f1 glyphs=7 advance=56
+  text bounds=(116,0,48,32) pos=(124,8,32,16) color=#707579ff text="pan-" font=f1 glyphs=4 advance=32
+  text bounds=(148,0,24,32) pos=(156,8,8,16) color=#707579ff text="y" font=f1 glyphs=1 advance=8
+  text bounds=(164,0,32,32) pos=(172,8,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(188,0,56,32) pos=(196,8,40,16) color=#707579ff text="slide" font=f2 glyphs=5 advance=40
+  text bounds=(236,0,24,32) pos=(244,8,8,16) color=#707579ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(252,0,56,32) pos=(260,8,40,16) color=#707579ff text="thumb" font=f2 glyphs=5 advance=40
+  text bounds=(300,0,32,32) pos=(308,8,16,16) color=#707579ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(4,18,40,32) pos=(12,26,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(36,18,56,32) pos=(44,26,40,16) color=#707579ff text="track" font=f2 glyphs=5 advance=40
+  text bounds=(84,18,88,32) pos=(92,26,72,16) color=#707579ff text="sideways;" font=f2 glyphs=9 advance=72
+  text bounds=(164,18,32,32) pos=(172,26,16,16) color=#707579ff text="up" font=f2 glyphs=2 advance=16
+  text bounds=(188,18,32,32) pos=(196,26,16,16) color=#707579ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(212,18,48,32) pos=(220,26,32,16) color=#707579ff text="down" font=f2 glyphs=4 advance=32
+  text bounds=(252,18,72,32) pos=(260,26,56,16) color=#707579ff text="scrolls" font=f2 glyphs=7 advance=56
+  text bounds=(316,18,40,32) pos=(324,26,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(4,35,48,32) pos=(12,43,32,16) color=#707579ff text="chat" font=f2 glyphs=4 advance=32
+  text bounds=(4,64,64,32) pos=(12,72,48,16) color=#000000ff text="Hotels" font=f3 glyphs=6 advance=48
+  text bounds=(60,64,32,32) pos=(68,72,16,16) color=#000000ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(84,64,72,32) pos=(92,72,56,16) color=#000000ff text="Lisbon," font=f3 glyphs=7 advance=56
+  text bounds=(148,64,40,32) pos=(156,72,24,16) color=#000000ff text="per" font=f3 glyphs=3 advance=24
+  text bounds=(180,64,56,32) pos=(188,72,40,16) color=#000000ff text="night" font=f3 glyphs=5 advance=40
+  text bounds=(4,91,56,32) pos=(12,99,40,16) color=#000000ff text="€60" font=f4 glyphs=5 advance=40
+  text bounds=(52,91,40,32) pos=(60,99,24,16) color=#000000ff text="–" font=f4 glyphs=3 advance=24
+  text bounds=(84,91,64,32) pos=(92,99,48,16) color=#000000ff text="€180" font=f4 glyphs=6 advance=48
+  text bounds=(12,233,56,32) pos=(20,241,40,16) color=#707579ff text="€20" font=f5 glyphs=5 advance=40
+  text bounds=(284,233,64,32) pos=(292,241,48,16) color=#707579ff text="€300" font=f5 glyphs=6 advance=48
+  text bounds=(4,257,32,32) pos=(12,265,16,16) color=#000000ff text="26" font=f2 glyphs=2 advance=16
+  text bounds=(28,257,32,32) pos=(36,265,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(52,257,32,32) pos=(60,265,16,16) color=#000000ff text="60" font=f2 glyphs=2 advance=16
+  text bounds=(76,257,64,32) pos=(84,265,48,16) color=#000000ff text="hotels" font=f2 glyphs=6 advance=48
+  text bounds=(132,257,32,32) pos=(140,265,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(156,257,72,32) pos=(164,265,56,16) color=#000000ff text="presses" font=f2 glyphs=7 advance=56
+  text bounds=(220,257,56,32) pos=(228,265,40,16) color=#000000ff text="taken" font=f2 glyphs=5 advance=40
+  text bounds=(268,257,32,32) pos=(276,265,16,16) color=#000000ff text="by" font=f2 glyphs=2 advance=16
+  text bounds=(292,257,40,32) pos=(300,265,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(4,275,56,32) pos=(12,283,40,16) color=#000000ff text="chat:" font=f2 glyphs=5 advance=40
+  text bounds=(52,275,24,32) pos=(60,283,8,16) color=#000000ff text="0" font=f6 glyphs=1 advance=8
+  solid-fill bounds=(20,211,320,4) layer=(border=(20,211,320,4),radius=(2,2,2,2,2,2,2,2),clip=(20,211,320,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8080804d
+  solid-fill bounds=(66,211,137,4) layer=(border=(66,211,137,4),radius=(2,2,2,2,2,2,2,2),clip=(66,211,137,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  box-shadow bounds=(45,192,42,42) box=(52,199,28,28) radius=(14,14,14,14,14,14,14,14) shadow=(0,1,4,0,#00000059,0)
+  solid-fill bounds=(52,199,28,28) layer=(border=(52,199,28,28),radius=(14,14,14,14,14,14,14,14),clip=(52,199,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  box-shadow bounds=(182,192,42,42) box=(189,199,28,28) radius=(14,14,14,14,14,14,14,14) shadow=(0,1,4,0,#00000059,0)
+  solid-fill bounds=(189,199,28,28) layer=(border=(189,199,28,28),radius=(14,14,14,14,14,14,14,14),clip=(189,199,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+
+== fonts
+f1 (family="ui-monospace,monospace",size=11.7,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

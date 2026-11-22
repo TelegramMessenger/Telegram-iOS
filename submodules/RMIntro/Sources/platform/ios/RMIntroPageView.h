@@ -14,6 +14,9 @@
     NSMutableAttributedString *_description;
 }
 
+@property (nonatomic, readonly) UILabel *headerLabel;
+@property (nonatomic, readonly) UILabel *descriptionLabel;
+
 - (id)initWithFrame:(CGRect)frame headline:(NSString*)headline description:(NSString*)description color:(UIColor *)color;
 
 @end

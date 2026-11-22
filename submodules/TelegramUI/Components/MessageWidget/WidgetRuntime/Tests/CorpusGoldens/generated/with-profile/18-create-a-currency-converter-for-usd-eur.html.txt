@@ -1,0 +1,146 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency Converter</title>
+<style></style>
+</head>
+<body>
+<h2>💱 Currency Converter</h2>
+<div class="box">
+  <div class="amt" id="amtSteps"><button data-d="-10">−10</button><button data-d="-1">−1</button><span id="amt">{"kind":"number","locale":"en-US","opts":{"style":"currency","currency":"USD"},"value":100}</span><button data-d="1">+1</button><button data-d="10">+10</button></div>
+  <div class="cur" id="from"><button data-c="USD" class="on">USD</button><button data-c="EUR">EUR</button><button data-c="GBP">GBP</button><button data-c="JPY">JPY</button></div>
+</div>
+<div class="swap"><button id="swap" title="Swap">⇅</button></div>
+<div class="box">
+  <div class="amt"><span id="out">{"kind":"number","locale":"en-US","opts":{"style":"currency","currency":"EUR"},"value":92}</span></div>
+  <div class="cur" id="to"><button data-c="USD">USD</button><button data-c="EUR" class="on">EUR</button><button data-c="GBP">GBP</button><button data-c="JPY">JPY</button></div>
+</div>
+<div class="rate" id="rate">1 USD = 0.9200 EUR</div>
+<details>
+  <summary>Edit rates (per 1 USD)</summary>
+  <div class="rates" id="rates"><div><span class="lbl">EUR</span><div class="step" data-c="EUR"><button data-d="-1">−</button><span>0.92</span><button data-d="1">+</button></div></div><div><span class="lbl">GBP</span><div class="step" data-c="GBP"><button data-d="-1">−</button><span>0.79</span><button data-d="1">+</button></div></div><div><span class="lbl">JPY</span><div class="step" data-c="JPY"><button data-d="-1">−</button><span>149.5</span><button data-d="1">+</button></div></div></div>
+  <div class="note">Rates are indicative and edited locally — the widget has no live data. Edited rates are kept on this device.</div>
+</details>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 396.545
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 368.545
+    h2 14 14 332 21.25
+    div 23 56.25 314 90.2
+      div 23 56.25 314 56.6
+        button 32 69.55 40 30
+        button 96 69.55 32 30
+        span 143 60.25 488 48.6
+        button 646 69.55 16 30
+        button 686 69.55 24 30
+      div 23 118.85 314 27.6
+        button 24 124.85 73.5 15.6
+        button 103.5 124.85 73.5 15.6
+        button 183 124.85 73.5 15.6
+        button 262.5 124.85 73.5 15.6
+    div 14 161.45 332 36
+      button 162 161.45 36 36
+    div 23 212.45 314 90.2
+      div 23 212.45 314 56.6
+        span 23 216.45 480 48.6
+      div 23 275.05 314 27.6
+        button 24 281.05 73.5 15.6
+        button 103.5 281.05 73.5 15.6
+        button 183 281.05 73.5 15.6
+        button 262.5 281.05 73.5 15.6
+    div 14 319.65 332 17.55
+    details 14 349.2 332 33.345
+      summary 14 349.2 332 33.345
+        -tag-before 14 349.2 14.625 31.59
+      div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            button 0 0 0 0
+            span 0 0 0 0
+            button 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            button 0 0 0 0
+            span 0 0 0 0
+            button 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            button 0 0 0 0
+            span 0 0 0 0
+            button 0 0 0 0
+      div 0 0 0 0
+
+== paint
+root 719x396.545 items=50
+  solid-fill bounds=(0,0,360,397) layer=(border=(0,0,360,397),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,397),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  borders bounds=(14,47,332,108) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(10,10,10,10,10,10,10,10)) pos=(14,47,332,108) root=0
+  solid-fill bounds=(23,70,58,30) layer=(border=(23,70,58,30),radius=(8,8,8,8,8,8,8,8),clip=(23,70,58,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(87,70,50,30) layer=(border=(87,70,50,30),radius=(8,8,8,8,8,8,8,8),clip=(87,70,50,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(637,70,34,30) layer=(border=(637,70,34,30),radius=(8,8,8,8,8,8,8,8),clip=(637,70,34,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(677,70,42,30) layer=(border=(677,70,42,30),radius=(8,8,8,8,8,8,8,8),clip=(677,70,42,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(23,119,76,27) layer=(border=(23,119,76,27),radius=(8,8,8,8,8,8,8,8),clip=(23,119,76,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(23,119,76,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(23,119,76,27) root=0
+  borders bounds=(103,119,75,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(103,119,75,27) root=0
+  borders bounds=(182,119,76,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(182,119,76,27) root=0
+  borders bounds=(262,119,75,27) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(262,119,75,27) root=0
+  borders bounds=(14,203,332,109) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(10,10,10,10,10,10,10,10)) pos=(14,203,332,109) root=0
+  borders bounds=(23,275,76,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(23,275,76,28) root=0
+  solid-fill bounds=(103,275,75,28) layer=(border=(103,275,75,28),radius=(8,8,8,8,8,8,8,8),clip=(103,275,75,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(103,275,75,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(103,275,75,28) root=0
+  borders bounds=(182,275,76,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(182,275,76,28) root=0
+  borders bounds=(262,275,75,28) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(262,275,75,28) root=0
+  text bounds=(6,8,48,32) pos=(14,16,32,16) color=#111827ff text="💱" font=f1 glyphs=4 advance=32
+  text bounds=(46,8,80,32) pos=(54,16,64,16) color=#111827ff text="Currency" font=f1 glyphs=8 advance=64
+  text bounds=(118,8,88,32) pos=(126,16,72,16) color=#111827ff text="Converter" font=f1 glyphs=9 advance=72
+  text bounds=(24,69,56,32) pos=(32,77,40,16) color=#111827ff text="−10" font=f2 glyphs=5 advance=40
+  text bounds=(88,69,48,32) pos=(96,77,32,16) color=#111827ff text="−1" font=f2 glyphs=4 advance=32
+  text bounds=(259,56,256,32) pos=(267,64,240,16) color=#111827ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f3 glyphs=30 advance=240
+  text bounds=(135,81,504,32) pos=(143,89,488,16) color=#111827ff text="US\",\"opts\":{\"style\":\"currency\",\"currency\":\"USD\"},\"value\":100}" font=f3 glyphs=61 advance=488
+  text bounds=(638,69,32,32) pos=(646,77,16,16) color=#111827ff text="+1" font=f2 glyphs=2 advance=16
+  text bounds=(678,69,40,32) pos=(686,77,24,16) color=#111827ff text="+10" font=f2 glyphs=3 advance=24
+  text bounds=(40.75,117,40,32) pos=(48.75,125,24,16) color=#ffffffff text="USD" font=f2 glyphs=3 advance=24
+  text bounds=(120.25,117,40,32) pos=(128.25,125,24,16) color=#111827ff text="EUR" font=f2 glyphs=3 advance=24
+  text bounds=(199.75,117,40,32) pos=(207.75,125,24,16) color=#111827ff text="GBP" font=f2 glyphs=3 advance=24
+  text bounds=(279.25,117,40,32) pos=(287.25,125,24,16) color=#111827ff text="JPY" font=f2 glyphs=3 advance=24
+  solid-fill bounds=(162,161,36,36) layer=(border=(162,161,36,36),radius=(8,8,8,8,8,8,8,8),clip=(162,161,36,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  text bounds=(160,163,40,32) pos=(168,171,24,16) color=#111827ff text="⇅" font=f4 glyphs=3 advance=24
+  text bounds=(135,212,256,32) pos=(143,220,240,16) color=#111827ff text="{\"kind\":\"number\",\"locale\":\"en-" font=f3 glyphs=30 advance=240
+  text bounds=(15,237,496,32) pos=(23,245,480,16) color=#111827ff text="US\",\"opts\":{\"style\":\"currency\",\"currency\":\"EUR\"},\"value\":92}" font=f3 glyphs=60 advance=480
+  text bounds=(40.75,273,40,32) pos=(48.75,281,24,16) color=#111827ff text="USD" font=f2 glyphs=3 advance=24
+  text bounds=(120.25,273,40,32) pos=(128.25,281,24,16) color=#ffffffff text="EUR" font=f2 glyphs=3 advance=24
+  text bounds=(199.75,273,40,32) pos=(207.75,281,24,16) color=#111827ff text="GBP" font=f2 glyphs=3 advance=24
+  text bounds=(279.25,273,40,32) pos=(287.25,281,24,16) color=#111827ff text="JPY" font=f2 glyphs=3 advance=24
+  text bounds=(100,312,24,32) pos=(108,320,8,16) color=#6b7280ff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(116,312,40,32) pos=(124,320,24,16) color=#6b7280ff text="USD" font=f5 glyphs=3 advance=24
+  text bounds=(148,312,24,32) pos=(156,320,8,16) color=#6b7280ff text="=" font=f5 glyphs=1 advance=8
+  text bounds=(164,312,64,32) pos=(172,320,48,16) color=#6b7280ff text="0.9200" font=f5 glyphs=6 advance=48
+  text bounds=(220,312,40,32) pos=(228,320,24,16) color=#6b7280ff text="EUR" font=f5 glyphs=3 advance=24
+  text bounds=(6,341,40,32) pos=(14,349,24,16) color=#2563ebff text="▶" font=f6 glyphs=3 advance=24
+  text bounds=(6,357,40,32) pos=(14,365,24,16) color=#2563ebff text="︎" font=f6 glyphs=3 advance=24
+  text bounds=(20.625,357,48,32) pos=(28.625,365,32,16) color=#2563ebff text="Edit" font=f5 glyphs=4 advance=32
+  text bounds=(60.625,357,56,32) pos=(68.625,365,40,16) color=#2563ebff text="rates" font=f5 glyphs=5 advance=40
+  text bounds=(108.625,357,48,32) pos=(116.625,365,32,16) color=#2563ebff text="(per" font=f5 glyphs=4 advance=32
+  text bounds=(148.625,357,24,32) pos=(156.625,365,8,16) color=#2563ebff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(164.625,357,48,32) pos=(172.625,365,32,16) color=#2563ebff text="USD)" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11.7,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

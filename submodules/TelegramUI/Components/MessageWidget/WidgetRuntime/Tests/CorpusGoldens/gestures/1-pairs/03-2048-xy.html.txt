@@ -1,0 +1,113 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>2048</title>
+<style></style>
+</head><body><p class="ta"><code>touch-action: none</code> · the xy game: swipe up, down, left or right to merge the tiles</p>
+<div class="hd"><span>Score <b id="sc">0</b> · best <b id="bs">0</b></span><button id="ng">New game</button></div>
+<div id="bw"><div id="bd" style="height: 298px; width: 298px;"><div style="left: 6px; top: 6px; line-height: 67px; height: 67px; width: 67px; background: #eee4da;">2</div><div style="left: 79px; top: 6px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 152px; top: 6px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 225px; top: 6px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 6px; top: 79px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 79px; top: 79px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 152px; top: 79px; line-height: 67px; height: 67px; width: 67px; background: #eee4da;">2</div><div style="left: 225px; top: 79px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 6px; top: 152px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 79px; top: 152px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 152px; top: 152px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 225px; top: 152px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 6px; top: 225px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 79px; top: 225px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 152px; top: 225px; line-height: 67px; height: 67px; width: 67px;"></div><div style="left: 225px; top: 225px; line-height: 67px; height: 67px; width: 67px;"></div></div></div>
+<p class="st"><span id="msg">Join equal tiles</span> · presses taken by the chat: <b id="tk">0</b></p>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 441
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 425
+    p 12 8 336 35.1
+      code 12 8 0 0
+    div 20 51.1 320 32.8
+      span 20 57.375 136 20.25
+        b 20 57.375 0 0
+        b 20 57.375 0 0
+      button 262 59.1 64 16.8
+    div 20 91.9 320 298
+      div 31 91.9 298 298
+        div 37 97.9 67 67
+        div 110 97.9 67 67
+        div 183 97.9 67 67
+        div 256 97.9 67 67
+        div 37 170.9 67 67
+        div 110 170.9 67 67
+        div 183 170.9 67 67
+        div 256 170.9 67 67
+        div 37 243.9 67 67
+        div 110 243.9 67 67
+        div 183 243.9 67 67
+        div 256 243.9 67 67
+        div 37 316.9 67 67
+        div 110 316.9 67 67
+        div 183 316.9 67 67
+        div 256 316.9 67 67
+    p 12 397.9 336 35.1
+      span 12 397.9 0 0
+      b 12 397.9 0 0
+
+== paint
+root 360x441 items=54
+  solid-fill bounds=(248,51,92,33) layer=(border=(248,51,92,33),radius=(8,8,8,8,8,8,8,8),clip=(248,51,92,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(4,0,64,32) pos=(12,8,48,16) color=#707579ff text="touch-" font=f1 glyphs=6 advance=48
+  text bounds=(52,0,72,32) pos=(60,8,56,16) color=#707579ff text="action:" font=f1 glyphs=7 advance=56
+  text bounds=(116,0,48,32) pos=(124,8,32,16) color=#707579ff text="none" font=f1 glyphs=4 advance=32
+  text bounds=(156,0,32,32) pos=(164,8,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(180,0,40,32) pos=(188,8,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(212,0,32,32) pos=(220,8,16,16) color=#707579ff text="xy" font=f2 glyphs=2 advance=16
+  text bounds=(236,0,56,32) pos=(244,8,40,16) color=#707579ff text="game:" font=f2 glyphs=5 advance=40
+  text bounds=(284,0,56,32) pos=(292,8,40,16) color=#707579ff text="swipe" font=f2 glyphs=5 advance=40
+  text bounds=(4,18,40,32) pos=(12,26,24,16) color=#707579ff text="up," font=f2 glyphs=3 advance=24
+  text bounds=(36,18,56,32) pos=(44,26,40,16) color=#707579ff text="down," font=f2 glyphs=5 advance=40
+  text bounds=(84,18,48,32) pos=(92,26,32,16) color=#707579ff text="left" font=f2 glyphs=4 advance=32
+  text bounds=(124,18,32,32) pos=(132,26,16,16) color=#707579ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(148,18,56,32) pos=(156,26,40,16) color=#707579ff text="right" font=f2 glyphs=5 advance=40
+  text bounds=(196,18,32,32) pos=(204,26,16,16) color=#707579ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(220,18,56,32) pos=(228,26,40,16) color=#707579ff text="merge" font=f2 glyphs=5 advance=40
+  text bounds=(268,18,40,32) pos=(276,26,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(300,18,56,32) pos=(308,26,40,16) color=#707579ff text="tiles" font=f2 glyphs=5 advance=40
+  text bounds=(12,51,56,32) pos=(20,59,40,16) color=#000000ff text="Score" font=f3 glyphs=5 advance=40
+  text bounds=(60,51,24,32) pos=(68,59,8,16) color=#000000ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(76,51,32,32) pos=(84,59,16,16) color=#000000ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(100,51,48,32) pos=(108,59,32,16) color=#000000ff text="best" font=f3 glyphs=4 advance=32
+  text bounds=(140,51,24,32) pos=(148,59,8,16) color=#000000ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(254,51,40,32) pos=(262,59,24,16) color=#000000ff text="New" font=f5 glyphs=3 advance=24
+  text bounds=(286,51,48,32) pos=(294,59,32,16) color=#000000ff text="game" font=f5 glyphs=4 advance=32
+  text bounds=(4,390,48,32) pos=(12,398,32,16) color=#000000ff text="Join" font=f2 glyphs=4 advance=32
+  text bounds=(44,390,56,32) pos=(52,398,40,16) color=#000000ff text="equal" font=f2 glyphs=5 advance=40
+  text bounds=(92,390,56,32) pos=(100,398,40,16) color=#000000ff text="tiles" font=f2 glyphs=5 advance=40
+  text bounds=(140,390,32,32) pos=(148,398,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(164,390,72,32) pos=(172,398,56,16) color=#000000ff text="presses" font=f2 glyphs=7 advance=56
+  text bounds=(228,390,56,32) pos=(236,398,40,16) color=#000000ff text="taken" font=f2 glyphs=5 advance=40
+  text bounds=(276,390,32,32) pos=(284,398,16,16) color=#000000ff text="by" font=f2 glyphs=2 advance=16
+  text bounds=(300,390,40,32) pos=(308,398,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(4,407,56,32) pos=(12,415,40,16) color=#000000ff text="chat:" font=f2 glyphs=5 advance=40
+  text bounds=(52,407,24,32) pos=(60,415,8,16) color=#000000ff text="0" font=f6 glyphs=1 advance=8
+  solid-fill bounds=(31,92,298,298) layer=(border=(31,92,298,298),radius=(10,10,10,10,10,10,10,10),clip=(31,92,298,298),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#bbada0ff
+  solid-fill bounds=(37,98,67,67) layer=(border=(37,98,67,67),radius=(6,6,6,6,6,6,6,6),clip=(37,98,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4daff
+  text bounds=(58.5,115,24,32) pos=(66.5,123,8,16) color=#776e65ff text="2" font=f7 glyphs=1 advance=8
+  solid-fill bounds=(110,98,67,67) layer=(border=(110,98,67,67),radius=(6,6,6,6,6,6,6,6),clip=(110,98,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(183,98,67,67) layer=(border=(183,98,67,67),radius=(6,6,6,6,6,6,6,6),clip=(183,98,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(256,98,67,67) layer=(border=(256,98,67,67),radius=(6,6,6,6,6,6,6,6),clip=(256,98,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(37,171,67,67) layer=(border=(37,171,67,67),radius=(6,6,6,6,6,6,6,6),clip=(37,171,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(110,171,67,67) layer=(border=(110,171,67,67),radius=(6,6,6,6,6,6,6,6),clip=(110,171,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(183,171,67,67) layer=(border=(183,171,67,67),radius=(6,6,6,6,6,6,6,6),clip=(183,171,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4daff
+  text bounds=(204.5,188,24,32) pos=(212.5,196,8,16) color=#776e65ff text="2" font=f7 glyphs=1 advance=8
+  solid-fill bounds=(256,171,67,67) layer=(border=(256,171,67,67),radius=(6,6,6,6,6,6,6,6),clip=(256,171,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(37,244,67,67) layer=(border=(37,244,67,67),radius=(6,6,6,6,6,6,6,6),clip=(37,244,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(110,244,67,67) layer=(border=(110,244,67,67),radius=(6,6,6,6,6,6,6,6),clip=(110,244,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(183,244,67,67) layer=(border=(183,244,67,67),radius=(6,6,6,6,6,6,6,6),clip=(183,244,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(256,244,67,67) layer=(border=(256,244,67,67),radius=(6,6,6,6,6,6,6,6),clip=(256,244,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(37,317,67,67) layer=(border=(37,317,67,67),radius=(6,6,6,6,6,6,6,6),clip=(37,317,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(110,317,67,67) layer=(border=(110,317,67,67),radius=(6,6,6,6,6,6,6,6),clip=(110,317,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(183,317,67,67) layer=(border=(183,317,67,67),radius=(6,6,6,6,6,6,6,6),clip=(183,317,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+  solid-fill bounds=(256,317,67,67) layer=(border=(256,317,67,67),radius=(6,6,6,6,6,6,6,6),clip=(256,317,67,67),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eee4da59
+
+== fonts
+f1 (family="ui-monospace,monospace",size=11.7,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f4 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=26,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

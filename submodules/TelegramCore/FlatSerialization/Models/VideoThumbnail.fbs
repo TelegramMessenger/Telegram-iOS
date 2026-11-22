@@ -1,0 +1,11 @@
+include "TelegramMediaResource.fbs";
+
+namespace TelegramCore;
+
+table VideoThumbnail {
+    width:int32 (id: 0);
+    height:int32 (id: 1);
+    resource:TelegramMediaResource (id: 2, required);
+}
+
+root_type VideoThumbnail;

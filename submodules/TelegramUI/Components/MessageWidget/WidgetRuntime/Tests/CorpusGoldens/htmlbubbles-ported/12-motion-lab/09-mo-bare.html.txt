@@ -1,0 +1,331 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad ck" id="w">
+  <div class="row between"><span><b>🕰 Clock</b> <span class="small t-orange" id="homename">Local</span></span><span id="tabs"><span class="tab on" data-action="tab" data-value="analog">Analog</span><span class="tab " data-action="tab" data-value="digital">Digital</span><span class="tab " data-action="tab" data-value="world">World</span></span></div>
+  <div id="analog">
+    <div class="face"><div style="position: relative; width: 150px; height: 150px">
+      <svg width="150" height="150" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="100" r="97" fill="#1c1c1e" stroke="#3a3a3c" stroke-width="4"></circle>
+        <g id="ticks"><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(0 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(6 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(12 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(18 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(24 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(30 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(36 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(42 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(48 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(54 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(60 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(66 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(72 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(78 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(84 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(90 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(96 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(102 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(108 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(114 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(120 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(126 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(132 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(138 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(144 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(150 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(156 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(162 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(168 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(174 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(180 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(186 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(192 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(198 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(204 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(210 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(216 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(222 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(228 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(234 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(240 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(246 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(252 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(258 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(264 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(270 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(276 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(282 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(288 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(294 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(300 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(306 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(312 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(318 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(324 100 100)"></line><line x1="100" y1="11" x2="100" y2="22" stroke="#f2f2f7" stroke-width="3.5" stroke-linecap="round" transform="rotate(330 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(336 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(342 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(348 100 100)"></line><line x1="100" y1="11" x2="100" y2="16" stroke="#8e8e93" stroke-width="1.5" stroke-linecap="round" transform="rotate(354 100 100)"></line></g>
+        <line class="hand" id="h-hour" x1="100" y1="110" x2="100" y2="50" stroke="#f2f2f7" stroke-width="7" stroke-linecap="round" style="transition: transform 900ms cubic-bezier(.33,1,.68,1); transform: rotate(270.0deg);"></line>
+        <line class="hand" id="h-min" x1="100" y1="112" x2="100" y2="28" stroke="#f2f2f7" stroke-width="5" stroke-linecap="round" style="transition: transform 900ms cubic-bezier(.33,1,.68,1); transform: rotate(0.0deg);"></line>
+        <line class="hand" id="h-sec" x1="100" y1="118" x2="100" y2="20" stroke="#ff9f0a" stroke-width="2" stroke-linecap="round" style="transition: transform 900ms cubic-bezier(.33,1,.68,1); transform: rotate(0deg);"></line>
+        <circle cx="100" cy="100" r="5" fill="#ff9f0a"></circle>
+      </svg></div>
+      <div class="digital"><div class="big" id="a-time">09:00:00</div><div class="small muted" id="a-date">{"kind":"date","locale":"en-GB","opts":{"weekday":"long","month":"short","day":"numeric"},"value":1767225600000}</div>
+        <div class="zones" style="margin-top: 6px" id="zones"><div><span class="muted">Lisbon</span><b>NaN:NaN</b></div><div><span class="muted">New York</span><b>NaN:NaN</b></div><div><span class="muted">Tokyo</span><b>NaN:NaN</b></div></div>
+        <button data-action="spin" style="margin-top: 6px">🌀 Spin</button></div></div>
+  </div>
+  <div id="digital" hidden="">
+    <div class="roll" id="roll"><div class="dg"><div class="col"><div class="from"></div><div class="to"></div></div></div><div class="dg"><div class="col"><div class="from"></div><div class="to"></div></div></div><span class="colon t-orange">:</span><div class="dg"><div class="col"><div class="from"></div><div class="to"></div></div></div><div class="dg"><div class="col"><div class="from"></div><div class="to"></div></div></div><span class="colon t-orange">:</span><div class="dg"><div class="col"><div class="from"></div><div class="to"></div></div></div><div class="dg"><div class="col"><div class="from"></div><div class="to"></div></div></div><span class="ampm muted" id="ampm" hidden=""></span></div>
+    <div class="row between"><span class="small muted" id="d-date"></span><span class="seg" id="seg"><span data-action="h12" data-value="24">24h</span><span data-action="h12" data-value="12">12h</span></span></div>
+  </div>
+  <div id="world" hidden="">
+    <div style="margin-top: 8px" id="cities"></div>
+    <div class="tiny muted" style="margin-top: 4px">Tap a city to show it on the analog and digital clocks</div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 237.15
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 237.15
+    div 15 13 310 211.15
+      div 15 13 310 39.2
+        span 15 14.4 119.518 36.4
+          b 15 14.4 0 0
+          span 15 14.4 0 0
+        span 134.518 13 190.482 39.2
+          span 145.518 15 48 15.6
+          span 213.518 15 56 15.6
+          span 145.518 34.6 40 15.6
+      div 15 62.2 310 161.95
+        div 15 62.2 310 161.95
+          div 15 68.175 150 150
+            svg 15 68.175 150 150
+              circle 0 0 0 0
+              g 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+                line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              line 0 0 0 0
+              circle 0 0 0 0
+          div 179 62.2 672 161.95
+            div 179 62.2 672 31.2
+            div 179 93.4 672 31.2
+            div 179 130.6 672 60.75
+              div 179 132.6 148 16.25
+                span 179 132.6 48 16.25
+                b 271 132.6 56 16.25
+              div 179 152.85 148 16.25
+                span 179 152.85 64 16.25
+                b 271 152.85 56 16.25
+              div 179 173.1 148 16.25
+                span 179 173.1 40 16.25
+                b 271 173.1 56 16.25
+            button 192 202.35 72 16.8
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+
+== paint
+root 851x237.15 items=89
+  solid-fill bounds=(0,0,340,237) layer=(border=(0,0,340,237),radius=(14,14,14,14,14,14,14,14),clip=(0,0,340,237),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,340,237) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,340,237) root=0
+  text bounds=(7,7,48,32) pos=(15,15,32,16) color=#000000ff text="🕰" font=f1 glyphs=4 advance=32
+  text bounds=(47,7,56,32) pos=(55,15,40,16) color=#000000ff text="Clock" font=f1 glyphs=5 advance=40
+  text bounds=(7,26,56,32) pos=(15,34,40,16) color=#ff9500ff text="Local" font=f2 glyphs=5 advance=40
+  solid-fill bounds=(137,13,66,20) layer=(border=(137,13,66,20),radius=(7,7,7,7,7,7,7,7),clip=(137,13,66,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9f0a33
+  text bounds=(137.518,7,64,32) pos=(145.518,15,48,16) color=#ff9f0aff text="Analog" font=f3 glyphs=6 advance=48
+  text bounds=(205.518,7,72,32) pos=(213.518,15,56,16) color=#000000ff text="Digital" font=f3 glyphs=7 advance=56
+  text bounds=(137.518,27,56,32) pos=(145.518,35,40,16) color=#000000ff text="World" font=f3 glyphs=5 advance=40
+  text bounds=(171,61,80,32) pos=(179,69,64,16) color=#000000ff text="09:00:00" font=f4 glyphs=8 advance=64
+  text bounds=(171,85,240,32) pos=(179,93,224,16) color=#6e6e73ff text="{\"kind\":\"date\",\"locale\":\"en-" font=f2 glyphs=28 advance=224
+  text bounds=(171,101,688,32) pos=(179,109,672,16) color=#6e6e73ff text="GB\",\"opts\":{\"weekday\":\"long\",\"month\":\"short\",\"day\":\"numeric\"},\"value\":1767225600000}" font=f2 glyphs=84 advance=672
+  text bounds=(171,125,64,32) pos=(179,133,48,16) color=#6e6e73ff text="Lisbon" font=f5 glyphs=6 advance=48
+  text bounds=(263,125,72,32) pos=(271,133,56,16) color=#000000ff text="NaN:NaN" font=f6 glyphs=7 advance=56
+  text bounds=(171,145,40,32) pos=(179,153,24,16) color=#6e6e73ff text="New" font=f5 glyphs=3 advance=24
+  text bounds=(203,145,48,32) pos=(211,153,32,16) color=#6e6e73ff text="York" font=f5 glyphs=4 advance=32
+  text bounds=(263,145,72,32) pos=(271,153,56,16) color=#000000ff text="NaN:NaN" font=f6 glyphs=7 advance=56
+  text bounds=(171,165,56,32) pos=(179,173,40,16) color=#6e6e73ff text="Tokyo" font=f5 glyphs=5 advance=40
+  text bounds=(263,165,72,32) pos=(271,173,56,16) color=#000000ff text="NaN:NaN" font=f6 glyphs=7 advance=56
+  solid-fill bounds=(179,197,98,27) layer=(border=(179,197,98,27),radius=(8,8,8,8,8,8,8,8),clip=(179,197,98,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(184,194,48,32) pos=(192,202,32,16) color=#000000ff text="🌀" font=f1 glyphs=4 advance=32
+  text bounds=(224,194,48,32) pos=(232,202,32,16) color=#000000ff text="Spin" font=f1 glyphs=4 advance=32
+  set-clip bounds=(15,68.175,150,150) pos=(15,68.175,150,150) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15,68.175,150,150)
+    group opacity=1 matrix=(0.75,0,0,0.75,15,68.175) backface=0 bounds=(0,0,200,200) exact=0
+      path bounds=(-6,-6,212,212) ops=(0,3,3,3,3,4) points=(197,100,197,153.572,153.572,197,100,197,46.4284,197,3,153.572,3,100,3,46.4284,46.4284,3,100,3,153.572,3,197,46.4284,197,100) fill=1 fill-color=#1c1c1eff evenodd=0 stroke=1 stroke-color=#3a3a3cff stroke-width=4 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.994522,0.104528,-0.104528,0.994522,11.0007,-9.90504) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.978148,0.207912,-0.207912,0.978148,22.9764,-18.6059) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.951057,0.309017,-0.309017,0.951057,35.796,-26.0074) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.913545,0.406737,-0.406737,0.913545,49.3191,-32.0282) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.866025,0.5,-0.5,0.866025,63.3975,-36.6025) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.809017,0.587785,-0.587785,0.809017,77.8768,-39.6802) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.743145,0.669131,-0.669131,0.743145,92.5986,-41.2275) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.669131,0.743145,-0.743145,0.669131,107.401,-41.2275) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.587785,0.809017,-0.809017,0.587785,122.123,-39.6802) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.5,0.866025,-0.866025,0.5,136.603,-36.6025) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.406737,0.913545,-0.913545,0.406737,150.681,-32.0282) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.309017,0.951057,-0.951057,0.309017,164.204,-26.0074) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.207912,0.978148,-0.978148,0.207912,177.024,-18.6059) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.104528,0.994522,-0.994522,0.104528,188.999,-9.90504) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-4.37114e-08,1,-1,-4.37114e-08,200,7.62939e-06) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.104529,0.994522,-0.994522,-0.104529,209.905,11.0007) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.207912,0.978148,-0.978148,-0.207912,218.606,22.9764) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.309017,0.951056,-0.951056,-0.309017,226.007,35.7961) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.406737,0.913545,-0.913545,-0.406737,232.028,49.3191) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.5,0.866025,-0.866025,-0.5,236.603,63.3975) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.587785,0.809017,-0.809017,-0.587785,239.68,77.8769) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.669131,0.743145,-0.743145,-0.669131,241.228,92.5986) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.743145,0.669131,-0.669131,-0.743145,241.228,107.401) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.809017,0.587785,-0.587785,-0.809017,239.68,122.123) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.866026,0.5,-0.5,-0.866026,236.603,136.603) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.913545,0.406737,-0.406737,-0.913545,232.028,150.681) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.951056,0.309017,-0.309017,-0.951056,226.007,164.204) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.978148,0.207912,-0.207912,-0.978148,218.606,177.024) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.994522,0.104528,-0.104528,-0.994522,209.905,188.999) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-1,-8.74228e-08,8.74228e-08,-1,200,200) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.994522,-0.104528,0.104528,-0.994522,188.999,209.905) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.978148,-0.207912,0.207912,-0.978148,177.024,218.606) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.951057,-0.309017,0.309017,-0.951057,164.204,226.007) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.913545,-0.406737,0.406737,-0.913545,150.681,232.028) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.866025,-0.5,0.5,-0.866025,136.603,236.603) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.809017,-0.587785,0.587785,-0.809017,122.123,239.68) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.743145,-0.669131,0.669131,-0.743145,107.401,241.228) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.669131,-0.743145,0.743145,-0.669131,92.5986,241.228) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.587785,-0.809017,0.809017,-0.587785,77.8768,239.68) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.5,-0.866025,0.866025,-0.5,63.3974,236.603) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.406737,-0.913545,0.913545,-0.406737,49.3191,232.028) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.309017,-0.951057,0.951057,-0.309017,35.796,226.007) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.207911,-0.978148,0.978148,-0.207911,22.9764,218.606) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.104528,-0.994522,0.994522,-0.104528,11.0006,209.905) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(1.19249e-08,-1,1,1.19249e-08,0,200) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.104528,-0.994522,0.994522,0.104528,-9.90503,188.999) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.207912,-0.978148,0.978148,0.207912,-18.6059,177.024) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.309017,-0.951056,0.951056,0.309017,-26.0074,164.204) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.406737,-0.913545,0.913545,0.406737,-32.0282,150.681) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.5,-0.866025,0.866025,0.5,-36.6026,136.602) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.587785,-0.809017,0.809017,0.587785,-39.6802,122.123) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.669131,-0.743145,0.743145,0.669131,-41.2276,107.401) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.743145,-0.669131,0.669131,0.743145,-41.2275,92.5986) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.809017,-0.587785,0.587785,0.809017,-39.6802,77.8768) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.866026,-0.5,0.5,0.866026,-36.6025,63.3974) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(92,3,16,27) ops=(0,1) points=(100,11,100,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=3.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.913546,-0.406736,0.406736,0.913546,-32.0282,49.3191) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.951057,-0.309017,0.309017,0.951057,-26.0073,35.796) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.978148,-0.207911,0.207911,0.978148,-18.6059,22.9764) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(0.994522,-0.104529,0.104529,0.994522,-9.90505,11.0007) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(96,7,8,13) ops=(0,1) points=(100,11,100,16) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=1.5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=1 matrix=(-0.0322548,-0.99948,0.99948,-0.0322548,3.27751,203.173) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(85,35,30,90) ops=(0,1) points=(100,110,100,50) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=7 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(89,17,22,106) ops=(0,1) points=(100,112,100,28) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=5 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(95,15,10,108) ops=(0,1) points=(100,118,100,20) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ff9f0aff stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(94,94,12,12) ops=(0,3,3,3,3,4) points=(105,100,105,102.761,102.761,105,100,105,97.2386,105,95,102.761,95,100,95,97.2386,97.2386,95,100,95,102.761,95,105,97.2386,105,100) fill=1 fill-color=#ff9f0aff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=24,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12.5,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

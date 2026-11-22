@@ -1,0 +1,314 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card it" id="root">
+  <div class="pad" style="padding-bottom: 0">
+    <div class="row">
+      <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px; flex-shrink: 0"><path d="M1 4.5 6 2.5v11l-5 2zM7 2.5l4 2v11l-4-2zM12 4.5l5-2v11l-5 2z" fill="#ff9500"></path></svg>
+      <b class="grow" style="font-size: 17px">Itinerary</b><span class="badge orange" id="badge">3 days · 0/14 ✓</span></div>
+    <div class="tiny muted">Tap a dot to tick a stop off, tap a stop for details and a map</div>
+  </div>
+  <div class="tabs" id="tabs"><div class="tab on" data-day="0">Thu 9<div class="cnt">0 / 6</div></div><div class="tab fg" data-day="1">Fri 10<div class="cnt">0 / 4</div></div><div class="tab fg" data-day="2">Sat 11<div class="cnt">0 / 4</div></div></div>
+  <div class="sub row"><span class="grow small"><b id="title">Arrival &amp; Chiado</b> <span class="muted">· <span id="wx">☀️ 26°</span></span></span><span id="status"><span class="small muted">0 of 6 done</span></span></div>
+  <div class="prog"><div id="prog" style="width: 0.0%;"></div></div>
+  <div class="tl" id="tl"><div class="ev"><span class="time">12:40</span>
+    <div class="dot" data-tick="0-0">&nbsp;</div>
+    <div class="body" data-open="0-0" style="transition-delay: 0ms">
+      <div class="what">✈️ Land at LIS <span class="tiny muted">▾</span></div>
+      <div class="det muted">Metro red line → Alameda, then green line. 25 min, €1.85 with a Viva card.</div></div></div><div class="ev"><span class="time">14:00</span>
+    <div class="dot" data-tick="0-1">&nbsp;</div>
+    <div class="body" data-open="0-1" style="transition-delay: 90ms">
+      <div class="what">🏨 Check in · Casa do Largo <span class="tiny muted">▾</span></div>
+      <div class="det muted">Largo do Carmo 12 — bags can go in early.</div></div></div><div class="ev"><span class="time">15:30</span>
+    <div class="dot" data-tick="0-2">&nbsp;</div>
+    <div class="body" data-open="0-2" style="transition-delay: 180ms">
+      <div class="what">🥐 Pastéis at Manteigaria <span class="tiny muted">▾</span></div>
+      <div class="det muted">Better than Belém, fight me. — Ana</div></div></div><div class="ev"><span class="time">17:00</span>
+    <div class="dot" data-tick="0-3">&nbsp;</div>
+    <div class="body" data-open="0-3" style="transition-delay: 270ms">
+      <div class="what">🚋 Tram 28 to Graça <span class="tiny muted">▾</span></div>
+      <div class="det muted">Board at Martim Moniz to get a seat.</div></div></div><div class="ev"><span class="time">19:30</span>
+    <div class="dot" data-tick="0-4">&nbsp;</div>
+    <div class="body" data-open="0-4" style="transition-delay: 360ms">
+      <div class="what">🌅 Sunset · Miradouro da Senhora do Monte <span class="tiny muted">▾</span></div>
+      <div class="det muted">Best view of the castle. Bring a jacket.</div></div></div><div class="ev"><span class="time">21:00</span>
+    <div class="dot" data-tick="0-5">&nbsp;</div>
+    <div class="body" data-open="0-5" style="transition-delay: 450ms">
+      <div class="what">🍷 Dinner · Taberna da Rua das Flores <span class="tiny muted">▾</span></div>
+      <div class="det muted">No reservations — get there early.</div></div></div></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 646.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 646.6
+    div 1 1 360 644.6
+      div 15 13 332 50.7
+        div 15 13 332 22.1
+          svg 15 15.05 18 18
+            path 0 0 0 0
+          b 41 13 146 22.1
+          span 195 16.9 144 14.3
+        div 15 35.1 332 28.6
+      div 15 73.7 332 38.9
+        div 15 78.7 106.667 29.9
+          div 15 95.6 106.667 13
+        div 127.667 78.7 106.667 29.9
+          div 127.667 95.6 106.667 13
+        div 240.333 78.7 106.667 29.9
+          div 240.333 95.6 106.667 13
+      div 15 120.6 332 36.4
+        span 15 123.2 245.048 31.2
+          b 15 123.2 0 0
+          span 15 123.2 0 0
+            span 15 123.2 0 0
+        span 260.048 120.6 86.9524 36.4
+          span 260.048 120.6 0 0
+      div 15 167 332 4
+        div 15 167 0 4
+      div 85 183 262 448.6
+        div 85 183 262 72
+          span 13 187 44 15.6
+          div 60 188 16 16
+          div 85 186 256 65
+            div 85 186 256 18.2
+              span 85 186 0 0
+            div 85 204.2 256 46.8
+        div 85 263 262 74.6
+          span 13 267 44 15.6
+          div 60 268 16 16
+          div 85 266 256 67.6
+            div 85 266 256 36.4
+              span 85 266 0 0
+            div 85 302.4 256 31.2
+        div 85 345.6 262 56.4
+          span 13 349.6 44 15.6
+          div 60 350.6 16 16
+          div 85 348.6 256 49.4
+            div 85 348.6 256 18.2
+              span 85 348.6 0 0
+            div 85 366.8 256 31.2
+        div 85 410 262 56.4
+          span 13 414 44 15.6
+          div 60 415 16 16
+          div 85 413 256 49.4
+            div 85 413 256 18.2
+              span 85 413 0 0
+            div 85 431.2 256 31.2
+        div 85 474.4 262 74.6
+          span 13 478.4 44 15.6
+          div 60 479.4 16 16
+          div 85 477.4 256 67.6
+            div 85 477.4 256 36.4
+              span 85 477.4 0 0
+            div 85 513.8 256 31.2
+        div 85 557 262 74.6
+          span 13 561 44 15.6
+          div 60 562 16 16
+          div 85 560 256 67.6
+            div 85 560 256 36.4
+              span 85 560 0 0
+            div 85 596.4 256 31.2
+
+== paint
+root 362x646.6 items=179
+  solid-fill bounds=(0,0,362,647) layer=(border=(0,0,362,647),radius=(14,14,14,14,14,14,14,14),clip=(0,0,362,647),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,362,647) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,362,647) root=0
+  set-clip bounds=(15,15.05,18,18) pos=(15,15.05,18,18) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15,15.05,18,18)
+    group opacity=1 matrix=(1,0,0,1,15,15.05) backface=0 bounds=(0,0,18,18) exact=0
+      path bounds=(0,1.5,18,15) ops=(0,1,1,1,4,0,1,1,1,4,0,1,1,1,4) points=(1,4.5,6,2.5,6,13.5,1,15.5,7,2.5,11,4.5,11,15.5,7,13.5,12,4.5,17,2.5,17,13.5,12,15.5) fill=1 fill-color=#ff9500ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(187,16,160,16) layer=(border=(187,16,160,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(187,16,160,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  solid-fill bounds=(15,74,107,39) layer=(border=(15,74,107,39),radius=(9,9,9,9,9,9,9,9),clip=(15,74,107,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(128,74,106,39) layer=(border=(128,74,106,39),radius=(9,9,9,9,9,9,9,9),clip=(128,74,106,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(240,74,107,39) layer=(border=(240,74,107,39),radius=(9,9,9,9,9,9,9,9),clip=(240,74,107,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,167,332,4) layer=(border=(15,167,332,4),radius=(2,2,2,2,2,2,2,2),clip=(15,167,332,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(15,167,0,4) layer=(border=(15,167,0,4),radius=(0,0,0,0,0,0,0,0),clip=(15,167,0,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  borders bounds=(67,183,280,449) borders=(left=(2,4,#7f7f7f4d),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(67,183,280,449) root=0
+  text bounds=(33,8,88,32) pos=(41,16,72,16) color=#000000ff text="Itinerary" font=f1 glyphs=9 advance=72
+  text bounds=(187,9,24,32) pos=(195,17,8,16) color=#ff9500ff text="3" font=f2 glyphs=1 advance=8
+  text bounds=(203,9,48,32) pos=(211,17,32,16) color=#ff9500ff text="days" font=f2 glyphs=4 advance=32
+  text bounds=(243,9,32,32) pos=(251,17,16,16) color=#ff9500ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(267,9,48,32) pos=(275,17,32,16) color=#ff9500ff text="0/14" font=f2 glyphs=4 advance=32
+  text bounds=(307,9,40,32) pos=(315,17,24,16) color=#ff9500ff text="✓" font=f2 glyphs=3 advance=24
+  text bounds=(7,27,40,32) pos=(15,35,24,16) color=#6e6e73ff text="Tap" font=f3 glyphs=3 advance=24
+  text bounds=(39,27,24,32) pos=(47,35,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(55,27,40,32) pos=(63,35,24,16) color=#6e6e73ff text="dot" font=f3 glyphs=3 advance=24
+  text bounds=(87,27,32,32) pos=(95,35,16,16) color=#6e6e73ff text="to" font=f3 glyphs=2 advance=16
+  text bounds=(111,27,48,32) pos=(119,35,32,16) color=#6e6e73ff text="tick" font=f3 glyphs=4 advance=32
+  text bounds=(151,27,24,32) pos=(159,35,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(167,27,48,32) pos=(175,35,32,16) color=#6e6e73ff text="stop" font=f3 glyphs=4 advance=32
+  text bounds=(207,27,48,32) pos=(215,35,32,16) color=#6e6e73ff text="off," font=f3 glyphs=4 advance=32
+  text bounds=(247,27,40,32) pos=(255,35,24,16) color=#6e6e73ff text="tap" font=f3 glyphs=3 advance=24
+  text bounds=(279,27,24,32) pos=(287,35,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(295,27,48,32) pos=(303,35,32,16) color=#6e6e73ff text="stop" font=f3 glyphs=4 advance=32
+  text bounds=(7,41,40,32) pos=(15,49,24,16) color=#6e6e73ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(39,41,72,32) pos=(47,49,56,16) color=#6e6e73ff text="details" font=f3 glyphs=7 advance=56
+  text bounds=(103,41,40,32) pos=(111,49,24,16) color=#6e6e73ff text="and" font=f3 glyphs=3 advance=24
+  text bounds=(135,41,24,32) pos=(143,49,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(151,41,40,32) pos=(159,49,24,16) color=#6e6e73ff text="map" font=f3 glyphs=3 advance=24
+  text bounds=(40.3333,71,40,32) pos=(48.3333,79,24,16) color=#ffffffff text="Thu" font=f4 glyphs=3 advance=24
+  text bounds=(72.3333,71,24,32) pos=(80.3333,79,8,16) color=#ffffffff text="9" font=f4 glyphs=1 advance=8
+  text bounds=(40.3333,87,24,32) pos=(48.3333,95,8,16) color=#ffffffff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(56.3333,87,24,32) pos=(64.3333,95,8,16) color=#ffffffff text="/" font=f5 glyphs=1 advance=8
+  text bounds=(72.3333,87,24,32) pos=(80.3333,95,8,16) color=#ffffffff text="6" font=f5 glyphs=1 advance=8
+  text bounds=(149,71,40,32) pos=(157,79,24,16) color=#000000ff text="Fri" font=f4 glyphs=3 advance=24
+  text bounds=(181,71,32,32) pos=(189,79,16,16) color=#000000ff text="10" font=f4 glyphs=2 advance=16
+  text bounds=(153,87,24,32) pos=(161,95,8,16) color=#000000ff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(169,87,24,32) pos=(177,95,8,16) color=#000000ff text="/" font=f5 glyphs=1 advance=8
+  text bounds=(185,87,24,32) pos=(193,95,8,16) color=#000000ff text="4" font=f5 glyphs=1 advance=8
+  text bounds=(261.667,71,40,32) pos=(269.667,79,24,16) color=#000000ff text="Sat" font=f4 glyphs=3 advance=24
+  text bounds=(293.667,71,32,32) pos=(301.667,79,16,16) color=#000000ff text="11" font=f4 glyphs=2 advance=16
+  text bounds=(265.667,87,24,32) pos=(273.667,95,8,16) color=#000000ff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(281.667,87,24,32) pos=(289.667,95,8,16) color=#000000ff text="/" font=f5 glyphs=1 advance=8
+  text bounds=(297.667,87,24,32) pos=(305.667,95,8,16) color=#000000ff text="4" font=f5 glyphs=1 advance=8
+  text bounds=(7,115,72,32) pos=(15,123,56,16) color=#000000ff text="Arrival" font=f6 glyphs=7 advance=56
+  text bounds=(71,115,24,32) pos=(79,123,8,16) color=#000000ff text="&" font=f6 glyphs=1 advance=8
+  text bounds=(87,115,64,32) pos=(95,123,48,16) color=#000000ff text="Chiado" font=f6 glyphs=6 advance=48
+  text bounds=(143,115,32,32) pos=(151,123,16,16) color=#6e6e73ff text="·" font=f7 glyphs=2 advance=16
+  text bounds=(167,115,64,32) pos=(175,123,48,16) color=#6e6e73ff text="☀️" font=f7 glyphs=6 advance=48
+  text bounds=(7,131,48,32) pos=(15,139,32,16) color=#6e6e73ff text="26°" font=f7 glyphs=4 advance=32
+  text bounds=(252.048,114,24,32) pos=(260.048,122,8,16) color=#6e6e73ff text="0" font=f7 glyphs=1 advance=8
+  text bounds=(268.048,114,32,32) pos=(276.048,122,16,16) color=#6e6e73ff text="of" font=f7 glyphs=2 advance=16
+  text bounds=(292.048,114,24,32) pos=(300.048,122,8,16) color=#6e6e73ff text="6" font=f7 glyphs=1 advance=8
+  text bounds=(252.048,132,48,32) pos=(260.048,140,32,16) color=#6e6e73ff text="done" font=f7 glyphs=4 advance=32
+  text bounds=(77,179,64,32) pos=(85,187,48,16) color=#000000ff text="✈️" font=f8 glyphs=6 advance=48
+  text bounds=(133,179,48,32) pos=(141,187,32,16) color=#000000ff text="Land" font=f8 glyphs=4 advance=32
+  text bounds=(173,179,32,32) pos=(181,187,16,16) color=#000000ff text="at" font=f8 glyphs=2 advance=16
+  text bounds=(197,179,40,32) pos=(205,187,24,16) color=#000000ff text="LIS" font=f8 glyphs=3 advance=24
+  text bounds=(229,179,40,32) pos=(237,187,24,16) color=#6e6e73ff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(77,196,56,32) pos=(85,204,40,16) color=#6e6e73ff text="Metro" font=f7 glyphs=5 advance=40
+  text bounds=(125,196,40,32) pos=(133,204,24,16) color=#6e6e73ff text="red" font=f7 glyphs=3 advance=24
+  text bounds=(157,196,48,32) pos=(165,204,32,16) color=#6e6e73ff text="line" font=f7 glyphs=4 advance=32
+  text bounds=(197,196,40,32) pos=(205,204,24,16) color=#6e6e73ff text="→" font=f7 glyphs=3 advance=24
+  text bounds=(229,196,80,32) pos=(237,204,64,16) color=#6e6e73ff text="Alameda," font=f7 glyphs=8 advance=64
+  text bounds=(301,196,48,32) pos=(309,204,32,16) color=#6e6e73ff text="then" font=f7 glyphs=4 advance=32
+  text bounds=(77,212,56,32) pos=(85,220,40,16) color=#6e6e73ff text="green" font=f7 glyphs=5 advance=40
+  text bounds=(125,212,56,32) pos=(133,220,40,16) color=#6e6e73ff text="line." font=f7 glyphs=5 advance=40
+  text bounds=(173,212,32,32) pos=(181,220,16,16) color=#6e6e73ff text="25" font=f7 glyphs=2 advance=16
+  text bounds=(197,212,48,32) pos=(205,220,32,16) color=#6e6e73ff text="min," font=f7 glyphs=4 advance=32
+  text bounds=(237,212,72,32) pos=(245,220,56,16) color=#6e6e73ff text="€1.85" font=f7 glyphs=7 advance=56
+  text bounds=(301,212,48,32) pos=(309,220,32,16) color=#6e6e73ff text="with" font=f7 glyphs=4 advance=32
+  text bounds=(77,227,24,32) pos=(85,235,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(93,227,48,32) pos=(101,235,32,16) color=#6e6e73ff text="Viva" font=f7 glyphs=4 advance=32
+  text bounds=(133,227,56,32) pos=(141,235,40,16) color=#6e6e73ff text="card." font=f7 glyphs=5 advance=40
+  text bounds=(9,179,56,32) pos=(17,187,40,16) color=#000000ff text="12:40" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(58,186,20,20) layer=(border=(58,186,20,20),radius=(10,10,10,10,10,10,10,10),clip=(58,186,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(58,186,20,20) borders=(left=(2,4,#ff9500ff),top=(2,4,#ff9500ff),right=(2,4,#ff9500ff),bottom=(2,4,#ff9500ff),radius=(10,10,10,10,10,10,10,10)) pos=(58,186,20,20) root=0
+  text bounds=(52,180,32,32) pos=(60,188,16,16) color=#ffffffff text=" " font=f11 glyphs=2 advance=16
+  text bounds=(77,259,48,32) pos=(85,267,32,16) color=#000000ff text="🏨" font=f8 glyphs=4 advance=32
+  text bounds=(117,259,56,32) pos=(125,267,40,16) color=#000000ff text="Check" font=f8 glyphs=5 advance=40
+  text bounds=(165,259,32,32) pos=(173,267,16,16) color=#000000ff text="in" font=f8 glyphs=2 advance=16
+  text bounds=(189,259,32,32) pos=(197,267,16,16) color=#000000ff text="·" font=f8 glyphs=2 advance=16
+  text bounds=(213,259,48,32) pos=(221,267,32,16) color=#000000ff text="Casa" font=f8 glyphs=4 advance=32
+  text bounds=(253,259,32,32) pos=(261,267,16,16) color=#000000ff text="do" font=f8 glyphs=2 advance=16
+  text bounds=(277,259,56,32) pos=(285,267,40,16) color=#000000ff text="Largo" font=f8 glyphs=5 advance=40
+  text bounds=(77,277,40,32) pos=(85,285,24,16) color=#6e6e73ff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(77,294,56,32) pos=(85,302,40,16) color=#6e6e73ff text="Largo" font=f7 glyphs=5 advance=40
+  text bounds=(125,294,32,32) pos=(133,302,16,16) color=#6e6e73ff text="do" font=f7 glyphs=2 advance=16
+  text bounds=(149,294,56,32) pos=(157,302,40,16) color=#6e6e73ff text="Carmo" font=f7 glyphs=5 advance=40
+  text bounds=(197,294,32,32) pos=(205,302,16,16) color=#6e6e73ff text="12" font=f7 glyphs=2 advance=16
+  text bounds=(221,294,40,32) pos=(229,302,24,16) color=#6e6e73ff text="—" font=f7 glyphs=3 advance=24
+  text bounds=(253,294,48,32) pos=(261,302,32,16) color=#6e6e73ff text="bags" font=f7 glyphs=4 advance=32
+  text bounds=(293,294,40,32) pos=(301,302,24,16) color=#6e6e73ff text="can" font=f7 glyphs=3 advance=24
+  text bounds=(77,310,32,32) pos=(85,318,16,16) color=#6e6e73ff text="go" font=f7 glyphs=2 advance=16
+  text bounds=(101,310,32,32) pos=(109,318,16,16) color=#6e6e73ff text="in" font=f7 glyphs=2 advance=16
+  text bounds=(125,310,64,32) pos=(133,318,48,16) color=#6e6e73ff text="early." font=f7 glyphs=6 advance=48
+  text bounds=(9,259,56,32) pos=(17,267,40,16) color=#000000ff text="14:00" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(58,266,20,20) layer=(border=(58,266,20,20),radius=(10,10,10,10,10,10,10,10),clip=(58,266,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(58,266,20,20) borders=(left=(2,4,#ff9500ff),top=(2,4,#ff9500ff),right=(2,4,#ff9500ff),bottom=(2,4,#ff9500ff),radius=(10,10,10,10,10,10,10,10)) pos=(58,266,20,20) root=0
+  text bounds=(52,260,32,32) pos=(60,268,16,16) color=#ffffffff text=" " font=f11 glyphs=2 advance=16
+  text bounds=(77,342,48,32) pos=(85,350,32,16) color=#000000ff text="🥐" font=f8 glyphs=4 advance=32
+  text bounds=(117,342,80,32) pos=(125,350,64,16) color=#000000ff text="Pastéis" font=f8 glyphs=8 advance=64
+  text bounds=(189,342,32,32) pos=(197,350,16,16) color=#000000ff text="at" font=f8 glyphs=2 advance=16
+  text bounds=(213,342,104,32) pos=(221,350,88,16) color=#000000ff text="Manteigaria" font=f8 glyphs=11 advance=88
+  text bounds=(309,342,40,32) pos=(317,350,24,16) color=#6e6e73ff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(77,359,64,32) pos=(85,367,48,16) color=#6e6e73ff text="Better" font=f7 glyphs=6 advance=48
+  text bounds=(133,359,48,32) pos=(141,367,32,16) color=#6e6e73ff text="than" font=f7 glyphs=4 advance=32
+  text bounds=(173,359,72,32) pos=(181,367,56,16) color=#6e6e73ff text="Belém," font=f7 glyphs=7 advance=56
+  text bounds=(237,359,56,32) pos=(245,367,40,16) color=#6e6e73ff text="fight" font=f7 glyphs=5 advance=40
+  text bounds=(285,359,40,32) pos=(293,367,24,16) color=#6e6e73ff text="me." font=f7 glyphs=3 advance=24
+  text bounds=(77,374,40,32) pos=(85,382,24,16) color=#6e6e73ff text="—" font=f7 glyphs=3 advance=24
+  text bounds=(109,374,40,32) pos=(117,382,24,16) color=#6e6e73ff text="Ana" font=f7 glyphs=3 advance=24
+  text bounds=(9,342,56,32) pos=(17,350,40,16) color=#000000ff text="15:30" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(58,349,20,20) layer=(border=(58,349,20,20),radius=(10,10,10,10,10,10,10,10),clip=(58,349,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(58,349,20,20) borders=(left=(2,4,#ff9500ff),top=(2,4,#ff9500ff),right=(2,4,#ff9500ff),bottom=(2,4,#ff9500ff),radius=(10,10,10,10,10,10,10,10)) pos=(58,349,20,20) root=0
+  text bounds=(52,343,32,32) pos=(60,351,16,16) color=#ffffffff text=" " font=f11 glyphs=2 advance=16
+  text bounds=(77,406,48,32) pos=(85,414,32,16) color=#000000ff text="🚋" font=f8 glyphs=4 advance=32
+  text bounds=(117,406,48,32) pos=(125,414,32,16) color=#000000ff text="Tram" font=f8 glyphs=4 advance=32
+  text bounds=(157,406,32,32) pos=(165,414,16,16) color=#000000ff text="28" font=f8 glyphs=2 advance=16
+  text bounds=(181,406,32,32) pos=(189,414,16,16) color=#000000ff text="to" font=f8 glyphs=2 advance=16
+  text bounds=(205,406,64,32) pos=(213,414,48,16) color=#000000ff text="Graça" font=f8 glyphs=6 advance=48
+  text bounds=(261,406,40,32) pos=(269,414,24,16) color=#6e6e73ff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(77,423,56,32) pos=(85,431,40,16) color=#6e6e73ff text="Board" font=f7 glyphs=5 advance=40
+  text bounds=(125,423,32,32) pos=(133,431,16,16) color=#6e6e73ff text="at" font=f7 glyphs=2 advance=16
+  text bounds=(149,423,64,32) pos=(157,431,48,16) color=#6e6e73ff text="Martim" font=f7 glyphs=6 advance=48
+  text bounds=(205,423,56,32) pos=(213,431,40,16) color=#6e6e73ff text="Moniz" font=f7 glyphs=5 advance=40
+  text bounds=(253,423,32,32) pos=(261,431,16,16) color=#6e6e73ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(277,423,40,32) pos=(285,431,24,16) color=#6e6e73ff text="get" font=f7 glyphs=3 advance=24
+  text bounds=(309,423,24,32) pos=(317,431,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(77,439,56,32) pos=(85,447,40,16) color=#6e6e73ff text="seat." font=f7 glyphs=5 advance=40
+  text bounds=(9,406,56,32) pos=(17,414,40,16) color=#000000ff text="17:00" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(58,413,20,20) layer=(border=(58,413,20,20),radius=(10,10,10,10,10,10,10,10),clip=(58,413,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(58,413,20,20) borders=(left=(2,4,#ff9500ff),top=(2,4,#ff9500ff),right=(2,4,#ff9500ff),bottom=(2,4,#ff9500ff),radius=(10,10,10,10,10,10,10,10)) pos=(58,413,20,20) root=0
+  text bounds=(52,407,32,32) pos=(60,415,16,16) color=#ffffffff text=" " font=f11 glyphs=2 advance=16
+  text bounds=(77,470,48,32) pos=(85,478,32,16) color=#000000ff text="🌅" font=f8 glyphs=4 advance=32
+  text bounds=(117,470,64,32) pos=(125,478,48,16) color=#000000ff text="Sunset" font=f8 glyphs=6 advance=48
+  text bounds=(173,470,32,32) pos=(181,478,16,16) color=#000000ff text="·" font=f8 glyphs=2 advance=16
+  text bounds=(197,470,88,32) pos=(205,478,72,16) color=#000000ff text="Miradouro" font=f8 glyphs=9 advance=72
+  text bounds=(277,470,32,32) pos=(285,478,16,16) color=#000000ff text="da" font=f8 glyphs=2 advance=16
+  text bounds=(77,489,72,32) pos=(85,497,56,16) color=#000000ff text="Senhora" font=f8 glyphs=7 advance=56
+  text bounds=(141,489,32,32) pos=(149,497,16,16) color=#000000ff text="do" font=f8 glyphs=2 advance=16
+  text bounds=(165,489,56,32) pos=(173,497,40,16) color=#000000ff text="Monte" font=f8 glyphs=5 advance=40
+  text bounds=(213,489,40,32) pos=(221,497,24,16) color=#6e6e73ff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(77,506,48,32) pos=(85,514,32,16) color=#6e6e73ff text="Best" font=f7 glyphs=4 advance=32
+  text bounds=(117,506,48,32) pos=(125,514,32,16) color=#6e6e73ff text="view" font=f7 glyphs=4 advance=32
+  text bounds=(157,506,32,32) pos=(165,514,16,16) color=#6e6e73ff text="of" font=f7 glyphs=2 advance=16
+  text bounds=(181,506,40,32) pos=(189,514,24,16) color=#6e6e73ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(213,506,72,32) pos=(221,514,56,16) color=#6e6e73ff text="castle." font=f7 glyphs=7 advance=56
+  text bounds=(277,506,56,32) pos=(285,514,40,16) color=#6e6e73ff text="Bring" font=f7 glyphs=5 advance=40
+  text bounds=(325,506,24,32) pos=(333,514,8,16) color=#6e6e73ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(77,521,72,32) pos=(85,529,56,16) color=#6e6e73ff text="jacket." font=f7 glyphs=7 advance=56
+  text bounds=(9,470,56,32) pos=(17,478,40,16) color=#000000ff text="19:30" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(58,477,20,20) layer=(border=(58,477,20,20),radius=(10,10,10,10,10,10,10,10),clip=(58,477,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(58,477,20,20) borders=(left=(2,4,#ff9500ff),top=(2,4,#ff9500ff),right=(2,4,#ff9500ff),bottom=(2,4,#ff9500ff),radius=(10,10,10,10,10,10,10,10)) pos=(58,477,20,20) root=0
+  text bounds=(52,471,32,32) pos=(60,479,16,16) color=#ffffffff text=" " font=f11 glyphs=2 advance=16
+  text bounds=(77,553,48,32) pos=(85,561,32,16) color=#000000ff text="🍷" font=f8 glyphs=4 advance=32
+  text bounds=(117,553,64,32) pos=(125,561,48,16) color=#000000ff text="Dinner" font=f8 glyphs=6 advance=48
+  text bounds=(173,553,32,32) pos=(181,561,16,16) color=#000000ff text="·" font=f8 glyphs=2 advance=16
+  text bounds=(197,553,72,32) pos=(205,561,56,16) color=#000000ff text="Taberna" font=f8 glyphs=7 advance=56
+  text bounds=(261,553,32,32) pos=(269,561,16,16) color=#000000ff text="da" font=f8 glyphs=2 advance=16
+  text bounds=(285,553,40,32) pos=(293,561,24,16) color=#000000ff text="Rua" font=f8 glyphs=3 advance=24
+  text bounds=(77,571,40,32) pos=(85,579,24,16) color=#000000ff text="das" font=f8 glyphs=3 advance=24
+  text bounds=(109,571,64,32) pos=(117,579,48,16) color=#000000ff text="Flores" font=f8 glyphs=6 advance=48
+  text bounds=(165,571,40,32) pos=(173,579,24,16) color=#6e6e73ff text="▾" font=f9 glyphs=3 advance=24
+  text bounds=(77,588,32,32) pos=(85,596,16,16) color=#6e6e73ff text="No" font=f7 glyphs=2 advance=16
+  text bounds=(101,588,112,32) pos=(109,596,96,16) color=#6e6e73ff text="reservations" font=f7 glyphs=12 advance=96
+  text bounds=(205,588,40,32) pos=(213,596,24,16) color=#6e6e73ff text="—" font=f7 glyphs=3 advance=24
+  text bounds=(237,588,40,32) pos=(245,596,24,16) color=#6e6e73ff text="get" font=f7 glyphs=3 advance=24
+  text bounds=(269,588,56,32) pos=(277,596,40,16) color=#6e6e73ff text="there" font=f7 glyphs=5 advance=40
+  text bounds=(77,604,64,32) pos=(85,612,48,16) color=#6e6e73ff text="early." font=f7 glyphs=6 advance=48
+  text bounds=(9,553,56,32) pos=(17,561,40,16) color=#000000ff text="21:00" font=f10 glyphs=5 advance=40
+  solid-fill bounds=(58,560,20,20) layer=(border=(58,560,20,20),radius=(10,10,10,10,10,10,10,10),clip=(58,560,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(58,560,20,20) borders=(left=(2,4,#ff9500ff),top=(2,4,#ff9500ff),right=(2,4,#ff9500ff),bottom=(2,4,#ff9500ff),radius=(10,10,10,10,10,10,10,10)) pos=(58,560,20,20) root=0
+  text bounds=(52,554,32,32) pos=(60,562,16,16) color=#ffffffff text=" " font=f11 glyphs=2 advance=16
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=11,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=11,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

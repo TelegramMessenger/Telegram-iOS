@@ -1,0 +1,49 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>Should I kick off a build of the new bubbles?</p>
+<div id="choices">
+  <button class="chip" type="button" data-text="Yes, ship it 🚀">Yes, ship it 🚀</button>
+  <button class="chip grey" type="button" data-text="Not yet — one more pass">Not yet</button>
+</div>
+<p class="answer" id="answer" hidden=""></p>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 54.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 54.4
+    p 0 0 360 18.2
+    div 0 26.2 360 28.2
+      button 13 32.2 136 18.2
+      button 187 32.2 56 18.2
+    p 0 0 0 0
+
+== paint
+root 360x54.4 items=18
+  text bounds=(-8,-7,64,32) pos=(0,1,48,16) color=#000000ff text="Should" font=f1 glyphs=6 advance=48
+  text bounds=(48,-7,24,32) pos=(56,1,8,16) color=#000000ff text="I" font=f1 glyphs=1 advance=8
+  text bounds=(64,-7,48,32) pos=(72,1,32,16) color=#000000ff text="kick" font=f1 glyphs=4 advance=32
+  text bounds=(104,-7,40,32) pos=(112,1,24,16) color=#000000ff text="off" font=f1 glyphs=3 advance=24
+  text bounds=(136,-7,24,32) pos=(144,1,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(152,-7,56,32) pos=(160,1,40,16) color=#000000ff text="build" font=f1 glyphs=5 advance=40
+  text bounds=(200,-7,32,32) pos=(208,1,16,16) color=#000000ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(224,-7,40,32) pos=(232,1,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(256,-7,40,32) pos=(264,1,24,16) color=#000000ff text="new" font=f1 glyphs=3 advance=24
+  text bounds=(288,-7,80,32) pos=(296,1,64,16) color=#000000ff text="bubbles?" font=f1 glyphs=8 advance=64
+  borders bounds=(0,28,162,26) borders=(left=(1,4,#007affff),top=(1,4,#007affff),right=(1,4,#007affff),bottom=(1,4,#007affff),radius=(8,8,8,8,8,8,8,8)) pos=(0,28,162,26) root=0
+  text bounds=(5,25,48,32) pos=(13,33,32,16) color=#007affff text="Yes," font=f1 glyphs=4 advance=32
+  text bounds=(45,25,48,32) pos=(53,33,32,16) color=#007affff text="ship" font=f1 glyphs=4 advance=32
+  text bounds=(85,25,32,32) pos=(93,33,16,16) color=#007affff text="it" font=f1 glyphs=2 advance=16
+  text bounds=(109,25,48,32) pos=(117,33,32,16) color=#007affff text="🚀" font=f1 glyphs=4 advance=32
+  borders bounds=(174,28,82,26) borders=(left=(1,4,#8e8e93ff),top=(1,4,#8e8e93ff),right=(1,4,#8e8e93ff),bottom=(1,4,#8e8e93ff),radius=(8,8,8,8,8,8,8,8)) pos=(174,28,82,26) root=0
+  text bounds=(179,25,40,32) pos=(187,33,24,16) color=#8e8e93ff text="Not" font=f1 glyphs=3 advance=24
+  text bounds=(211,25,40,32) pos=(219,33,24,16) color=#8e8e93ff text="yet" font=f1 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

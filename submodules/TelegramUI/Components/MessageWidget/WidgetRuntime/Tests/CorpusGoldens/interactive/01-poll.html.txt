@@ -1,0 +1,81 @@
+stop -
+drive idle
+bridge watchPublicData ["true"]
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><meta name="tw-bot" content="poll">
+<style></style></head>
+<body>
+<h3>Tea, coffee or juice?</h3>
+<div id="opts"><button class="opt"><div class="bar" style="width: 0%;"></div><span>Tea</span><span class="n">0</span></button><button class="opt"><div class="bar" style="width: 0%;"></div><span>Coffee</span><span class="n">0</span></button><button class="opt"><div class="bar" style="width: 0%;"></div><span>Juice</span><span class="n">0</span></button></div>
+<div id="hint">0 votes · tap to vote, tap again to take it back</div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 260.535
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 244.535
+    h3 12 8 336 22.5
+    div 12 38.5 336 172.8
+      button 24 48.5 312 33.6
+        div 12 38.5 0 53.6
+        span 24 56.9 0 0
+        span 328 73.7 8 16.8
+      button 24 108.1 312 33.6
+        div 12 98.1 0 53.6
+        span 24 116.5 0 0
+        span 328 133.3 8 16.8
+      button 24 167.7 312 33.6
+        div 12 157.7 0 53.6
+        span 24 176.1 0 0
+        span 328 192.9 8 16.8
+    div 12 217.3 336 35.235
+
+== paint
+root 360x260.535 items=34
+  text bounds=(4,3,48,32) pos=(12,11,32,16) color=#000000ff text="Tea," font=f1 glyphs=4 advance=32
+  text bounds=(44,3,64,32) pos=(52,11,48,16) color=#000000ff text="coffee" font=f1 glyphs=6 advance=48
+  text bounds=(100,3,32,32) pos=(108,11,16,16) color=#000000ff text="or" font=f1 glyphs=2 advance=16
+  text bounds=(124,3,64,32) pos=(132,11,48,16) color=#000000ff text="juice?" font=f1 glyphs=6 advance=48
+  text bounds=(4,209,24,32) pos=(12,217,8,16) color=#707579ff text="0" font=f2 glyphs=1 advance=8
+  text bounds=(20,209,56,32) pos=(28,217,40,16) color=#707579ff text="votes" font=f2 glyphs=5 advance=40
+  text bounds=(68,209,32,32) pos=(76,217,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(92,209,40,32) pos=(100,217,24,16) color=#707579ff text="tap" font=f2 glyphs=3 advance=24
+  text bounds=(124,209,32,32) pos=(132,217,16,16) color=#707579ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(148,209,56,32) pos=(156,217,40,16) color=#707579ff text="vote," font=f2 glyphs=5 advance=40
+  text bounds=(196,209,40,32) pos=(204,217,24,16) color=#707579ff text="tap" font=f2 glyphs=3 advance=24
+  text bounds=(228,209,56,32) pos=(236,217,40,16) color=#707579ff text="again" font=f2 glyphs=5 advance=40
+  text bounds=(276,209,32,32) pos=(284,217,16,16) color=#707579ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(300,209,48,32) pos=(308,217,32,16) color=#707579ff text="take" font=f2 glyphs=4 advance=32
+  text bounds=(4,227,32,32) pos=(12,235,16,16) color=#707579ff text="it" font=f2 glyphs=2 advance=16
+  text bounds=(28,227,48,32) pos=(36,235,32,16) color=#707579ff text="back" font=f2 glyphs=4 advance=32
+  solid-fill bounds=(12,39,336,53) layer=(border=(12,39,336,53),radius=(8,8,8,8,8,8,8,8),clip=(12,39,336,53),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  set-clip bounds=(12,38.5,336,53.6) pos=(12,38.5,336,53.6) radius=(8,8,8,8,8,8,8,8)
+  group opacity=0.18 matrix=(1,0,0,1,0,0) backface=0 bounds=(10,36.5,4,57.6) exact=1
+    solid-fill bounds=(12,39,0,53) layer=(border=(12,39,0,53),radius=(0,0,0,0,0,0,0,0),clip=(12,39,0,53),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  text bounds=(16,49,40,32) pos=(24,57,24,16) color=#000000ff text="Tea" font=f3 glyphs=3 advance=24
+  text bounds=(320,66,24,32) pos=(328,74,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(12,98,336,54) layer=(border=(12,98,336,54),radius=(8,8,8,8,8,8,8,8),clip=(12,98,336,54),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  set-clip bounds=(12,98.1,336,53.6) pos=(12,98.1,336,53.6) radius=(8,8,8,8,8,8,8,8)
+  group opacity=0.18 matrix=(1,0,0,1,0,0) backface=0 bounds=(10,96.1,4,57.6) exact=1
+    solid-fill bounds=(12,98,0,54) layer=(border=(12,98,0,54),radius=(0,0,0,0,0,0,0,0),clip=(12,98,0,54),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  text bounds=(16,109,64,32) pos=(24,117,48,16) color=#000000ff text="Coffee" font=f3 glyphs=6 advance=48
+  text bounds=(320,125,24,32) pos=(328,133,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(12,158,336,53) layer=(border=(12,158,336,53),radius=(8,8,8,8,8,8,8,8),clip=(12,158,336,53),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  set-clip bounds=(12,157.7,336,53.6) pos=(12,157.7,336,53.6) radius=(8,8,8,8,8,8,8,8)
+  group opacity=0.18 matrix=(1,0,0,1,0,0) backface=0 bounds=(10,155.7,4,57.6) exact=1
+    solid-fill bounds=(12,158,0,53) layer=(border=(12,158,0,53),radius=(0,0,0,0,0,0,0,0),clip=(12,158,0,53),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  text bounds=(16,168,56,32) pos=(24,176,40,16) color=#000000ff text="Juice" font=f3 glyphs=5 advance=40
+  text bounds=(320,185,24,32) pos=(328,193,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13.05,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,1494 @@
+{
+  "schema": 1,
+  "runtime": {
+    "osVersion": "26.5",
+    "osBuild": "23F73"
+  },
+  "family": "inline-formatting",
+  "scenarios": [
+    {
+      "identifier": "caret-bold-type",
+      "initial": {
+        "text": "A",
+        "selection": {
+          "location": 1,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "insert-text",
+          "text": "X",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "caret-bold-return-type",
+      "initial": {
+        "text": "A",
+        "selection": {
+          "location": 1,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "insert-text",
+          "text": "\n",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "insert-text",
+          "text": "X",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "caret-combined-traits",
+      "initial": {
+        "text": "A",
+        "selection": {
+          "location": 1,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "underline"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "insert-text",
+          "text": "X",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "caret-move-away",
+      "initial": {
+        "text": "AB",
+        "selection": {
+          "location": 1,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 2,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "single-range-add-remove",
+      "initial": {
+        "text": "AB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "mixed-range-global-add",
+      "initial": {
+        "text": "AB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-04"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "cross-block-bold",
+      "initial": {
+        "text": "A\nB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 3
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "cross-block-underline",
+      "initial": {
+        "text": "A\nB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 3
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "underline"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "replace-selected-formatted-range",
+      "initial": {
+        "text": "ABCD",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 1,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "italic"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "insert-text",
+          "text": "X",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "delete-run-boundary",
+      "initial": {
+        "text": "AB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 1,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        },
+        {
+          "kind": "delete-backward",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-04"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "backspace-block-boundary",
+      "initial": {
+        "text": "A\nB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 2,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 2,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        },
+        {
+          "kind": "delete-backward",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-04"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "undo-range-format",
+      "initial": {
+        "text": "AB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "redo-range-format",
+      "initial": {
+        "text": "AB",
+        "selection": {
+          "location": 0,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 0,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        },
+        {
+          "kind": "redo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-04"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    },
+    {
+      "identifier": "undo-formatted-typing",
+      "initial": {
+        "text": "A",
+        "selection": {
+          "location": 1,
+          "length": 0
+        },
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "spellCheckingType": 1,
+          "smartQuotesType": 1,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "inlinePredictionType": 0,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false
+        }
+      },
+      "transactions": [
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "toggleInlineTrait",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null,
+          "trait": "bold"
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-01"
+        },
+        {
+          "kind": "insert-text",
+          "text": "X",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-02"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "operation-03"
+        }
+      ],
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "typingInlineTraits",
+        "inlineRuns",
+        "canUndo",
+        "canRedo"
+      ],
+      "geometryTolerance": 0,
+      "provenance": {
+        "sourceFixture": "IDInlineFormattingStockOracleTests",
+        "stockEvidence": "UIKitCore iOS 26.5 typing-attribute truth table",
+        "targetRuntime": "iOS 26.5 (23F73), K3"
+      }
+    }
+  ]
+}

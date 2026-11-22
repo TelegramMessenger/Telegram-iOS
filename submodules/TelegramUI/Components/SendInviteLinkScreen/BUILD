@@ -1,0 +1,41 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "SendInviteLinkScreen",
+    module_name = "SendInviteLinkScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ViewControllerComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramPresentationData",
+        "//submodules/AccountContext",
+        "//submodules/AppBundle",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/PresentationDataUtils",
+        "//submodules/Components/ResizableSheetComponent",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/AvatarNode",
+        "//submodules/CheckNode",
+        "//submodules/Markdown",
+        "//submodules/PeerPresenceStatusManager",
+        "//submodules/UndoUI",
+        "//submodules/AnimatedAvatarSetNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessagePaymentAlertController",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

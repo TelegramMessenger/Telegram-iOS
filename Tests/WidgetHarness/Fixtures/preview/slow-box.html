@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body { margin: 0 }
+#box { height: 300px; background: #33aa88 }
+</style>
+</head>
+<body>
+<div id="box"></div>
+<script>
+// WidgetHarnessPreviewTests (v0.2 W3, the fix wave's review): a boot that outlasts the layout pass's 20 ms wait, so its
+// size reaches the preview in a late snapshot.
+let sum = 0;
+for (let step = 0; step < 3000000; step++) { sum = (sum + step) | 0; }
+document.documentElement.dataset.log = String(sum);
+</script>
+</body>
+</html>

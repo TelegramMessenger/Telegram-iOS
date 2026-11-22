@@ -1,0 +1,389 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad fn" id="root">
+  <div class="row between"><b style="font-size: 16px">Conversion funnel</b><span class="seg" id="variants"><span class="on" data-act="variant" data-value="0">A · Control</span><span data-act="variant" data-value="1">B · One-tap</span></span></div>
+  <div class="tiny muted" style="margin: 2px 0 8px 0" id="hint">Variant A · current sign-up form · click a step for details</div>
+  <div class="chips" style="margin-bottom: 6px" id="devices"><span data-act="device" data-value="all" class="on">All devices</span><span data-act="device" data-value="desktop">Desktop</span><span data-act="device" data-value="mobile">Mobile</span></div>
+  <div id="steps"><div>
+    <div class="stp" data-act="step" data-value="0">
+      <div class="fl"><b class="grow">Visited site</b><span class="tiny" style="margin-right: 6px" hidden=""></span><span class="muted">182,400</span></div>
+      <div class="trk"><div class="gh" style="left: 50.00%; width: 0.00%;"></div><div class="fs" style="background-color: #5856d6; width: 100.00%;">100%</div></div>
+    </div>
+    <div class="det" hidden="">
+      <div class="row"><b class="grow"></b><span class="tiny muted"></span><span class="x" data-act="close">×</span></div>
+      <div class="stk"><div style="width: 0%; background-color: #5856d6"></div><div style="width: 0%; background-color: #ff9500"></div><div style="width: 0%; background-color: #30b0c7"></div></div>
+      <div class="rs"><div><i style="background-color: #5856d6"></i><span class="grow">Search</span><b></b></div><div><i style="background-color: #ff9500"></i><span class="grow">Social</span><b></b></div><div><i style="background-color: #30b0c7"></i><span class="grow">Direct</span><b></b></div></div>
+      
+    </div></div><div><div class="drop">▼ 62% drop-off</div>
+    <div class="stp" data-act="step" data-value="1">
+      <div class="fl"><b class="grow">Signed up</b><span class="tiny" style="margin-right: 6px" hidden=""></span><span class="muted">69,312</span></div>
+      <div class="trk"><div class="gh" style="left: 50.00%; width: 0.00%;"></div><div class="fs" style="background-color: #6a5ae0; width: 44.20%;">38%</div></div>
+    </div>
+    <div class="det" hidden="">
+      <div class="row"><b class="grow"></b><span class="tiny muted"></span><span class="x" data-act="close">×</span></div>
+      <div class="stk"><div style="width: 0%; background-color: #ff3b30"></div><div style="width: 0%; background-color: #ff9500"></div><div style="width: 0%; background-color: #8e8e93"></div></div>
+      <div class="rs"><div><i style="background-color: #ff3b30"></i><span class="grow">Bounced on the landing page</span><b></b></div><div><i style="background-color: #ff9500"></i><span class="grow">Left the sign-up form</span><b></b></div><div><i style="background-color: #8e8e93"></i><span class="grow">Chose “maybe later”</span><b></b></div></div>
+      <div class="tiny muted" style="margin-top: 5px"></div>
+    </div></div><div><div class="drop">▼ 45% drop-off</div>
+    <div class="stp" data-act="step" data-value="2">
+      <div class="fl"><b class="grow">Sent first message</b><span class="tiny" style="margin-right: 6px" hidden=""></span><span class="muted">38,301</span></div>
+      <div class="trk"><div class="gh" style="left: 50.00%; width: 0.00%;"></div><div class="fs" style="background-color: #7d5ce8; width: 28.90%;">21%</div></div>
+    </div>
+    <div class="det" hidden="">
+      <div class="row"><b class="grow"></b><span class="tiny muted"></span><span class="x" data-act="close">×</span></div>
+      <div class="stk"><div style="width: 0%; background-color: #ff3b30"></div><div style="width: 0%; background-color: #ff9500"></div><div style="width: 0%; background-color: #8e8e93"></div></div>
+      <div class="rs"><div><i style="background-color: #ff3b30"></i><span class="grow">Never opened the app again</span><b></b></div><div><i style="background-color: #ff9500"></i><span class="grow">No contacts on LiteChat yet</span><b></b></div><div><i style="background-color: #8e8e93"></i><span class="grow">Skipped onboarding</span><b></b></div></div>
+      <div class="tiny muted" style="margin-top: 5px"></div>
+    </div></div><div><div class="drop">▼ 65% drop-off</div>
+    <div class="stp" data-act="step" data-value="3">
+      <div class="fl"><b class="grow">Subscribed</b><span class="tiny" style="margin-right: 6px" hidden=""></span><span class="muted">13,447</span></div>
+      <div class="trk"><div class="gh" style="left: 50.00%; width: 0.00%;"></div><div class="fs" style="background-color: #af52de; width: 16.63%;">7.4%</div></div>
+    </div>
+    <div class="det" hidden="">
+      <div class="row"><b class="grow"></b><span class="tiny muted"></span><span class="x" data-act="close">×</span></div>
+      <div class="stk"><div style="width: 0%; background-color: #ff3b30"></div><div style="width: 0%; background-color: #ff9500"></div><div style="width: 0%; background-color: #8e8e93"></div></div>
+      <div class="rs"><div><i style="background-color: #ff3b30"></i><span class="grow">The free plan is enough</span><b></b></div><div><i style="background-color: #ff9500"></i><span class="grow">Price</span><b></b></div><div><i style="background-color: #8e8e93"></i><span class="grow">Trial ended unnoticed</span><b></b></div></div>
+      <div class="tiny muted" style="margin-top: 5px"></div>
+    </div></div><div><div class="drop">▼ 32% drop-off</div>
+    <div class="stp" data-act="step" data-value="4">
+      <div class="fl"><b class="grow">Still active after 90 days</b><span class="tiny" style="margin-right: 6px" hidden=""></span><span class="muted">9,121</span></div>
+      <div class="trk"><div class="gh" style="left: 50.00%; width: 0.00%;"></div><div class="fs" style="background-color: #ff2d55; width: 14.50%;">5.0%</div></div>
+    </div>
+    <div class="det" hidden="">
+      <div class="row"><b class="grow"></b><span class="tiny muted"></span><span class="x" data-act="close">×</span></div>
+      <div class="stk"><div style="width: 0%; background-color: #ff3b30"></div><div style="width: 0%; background-color: #ff9500"></div><div style="width: 0%; background-color: #8e8e93"></div></div>
+      <div class="rs"><div><i style="background-color: #ff3b30"></i><span class="grow">Cancelled</span><b></b></div><div><i style="background-color: #ff9500"></i><span class="grow">Payment failed</span><b></b></div><div><i style="background-color: #8e8e93"></i><span class="grow">Went inactive</span><b></b></div></div>
+      <div class="tiny muted" style="margin-top: 5px"></div>
+    </div></div></div>
+  <div class="sum"><div class="grow"><div class="caps">Visit → active after 90 days</div><b style="font-size: 22px" id="overall">5.00%</b></div>
+    <div class="right"><span class="badge green" id="lift">B lifts it by 0.9 pp</span><div class="tiny muted" style="margin-top: 3px" id="band">Grey band: variant B</div></div></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 532
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 532
+    div 15 13 330 506
+      div 15 13 330 45.9
+        b 15 15.15 121.802 41.6
+        span 138.802 15 204.198 41.9
+          span 147.802 18 96 14.95
+          span 147.802 38.95 96 14.95
+      div 15 60.9 330 28.6
+      div 15 97.5 330 20.3
+        span 25 100.5 88 14.3
+        span 137 100.5 56 14.3
+        span 217 100.5 48 14.3
+      div 15 123.8 330 313
+        div 15 123.8 330 50.6
+          div 21 127.8 318 42.6
+            div 21 127.8 318 15.6
+              b 21 127.8 262 15.6
+              span 0 0 0 0
+              span 283 127.8 56 15.6
+            div 21 146.4 318 24
+              div 180 146.4 0 24
+              div 21 146.4 318 24
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+        div 15 175.4 330 64.6
+          div 15 175.4 330 13
+          div 21 193.4 318 42.6
+            div 21 193.4 318 15.6
+              b 21 193.4 270 15.6
+              span 0 0 0 0
+              span 291 193.4 48 15.6
+            div 21 212 318 24
+              div 180 212 0 24
+              div 109.722 212 140.556 24
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+            div 0 0 0 0
+        div 15 241 330 64.6
+          div 15 241 330 13
+          div 21 259 318 42.6
+            div 21 259 318 15.6
+              b 21 259 270 15.6
+              span 0 0 0 0
+              span 291 259 48 15.6
+            div 21 277.6 318 24
+              div 180 277.6 0 24
+              div 134.049 277.6 91.902 24
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+            div 0 0 0 0
+        div 15 306.6 330 64.6
+          div 15 306.6 330 13
+          div 21 324.6 318 42.6
+            div 21 324.6 318 15.6
+              b 21 324.6 270 15.6
+              span 0 0 0 0
+              span 291 324.6 48 15.6
+            div 21 343.2 318 24
+              div 180 343.2 0 24
+              div 153.558 343.2 52.8834 24
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+            div 0 0 0 0
+        div 15 372.2 330 64.6
+          div 15 372.2 330 13
+          div 21 390.2 318 42.6
+            div 21 390.2 318 15.6
+              b 21 390.2 278 15.6
+              span 0 0 0 0
+              span 299 390.2 40 15.6
+            div 21 408.8 318 24
+              div 180 408.8 0 24
+              div 156.945 408.8 46.11 24
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+              div 0 0 0 0
+                i 0 0 0 0
+                span 0 0 0 0
+                b 0 0 0 0
+            div 0 0 0 0
+      div 15 456.8 330 62.2
+        div 15 459.3 190.385 57.2
+          div 15 459.3 190.385 28.6
+          b 15 487.9 0 0
+        div 205.385 456.8 139.615 62.2
+          span 241 457.8 104 28.6
+          div 205.385 490.4 139.615 28.6
+
+== paint
+root 360x532 items=122
+  solid-fill bounds=(0,0,360,532) layer=(border=(0,0,360,532),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,532),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,532) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,532) root=0
+  solid-fill bounds=(137,13,208,46) layer=(border=(137,13,208,46),radius=(9,9,9,9,9,9,9,9),clip=(137,13,208,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  borders bounds=(15,447,330,72) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f33),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,447,330,72) root=0
+  text bounds=(7,9,96,32) pos=(15,17,80,16) color=#000000ff text="Conversion" font=f1 glyphs=10 advance=80
+  text bounds=(7,30,64,32) pos=(15,38,48,16) color=#000000ff text="funnel" font=f1 glyphs=6 advance=48
+  solid-fill bounds=(139,15,114,21) layer=(border=(139,15,114,21),radius=(7,7,7,7,7,7,7,7),clip=(139,15,114,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  text bounds=(139.802,10,24,32) pos=(147.802,18,8,16) color=#ffffffff text="A" font=f2 glyphs=1 advance=8
+  text bounds=(155.802,10,32,32) pos=(163.802,18,16,16) color=#ffffffff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(179.802,10,72,32) pos=(187.802,18,56,16) color=#ffffffff text="Control" font=f2 glyphs=7 advance=56
+  text bounds=(139.802,31,24,32) pos=(147.802,39,8,16) color=#000000ff text="B" font=f2 glyphs=1 advance=8
+  text bounds=(155.802,31,32,32) pos=(163.802,39,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(179.802,31,48,32) pos=(187.802,39,32,16) color=#000000ff text="One-" font=f2 glyphs=4 advance=32
+  text bounds=(211.802,31,40,32) pos=(219.802,39,24,16) color=#000000ff text="tap" font=f2 glyphs=3 advance=24
+  text bounds=(7,53,72,32) pos=(15,61,56,16) color=#6e6e73ff text="Variant" font=f3 glyphs=7 advance=56
+  text bounds=(71,53,24,32) pos=(79,61,8,16) color=#6e6e73ff text="A" font=f3 glyphs=1 advance=8
+  text bounds=(87,53,32,32) pos=(95,61,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(111,53,72,32) pos=(119,61,56,16) color=#6e6e73ff text="current" font=f3 glyphs=7 advance=56
+  text bounds=(175,53,56,32) pos=(183,61,40,16) color=#6e6e73ff text="sign-" font=f3 glyphs=5 advance=40
+  text bounds=(215,53,32,32) pos=(223,61,16,16) color=#6e6e73ff text="up" font=f3 glyphs=2 advance=16
+  text bounds=(239,53,48,32) pos=(247,61,32,16) color=#6e6e73ff text="form" font=f3 glyphs=4 advance=32
+  text bounds=(279,53,32,32) pos=(287,61,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(7,67,56,32) pos=(15,75,40,16) color=#6e6e73ff text="click" font=f3 glyphs=5 advance=40
+  text bounds=(55,67,24,32) pos=(63,75,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(71,67,48,32) pos=(79,75,32,16) color=#6e6e73ff text="step" font=f3 glyphs=4 advance=32
+  text bounds=(111,67,40,32) pos=(119,75,24,16) color=#6e6e73ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(143,67,72,32) pos=(151,75,56,16) color=#6e6e73ff text="details" font=f3 glyphs=7 advance=56
+  solid-fill bounds=(15,98,108,20) layer=(border=(15,98,108,20),radius=(10.15,10.15,10.15,10.15,10.15,10.15,10.15,10.15),clip=(15,98,108,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d61a
+  borders bounds=(15,98,108,20) borders=(left=(1,4,#5856d6ff),top=(1,4,#5856d6ff),right=(1,4,#5856d6ff),bottom=(1,4,#5856d6ff),radius=(10,10,10,10,10,10,10,10)) pos=(15,98,108,20) root=0
+  text bounds=(17,93,40,32) pos=(25,101,24,16) color=#5856d6ff text="All" font=f4 glyphs=3 advance=24
+  text bounds=(49,93,72,32) pos=(57,101,56,16) color=#5856d6ff text="devices" font=f4 glyphs=7 advance=56
+  borders bounds=(127,98,76,20) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(10,10,10,10,10,10,10,10)) pos=(127,98,76,20) root=0
+  text bounds=(129,93,72,32) pos=(137,101,56,16) color=#000000ff text="Desktop" font=f4 glyphs=7 advance=56
+  borders bounds=(207,98,68,20) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(10,10,10,10,10,10,10,10)) pos=(207,98,68,20) root=0
+  text bounds=(209,93,64,32) pos=(217,101,48,16) color=#000000ff text="Mobile" font=f4 glyphs=6 advance=48
+  text bounds=(13,120,72,32) pos=(21,128,56,16) color=#000000ff text="Visited" font=f5 glyphs=7 advance=56
+  text bounds=(77,120,48,32) pos=(85,128,32,16) color=#000000ff text="site" font=f5 glyphs=4 advance=32
+  text bounds=(275,120,72,32) pos=(283,128,56,16) color=#6e6e73ff text="182,400" font=f6 glyphs=7 advance=56
+  text bounds=(108,166,40,32) pos=(116,174,24,16) color=#ff3b30ff text="▼" font=f7 glyphs=3 advance=24
+  text bounds=(140,166,40,32) pos=(148,174,24,16) color=#ff3b30ff text="62%" font=f7 glyphs=3 advance=24
+  text bounds=(172,166,56,32) pos=(180,174,40,16) color=#ff3b30ff text="drop-" font=f7 glyphs=5 advance=40
+  text bounds=(212,166,40,32) pos=(220,174,24,16) color=#ff3b30ff text="off" font=f7 glyphs=3 advance=24
+  text bounds=(13,185,64,32) pos=(21,193,48,16) color=#000000ff text="Signed" font=f5 glyphs=6 advance=48
+  text bounds=(69,185,32,32) pos=(77,193,16,16) color=#000000ff text="up" font=f5 glyphs=2 advance=16
+  text bounds=(283,185,64,32) pos=(291,193,48,16) color=#6e6e73ff text="69,312" font=f6 glyphs=6 advance=48
+  text bounds=(108,232,40,32) pos=(116,240,24,16) color=#ff3b30ff text="▼" font=f7 glyphs=3 advance=24
+  text bounds=(140,232,40,32) pos=(148,240,24,16) color=#ff3b30ff text="45%" font=f7 glyphs=3 advance=24
+  text bounds=(172,232,56,32) pos=(180,240,40,16) color=#ff3b30ff text="drop-" font=f7 glyphs=5 advance=40
+  text bounds=(212,232,40,32) pos=(220,240,24,16) color=#ff3b30ff text="off" font=f7 glyphs=3 advance=24
+  text bounds=(13,251,48,32) pos=(21,259,32,16) color=#000000ff text="Sent" font=f5 glyphs=4 advance=32
+  text bounds=(53,251,56,32) pos=(61,259,40,16) color=#000000ff text="first" font=f5 glyphs=5 advance=40
+  text bounds=(101,251,72,32) pos=(109,259,56,16) color=#000000ff text="message" font=f5 glyphs=7 advance=56
+  text bounds=(283,251,64,32) pos=(291,259,48,16) color=#6e6e73ff text="38,301" font=f6 glyphs=6 advance=48
+  text bounds=(108,298,40,32) pos=(116,306,24,16) color=#ff3b30ff text="▼" font=f7 glyphs=3 advance=24
+  text bounds=(140,298,40,32) pos=(148,306,24,16) color=#ff3b30ff text="65%" font=f7 glyphs=3 advance=24
+  text bounds=(172,298,56,32) pos=(180,306,40,16) color=#ff3b30ff text="drop-" font=f7 glyphs=5 advance=40
+  text bounds=(212,298,40,32) pos=(220,306,24,16) color=#ff3b30ff text="off" font=f7 glyphs=3 advance=24
+  text bounds=(13,317,96,32) pos=(21,325,80,16) color=#000000ff text="Subscribed" font=f5 glyphs=10 advance=80
+  text bounds=(283,317,64,32) pos=(291,325,48,16) color=#6e6e73ff text="13,447" font=f6 glyphs=6 advance=48
+  text bounds=(108,363,40,32) pos=(116,371,24,16) color=#ff3b30ff text="▼" font=f7 glyphs=3 advance=24
+  text bounds=(140,363,40,32) pos=(148,371,24,16) color=#ff3b30ff text="32%" font=f7 glyphs=3 advance=24
+  text bounds=(172,363,56,32) pos=(180,371,40,16) color=#ff3b30ff text="drop-" font=f7 glyphs=5 advance=40
+  text bounds=(212,363,40,32) pos=(220,371,24,16) color=#ff3b30ff text="off" font=f7 glyphs=3 advance=24
+  text bounds=(13,382,56,32) pos=(21,390,40,16) color=#000000ff text="Still" font=f5 glyphs=5 advance=40
+  text bounds=(61,382,64,32) pos=(69,390,48,16) color=#000000ff text="active" font=f5 glyphs=6 advance=48
+  text bounds=(117,382,56,32) pos=(125,390,40,16) color=#000000ff text="after" font=f5 glyphs=5 advance=40
+  text bounds=(165,382,32,32) pos=(173,390,16,16) color=#000000ff text="90" font=f5 glyphs=2 advance=16
+  text bounds=(189,382,48,32) pos=(197,390,32,16) color=#000000ff text="days" font=f5 glyphs=4 advance=32
+  text bounds=(291,382,56,32) pos=(299,390,40,16) color=#6e6e73ff text="9,121" font=f6 glyphs=5 advance=40
+  text bounds=(7,451,56,32) pos=(15,459,40,16) color=#6e6e73ff text="VISIT" font=f4 glyphs=5 advance=40
+  text bounds=(55,451,40,32) pos=(63,459,24,16) color=#6e6e73ff text="→" font=f4 glyphs=3 advance=24
+  text bounds=(87,451,64,32) pos=(95,459,48,16) color=#6e6e73ff text="ACTIVE" font=f4 glyphs=6 advance=48
+  text bounds=(143,451,56,32) pos=(151,459,40,16) color=#6e6e73ff text="AFTER" font=f4 glyphs=5 advance=40
+  text bounds=(7,466,32,32) pos=(15,474,16,16) color=#6e6e73ff text="90" font=f4 glyphs=2 advance=16
+  text bounds=(31,466,48,32) pos=(39,474,32,16) color=#6e6e73ff text="DAYS" font=f4 glyphs=4 advance=32
+  text bounds=(7,486,56,32) pos=(15,494,40,16) color=#000000ff text="5.00%" font=f8 glyphs=5 advance=40
+  solid-fill bounds=(233,457,120,30) layer=(border=(233,457,120,30),radius=(9,9,9,9,9,9,9,9),clip=(233,457,120,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(233,450,24,32) pos=(241,458,8,16) color=#34c759ff text="B" font=f4 glyphs=1 advance=8
+  text bounds=(249,450,56,32) pos=(257,458,40,16) color=#34c759ff text="lifts" font=f4 glyphs=5 advance=40
+  text bounds=(297,450,32,32) pos=(305,458,16,16) color=#34c759ff text="it" font=f4 glyphs=2 advance=16
+  text bounds=(321,450,32,32) pos=(329,458,16,16) color=#34c759ff text="by" font=f4 glyphs=2 advance=16
+  text bounds=(289,464,40,32) pos=(297,472,24,16) color=#34c759ff text="0.9" font=f4 glyphs=3 advance=24
+  text bounds=(321,464,32,32) pos=(329,472,16,16) color=#34c759ff text="pp" font=f4 glyphs=2 advance=16
+  text bounds=(257,482,48,32) pos=(265,490,32,16) color=#6e6e73ff text="Grey" font=f3 glyphs=4 advance=32
+  text bounds=(297,482,56,32) pos=(305,490,40,16) color=#6e6e73ff text="band:" font=f3 glyphs=5 advance=40
+  text bounds=(265,497,72,32) pos=(273,505,56,16) color=#6e6e73ff text="variant" font=f3 glyphs=7 advance=56
+  text bounds=(329,497,24,32) pos=(337,505,8,16) color=#6e6e73ff text="B" font=f3 glyphs=1 advance=8
+  set-clip bounds=(21,146.4,318,24) pos=(21,146.4,318,24) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(180,146,0,24) layer=(border=(180,146,0,24),radius=(0,0,0,0,0,0,0,0),clip=(180,146,0,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(21,146,318,24) layer=(border=(21,146,318,24),radius=(7,7,7,7,7,7,7,7),clip=(21,146,318,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  set-clip bounds=(21,146.4,318,24) pos=(21,146.4,318,24) radius=(7,7,7,7,7,7,7,7)
+  text bounds=(156,142,48,32) pos=(164,150,32,16) color=#ffffffff text="100%" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(21,212,318,24) pos=(21,212,318,24) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(180,212,0,24) layer=(border=(180,212,0,24),radius=(0,0,0,0,0,0,0,0),clip=(180,212,0,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(110,212,140,24) layer=(border=(110,212,140,24),radius=(7,7,7,7,7,7,7,7),clip=(110,212,140,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6a5ae0ff
+  set-clip bounds=(109.722,212,140.556,24) pos=(109.722,212,140.556,24) radius=(7,7,7,7,7,7,7,7)
+  text bounds=(160,208,40,32) pos=(168,216,24,16) color=#ffffffff text="38%" font=f2 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(21,277.6,318,24) pos=(21,277.6,318,24) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(180,278,0,24) layer=(border=(180,278,0,24),radius=(0,0,0,0,0,0,0,0),clip=(180,278,0,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(134,278,92,24) layer=(border=(134,278,92,24),radius=(7,7,7,7,7,7,7,7),clip=(134,278,92,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7d5ce8ff
+  set-clip bounds=(134.049,277.6,91.902,24) pos=(134.049,277.6,91.902,24) radius=(7,7,7,7,7,7,7,7)
+  text bounds=(160,274,40,32) pos=(168,282,24,16) color=#ffffffff text="21%" font=f2 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(21,343.2,318,24) pos=(21,343.2,318,24) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(180,343,0,24) layer=(border=(180,343,0,24),radius=(0,0,0,0,0,0,0,0),clip=(180,343,0,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(154,343,52,24) layer=(border=(154,343,52,24),radius=(7,7,7,7,7,7,7,7),clip=(154,343,52,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  set-clip bounds=(153.558,343.2,52.8834,24) pos=(153.558,343.2,52.8834,24) radius=(7,7,7,7,7,7,7,7)
+  text bounds=(156,339,48,32) pos=(164,347,32,16) color=#ffffffff text="7.4%" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(21,408.8,318,24) pos=(21,408.8,318,24) radius=(7,7,7,7,7,7,7,7)
+  solid-fill bounds=(180,409,0,24) layer=(border=(180,409,0,24),radius=(0,0,0,0,0,0,0,0),clip=(180,409,0,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f38
+  solid-fill bounds=(157,409,46,24) layer=(border=(157,409,46,24),radius=(7,7,7,7,7,7,7,7),clip=(157,409,46,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  set-clip bounds=(156.945,408.8,46.11,24) pos=(156.945,408.8,46.11,24) radius=(7,7,7,7,7,7,7,7)
+  text bounds=(156,405,48,32) pos=(164,413,32,16) color=#ffffffff text="5.0%" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11.5,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

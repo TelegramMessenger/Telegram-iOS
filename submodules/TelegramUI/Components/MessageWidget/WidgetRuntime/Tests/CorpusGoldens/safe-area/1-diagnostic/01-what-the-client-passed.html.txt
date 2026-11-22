@@ -1,0 +1,136 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>What the client passed</title>
+<style></style>
+</head><body><div class="an"><b>What your client passed.</b> With no caption below, your time must sit in the red box over the striped band, and cover nothing else. With a caption below: all 0, no band.</div>
+<table id="t"><tbody><tr><td>top</td><td class="z">0 px</td></tr><tr><td>right</td><td class="z">0 px</td></tr><tr><td>bottom</td><td class="z">0 px</td></tr><tr><td>left</td><td class="z">0 px</td></tr><tr><td>cornerLeft</td><td class="z">0 px</td></tr><tr><td>cornerRight</td><td class="z">0 px</td></tr></tbody></table>
+<div class="ft" id="ft">No band: the time is in the caption below · changes: 0</div>
+<div class="band"></div><div class="c r"></div><div class="c l"></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 305.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 12 332 281.4
+    div 24 18 312 84
+      b 24 18 0 0
+    table 14 118 332.016 135
+      tbody 0 0 0 0
+        tr 0 0 0 0
+          td 14 119 243.469 19.5
+          td 257.469 119 88.5469 19.5
+        tr 0 0 0 0
+          td 14 141.5 243.469 19.5
+          td 257.469 141.5 88.5469 19.5
+        tr 0 0 0 0
+          td 14 164 243.469 19.5
+          td 257.469 164 88.5469 19.5
+        tr 0 0 0 0
+          td 14 186.5 243.469 19.5
+          td 257.469 186.5 88.5469 19.5
+        tr 0 0 0 0
+          td 14 209 243.469 19.5
+          td 257.469 209 88.5469 19.5
+        tr 0 0 0 0
+          td 14 231.5 243.469 19.5
+          td 257.469 231.5 88.5469 19.5
+    div 14 261 332 32.4
+    div 0 0 360 0
+    div 360 0 0 0
+    div 0 0 0 0
+
+== paint
+root 360x305.4 items=83
+  solid-fill bounds=(14,12,332,96) layer=(border=(14,12,332,96),radius=(8,8,8,8,8,8,8,8),clip=(14,12,332,96),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(14,118,243,23) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,118,243,23) root=0
+  borders bounds=(257,118,89,23) borders=(left=(0,0,#707579ff),top=(0,0,#707579ff),right=(0,0,#707579ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(257,118,89,23) root=0
+  borders bounds=(14,141,243,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,141,243,22) root=0
+  borders bounds=(257,141,89,22) borders=(left=(0,0,#707579ff),top=(0,0,#707579ff),right=(0,0,#707579ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(257,141,89,22) root=0
+  borders bounds=(14,163,243,23) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,163,243,23) root=0
+  borders bounds=(257,163,89,23) borders=(left=(0,0,#707579ff),top=(0,0,#707579ff),right=(0,0,#707579ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(257,163,89,23) root=0
+  borders bounds=(14,186,243,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,186,243,22) root=0
+  borders bounds=(257,186,89,22) borders=(left=(0,0,#707579ff),top=(0,0,#707579ff),right=(0,0,#707579ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(257,186,89,22) root=0
+  borders bounds=(14,208,243,23) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,208,243,23) root=0
+  borders bounds=(257,208,89,23) borders=(left=(0,0,#707579ff),top=(0,0,#707579ff),right=(0,0,#707579ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(257,208,89,23) root=0
+  borders bounds=(14,231,243,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,231,243,22) root=0
+  borders bounds=(257,231,89,22) borders=(left=(0,0,#707579ff),top=(0,0,#707579ff),right=(0,0,#707579ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(257,231,89,22) root=0
+  text bounds=(16,10,48,32) pos=(24,18,32,16) color=#000000ff text="What" font=f1 glyphs=4 advance=32
+  text bounds=(56,10,48,32) pos=(64,18,32,16) color=#000000ff text="your" font=f1 glyphs=4 advance=32
+  text bounds=(96,10,64,32) pos=(104,18,48,16) color=#000000ff text="client" font=f1 glyphs=6 advance=48
+  text bounds=(152,10,72,32) pos=(160,18,56,16) color=#000000ff text="passed." font=f1 glyphs=7 advance=56
+  text bounds=(216,10,48,32) pos=(224,18,32,16) color=#707579ff text="With" font=f2 glyphs=4 advance=32
+  text bounds=(256,10,32,32) pos=(264,18,16,16) color=#707579ff text="no" font=f2 glyphs=2 advance=16
+  text bounds=(16,27,72,32) pos=(24,35,56,16) color=#707579ff text="caption" font=f2 glyphs=7 advance=56
+  text bounds=(80,27,64,32) pos=(88,35,48,16) color=#707579ff text="below," font=f2 glyphs=6 advance=48
+  text bounds=(136,27,48,32) pos=(144,35,32,16) color=#707579ff text="your" font=f2 glyphs=4 advance=32
+  text bounds=(176,27,48,32) pos=(184,35,32,16) color=#707579ff text="time" font=f2 glyphs=4 advance=32
+  text bounds=(216,27,48,32) pos=(224,35,32,16) color=#707579ff text="must" font=f2 glyphs=4 advance=32
+  text bounds=(256,27,40,32) pos=(264,35,24,16) color=#707579ff text="sit" font=f2 glyphs=3 advance=24
+  text bounds=(288,27,32,32) pos=(296,35,16,16) color=#707579ff text="in" font=f2 glyphs=2 advance=16
+  text bounds=(16,44,40,32) pos=(24,52,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(48,44,40,32) pos=(56,52,24,16) color=#707579ff text="red" font=f2 glyphs=3 advance=24
+  text bounds=(80,44,40,32) pos=(88,52,24,16) color=#707579ff text="box" font=f2 glyphs=3 advance=24
+  text bounds=(112,44,48,32) pos=(120,52,32,16) color=#707579ff text="over" font=f2 glyphs=4 advance=32
+  text bounds=(152,44,40,32) pos=(160,52,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(184,44,72,32) pos=(192,52,56,16) color=#707579ff text="striped" font=f2 glyphs=7 advance=56
+  text bounds=(248,44,56,32) pos=(256,52,40,16) color=#707579ff text="band," font=f2 glyphs=5 advance=40
+  text bounds=(296,44,40,32) pos=(304,52,24,16) color=#707579ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(16,60,56,32) pos=(24,68,40,16) color=#707579ff text="cover" font=f2 glyphs=5 advance=40
+  text bounds=(64,60,72,32) pos=(72,68,56,16) color=#707579ff text="nothing" font=f2 glyphs=7 advance=56
+  text bounds=(128,60,56,32) pos=(136,68,40,16) color=#707579ff text="else." font=f2 glyphs=5 advance=40
+  text bounds=(176,60,48,32) pos=(184,68,32,16) color=#707579ff text="With" font=f2 glyphs=4 advance=32
+  text bounds=(216,60,24,32) pos=(224,68,8,16) color=#707579ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(232,60,72,32) pos=(240,68,56,16) color=#707579ff text="caption" font=f2 glyphs=7 advance=56
+  text bounds=(16,77,64,32) pos=(24,85,48,16) color=#707579ff text="below:" font=f2 glyphs=6 advance=48
+  text bounds=(72,77,40,32) pos=(80,85,24,16) color=#707579ff text="all" font=f2 glyphs=3 advance=24
+  text bounds=(104,77,32,32) pos=(112,85,16,16) color=#707579ff text="0," font=f2 glyphs=2 advance=16
+  text bounds=(128,77,32,32) pos=(136,85,16,16) color=#707579ff text="no" font=f2 glyphs=2 advance=16
+  text bounds=(152,77,56,32) pos=(160,85,40,16) color=#707579ff text="band." font=f2 glyphs=5 advance=40
+  text bounds=(6,112,40,32) pos=(14,120,24,16) color=#000000ff text="top" font=f3 glyphs=3 advance=24
+  text bounds=(306.016,112,24,32) pos=(314.016,120,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(322.016,112,32,32) pos=(330.016,120,16,16) color=#707579ff text="px" font=f3 glyphs=2 advance=16
+  text bounds=(6,135,56,32) pos=(14,143,40,16) color=#000000ff text="right" font=f3 glyphs=5 advance=40
+  text bounds=(306.016,135,24,32) pos=(314.016,143,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(322.016,135,32,32) pos=(330.016,143,16,16) color=#707579ff text="px" font=f3 glyphs=2 advance=16
+  text bounds=(6,157,64,32) pos=(14,165,48,16) color=#000000ff text="bottom" font=f3 glyphs=6 advance=48
+  text bounds=(306.016,157,24,32) pos=(314.016,165,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(322.016,157,32,32) pos=(330.016,165,16,16) color=#707579ff text="px" font=f3 glyphs=2 advance=16
+  text bounds=(6,180,48,32) pos=(14,188,32,16) color=#000000ff text="left" font=f3 glyphs=4 advance=32
+  text bounds=(306.016,180,24,32) pos=(314.016,188,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(322.016,180,32,32) pos=(330.016,188,16,16) color=#707579ff text="px" font=f3 glyphs=2 advance=16
+  text bounds=(6,202,96,32) pos=(14,210,80,16) color=#000000ff text="cornerLeft" font=f3 glyphs=10 advance=80
+  text bounds=(306.016,202,24,32) pos=(314.016,210,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(322.016,202,32,32) pos=(330.016,210,16,16) color=#707579ff text="px" font=f3 glyphs=2 advance=16
+  text bounds=(6,225,104,32) pos=(14,233,88,16) color=#000000ff text="cornerRight" font=f3 glyphs=11 advance=88
+  text bounds=(306.016,225,24,32) pos=(314.016,233,8,16) color=#707579ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(322.016,225,32,32) pos=(330.016,233,16,16) color=#707579ff text="px" font=f3 glyphs=2 advance=16
+  text bounds=(6,253,32,32) pos=(14,261,16,16) color=#707579ff text="No" font=f2 glyphs=2 advance=16
+  text bounds=(30,253,56,32) pos=(38,261,40,16) color=#707579ff text="band:" font=f2 glyphs=5 advance=40
+  text bounds=(78,253,40,32) pos=(86,261,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(110,253,48,32) pos=(118,261,32,16) color=#707579ff text="time" font=f2 glyphs=4 advance=32
+  text bounds=(150,253,32,32) pos=(158,261,16,16) color=#707579ff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(174,253,32,32) pos=(182,261,16,16) color=#707579ff text="in" font=f2 glyphs=2 advance=16
+  text bounds=(198,253,40,32) pos=(206,261,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(230,253,72,32) pos=(238,261,56,16) color=#707579ff text="caption" font=f2 glyphs=7 advance=56
+  text bounds=(294,253,56,32) pos=(302,261,40,16) color=#707579ff text="below" font=f2 glyphs=5 advance=40
+  text bounds=(6,269,32,32) pos=(14,277,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(30,269,80,32) pos=(38,277,64,16) color=#707579ff text="changes:" font=f2 glyphs=8 advance=64
+  text bounds=(102,269,24,32) pos=(110,277,8,16) color=#707579ff text="0" font=f2 glyphs=1 advance=8
+  suspend-clips bounds=(0,0,0,0)
+  resume-clips bounds=(0,0,0,0)
+  suspend-clips bounds=(0,0,0,0)
+  box-shadow bounds=(360,0,0,0) box=(360,0,0,0) radius=(0,0,0,0,0,0,0,0) shadow=(0,0,0,2,#e53935ff,1)
+  resume-clips bounds=(0,0,0,0)
+  suspend-clips bounds=(0,0,0,0)
+  box-shadow bounds=(0,0,0,0) box=(0,0,0,0) radius=(0,0,0,0,0,0,0,0) shadow=(0,0,0,2,#e53935ff,1)
+  resume-clips bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

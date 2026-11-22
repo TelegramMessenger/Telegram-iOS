@@ -7,12 +7,12 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import "ASDisplayNode+Convenience.h"
+#import <AsyncDisplayKit/ASDisplayNode+Convenience.h>
 
 #import <UIKit/UIViewController.h>
 
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import <AsyncDisplayKit/ASResponderChainEnumerator.h>
+#import "ASResponderChainEnumerator.h"
 
 @implementation ASDisplayNode (Convenience)
 

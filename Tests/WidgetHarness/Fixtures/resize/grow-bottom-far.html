@@ -1,0 +1,13 @@
+<!-- Resize anchor (widget-sandbox v0.1.3): 'bottom', set at the start. Its first click grows it by 480 px, once: more than
+     the room below the newest post when a post above it is pinned to the screen's top. -->
+<style>
+  body { margin: 0; }
+  #box { height: 100px; background: #8cf; }
+  #more { display: none; height: 480px; background: #fc8; }
+</style>
+<div id="more"></div>
+<div id="box">grows far, bottom stays</div>
+<script>
+  TelegramWidget.setResizeAnchor('bottom');
+  document.addEventListener('click', () => { document.getElementById('more').style.display = 'block'; }, { once: true });
+</script>

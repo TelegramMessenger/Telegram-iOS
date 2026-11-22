@@ -1,0 +1,58 @@
+/*
+ * Copyright © 2023 Rémi Denis-Courmont.
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with FFmpeg; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+#include "config.h"
+
+#include "libavutil/attributes.h"
+#include "libavutil/cpu.h"
+#include "libavcodec/lossless_videoencdsp.h"
+
+#include "libavcodec/mathops.h"
+#include <sys/param.h>
+
+void ff_llvidenc_sub_median_pred_rvb(uint8_t *dst, const uint8_t *src1,
+                                     const uint8_t *src2, intptr_t w,
+                                     int *left, int *left_top);
+void ff_llvidenc_diff_bytes_rvv(uint8_t *dst, const uint8_t *src1,
+                                const uint8_t *src2, intptr_t w);
+void ff_llvidenc_sub_median_pred_rvv(uint8_t *dst, const uint8_t *src1,
+                                     const uint8_t *src2, intptr_t width,
+                                     int *left, int *left_top);
+void ff_llvidenc_sub_left_predict_rvv(uint8_t *dst, const uint8_t *src,
+                                      ptrdiff_t stride, ptrdiff_t width,
+                                      int height);
+
+av_cold void ff_llvidencdsp_init_riscv(LLVidEncDSPContext *c)
+{
+#if HAVE_RV
+    int flags = av_get_cpu_flags();
+
+    if (flags & AV_CPU_FLAG_RVB_BASIC)
+        c->sub_median_pred = ff_llvidenc_sub_median_pred_rvb;
+
+#if HAVE_RVV
+    if (flags & AV_CPU_FLAG_RVV_I32) {
+        c->diff_bytes = ff_llvidenc_diff_bytes_rvv;
+        c->sub_median_pred = ff_llvidenc_sub_median_pred_rvv;
+        c->sub_left_predict = ff_llvidenc_sub_left_predict_rvv;
+    }
+#endif
+#endif
+}

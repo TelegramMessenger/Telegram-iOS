@@ -1,0 +1,13 @@
+<!-- Resize anchor (widget-sandbox v0.1.3): 'top', set at the start. It grows by 120 px 2.5 s after it loads, once,
+     with nobody touching it (off screen, or beside another widget growing). -->
+<style>
+  body { margin: 0; }
+  #box { height: 100px; background: #c8f; }
+  #more { display: none; height: 120px; background: #fc8; }
+</style>
+<div id="box">grows by itself, top stays</div>
+<div id="more"></div>
+<script>
+  TelegramWidget.setResizeAnchor('top');
+  setTimeout(() => { document.getElementById('more').style.display = 'block'; }, 2500);
+</script>

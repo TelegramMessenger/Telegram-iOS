@@ -1,0 +1,109 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>סוף שבוע בליסבון</title>
+<style></style>
+</head><body><div class="card" dir="rtl" lang="he">
+  <div class="an" dir="ltr"><b>A right-to-left widget.</b> In a left-to-right client the time is on its right (its start), in a right-to-left one on its left: the row keeps out of either.</div>
+  <div class="k">טאפ אייר · 3 לילות</div>
+  <h1>סוף שבוע בליסבון</h1>
+  <div class="d">14–17 בנובמבר · מלון באלפמה · ארוחת בוקר</div>
+  <div class="p">₪1,690 <small>לאדם</small></div>
+  <div class="row"><button id="b">להזמין</button><span class="s" id="st">נשארו 2 מקומות</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 297.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 297.8
+    div 16 16 328 281.8
+      div 26 22 308 67.2
+        b 26 22 0 0
+      div 16 107.2 328 16.2
+      h1 16 127.4 328 26.4
+      div 16 155.8 328 37.8
+      div 16 207.6 328 37.8
+        small 16 207.6 0 0
+      div 16 259.4 328 32.4
+        button 32 267.2 96 16.8
+        span 152 259.4 192 32.4
+
+== paint
+root 360x297.8 items=59
+  linear-gradient bounds=(0,0,360,298) layer=(border=(0,0,360,298),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,298),origin=(0,0,360,298),attachment=0,repeat=0,root=0) points=((0,#3390ecff,-),(1,#3390ecff,-)) space=0 hue=0 start=(248.944,-40.4212) end=(111.056,338.421)
+  solid-fill bounds=(16,16,328,79) layer=(border=(16,16,328,79),radius=(8,8,8,8,8,8,8,8),clip=(16,16,328,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.8 matrix=(1,0,0,1,0,0) backface=0 bounds=(14,97.2,340,36) exact=1
+    text bounds=(288,99,64,32) pos=(296,107,48,16) color=#ffffffff text="טאפ" font=f1 glyphs=6 advance=48
+    text bounds=(216,99,80,32) pos=(224,107,64,16) color=#ffffffff text="אייר" font=f1 glyphs=8 advance=64
+    text bounds=(192,99,32,32) pos=(200,107,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+    text bounds=(176,99,24,32) pos=(184,107,8,16) color=#ffffffff text="3" font=f1 glyphs=1 advance=8
+    text bounds=(88,99,96,32) pos=(96,107,80,16) color=#ffffffff text="לילות" font=f1 glyphs=10 advance=80
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(14,145.8,340,55.9) exact=1
+    text bounds=(280,149,72,32) pos=(288,157,56,16) color=#ffffffff text="14–17" font=f2 glyphs=7 advance=56
+    text bounds=(160,149,128,32) pos=(168,157,112,16) color=#ffffffff text="בנובמבר" font=f2 glyphs=14 advance=112
+    text bounds=(136,149,32,32) pos=(144,157,16,16) color=#ffffffff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(64,149,80,32) pos=(72,157,64,16) color=#ffffffff text="מלון" font=f2 glyphs=8 advance=64
+    text bounds=(240,168,112,32) pos=(248,176,96,16) color=#ffffffff text="באלפמה" font=f2 glyphs=12 advance=96
+    text bounds=(216,168,32,32) pos=(224,176,16,16) color=#ffffffff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(128,168,96,32) pos=(136,176,80,16) color=#ffffffff text="ארוחת" font=f2 glyphs=10 advance=80
+    text bounds=(56,168,80,32) pos=(64,176,64,16) color=#ffffffff text="בוקר" font=f2 glyphs=8 advance=64
+  solid-fill bounds=(16,260,128,31) layer=(border=(16,260,128,31),radius=(8,8,8,8,8,8,8,8),clip=(16,260,128,31),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(142,249.4,204,52.2) exact=1
+    text bounds=(160,251,96,32) pos=(168,259,80,16) color=#ffffffff text="נשארו" font=f1 glyphs=10 advance=80
+    text bounds=(144,251,24,32) pos=(152,259,8,16) color=#ffffffff text="2" font=f1 glyphs=1 advance=8
+    text bounds=(144,268,112,32) pos=(152,276,96,16) color=#ffffffff text="מקומות" font=f1 glyphs=12 advance=96
+  text bounds=(18,14,24,32) pos=(26,22,8,16) color=#000000ff text="A" font=f3 glyphs=1 advance=8
+  text bounds=(34,14,64,32) pos=(42,22,48,16) color=#000000ff text="right-" font=f3 glyphs=6 advance=48
+  text bounds=(82,14,40,32) pos=(90,22,24,16) color=#000000ff text="to-" font=f3 glyphs=3 advance=24
+  text bounds=(106,14,48,32) pos=(114,22,32,16) color=#000000ff text="left" font=f3 glyphs=4 advance=32
+  text bounds=(146,14,72,32) pos=(154,22,56,16) color=#000000ff text="widget." font=f3 glyphs=7 advance=56
+  text bounds=(210,14,32,32) pos=(218,22,16,16) color=#707579ff text="In" font=f1 glyphs=2 advance=16
+  text bounds=(234,14,24,32) pos=(242,22,8,16) color=#707579ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(250,14,56,32) pos=(258,22,40,16) color=#707579ff text="left-" font=f1 glyphs=5 advance=40
+  text bounds=(290,14,40,32) pos=(298,22,24,16) color=#707579ff text="to-" font=f1 glyphs=3 advance=24
+  text bounds=(18,31,56,32) pos=(26,39,40,16) color=#707579ff text="right" font=f1 glyphs=5 advance=40
+  text bounds=(66,31,64,32) pos=(74,39,48,16) color=#707579ff text="client" font=f1 glyphs=6 advance=48
+  text bounds=(122,31,40,32) pos=(130,39,24,16) color=#707579ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(154,31,48,32) pos=(162,39,32,16) color=#707579ff text="time" font=f1 glyphs=4 advance=32
+  text bounds=(194,31,32,32) pos=(202,39,16,16) color=#707579ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(218,31,32,32) pos=(226,39,16,16) color=#707579ff text="on" font=f1 glyphs=2 advance=16
+  text bounds=(242,31,40,32) pos=(250,39,24,16) color=#707579ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(274,31,56,32) pos=(282,39,40,16) color=#707579ff text="right" font=f1 glyphs=5 advance=40
+  text bounds=(18,48,48,32) pos=(26,56,32,16) color=#707579ff text="(its" font=f1 glyphs=4 advance=32
+  text bounds=(58,48,72,32) pos=(66,56,56,16) color=#707579ff text="start)," font=f1 glyphs=7 advance=56
+  text bounds=(122,48,32,32) pos=(130,56,16,16) color=#707579ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(146,48,24,32) pos=(154,56,8,16) color=#707579ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(162,48,64,32) pos=(170,56,48,16) color=#707579ff text="right-" font=f1 glyphs=6 advance=48
+  text bounds=(210,48,40,32) pos=(218,56,24,16) color=#707579ff text="to-" font=f1 glyphs=3 advance=24
+  text bounds=(234,48,48,32) pos=(242,56,32,16) color=#707579ff text="left" font=f1 glyphs=4 advance=32
+  text bounds=(274,48,40,32) pos=(282,56,24,16) color=#707579ff text="one" font=f1 glyphs=3 advance=24
+  text bounds=(306,48,32,32) pos=(314,56,16,16) color=#707579ff text="on" font=f1 glyphs=2 advance=16
+  text bounds=(18,64,40,32) pos=(26,72,24,16) color=#707579ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(50,64,56,32) pos=(58,72,40,16) color=#707579ff text="left:" font=f1 glyphs=5 advance=40
+  text bounds=(98,64,40,32) pos=(106,72,24,16) color=#707579ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(130,64,40,32) pos=(138,72,24,16) color=#707579ff text="row" font=f1 glyphs=3 advance=24
+  text bounds=(162,64,56,32) pos=(170,72,40,16) color=#707579ff text="keeps" font=f1 glyphs=5 advance=40
+  text bounds=(210,64,40,32) pos=(218,72,24,16) color=#707579ff text="out" font=f1 glyphs=3 advance=24
+  text bounds=(242,64,32,32) pos=(250,72,16,16) color=#707579ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(266,64,72,32) pos=(274,72,56,16) color=#707579ff text="either." font=f1 glyphs=7 advance=56
+  text bounds=(288,124,64,32) pos=(296,132,48,16) color=#ffffffff text="סוף" font=f4 glyphs=6 advance=48
+  text bounds=(216,124,80,32) pos=(224,132,64,16) color=#ffffffff text="שבוע" font=f4 glyphs=8 advance=64
+  text bounds=(96,124,128,32) pos=(104,132,112,16) color=#ffffffff text="בליסבון" font=f4 glyphs=14 advance=112
+  text bounds=(272,210,80,32) pos=(280,218,64,16) color=#ffffffff text="₪1,690" font=f5 glyphs=8 advance=64
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(14,205.6,268,38) exact=1
+    text bounds=(200,210,80,32) pos=(208,218,64,16) color=#ffffffff text="לאדם" font=f6 glyphs=8 advance=64
+  text bounds=(24,259,112,32) pos=(32,267,96,16) color=#000000ff text="להזמין" font=f7 glyphs=12 advance=96
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=28,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

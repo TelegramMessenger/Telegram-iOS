@@ -1,0 +1,44 @@
+stop -
+drive idle
+diagnostic script-skipped external script not available: https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<style></style>
+</head><body>
+<canvas id="c" style="display: none;"></canvas>
+<div id="fallback" style="display: block;">3D preview isn't available here. (WebGL / Three.js not supported in this runtime.)</div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 124.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 100.75
+    canvas 12 12 0 0
+    div 32 32 296 60.75
+
+== paint
+root 360x124.75 items=15
+  solid-fill bounds=(0,0,360,125) layer=(border=(0,0,360,125),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,125),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(12,12,336,101) layer=(border=(12,12,336,101),radius=(8,8,8,8,8,8,8,8),clip=(12,12,336,101),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fef3c7ff
+  text bounds=(24,26,32,32) pos=(32,34,16,16) color=#92400eff text="3D" font=f1 glyphs=2 advance=16
+  text bounds=(48,26,72,32) pos=(56,34,56,16) color=#92400eff text="preview" font=f1 glyphs=7 advance=56
+  text bounds=(112,26,56,32) pos=(120,34,40,16) color=#92400eff text="isn't" font=f1 glyphs=5 advance=40
+  text bounds=(160,26,88,32) pos=(168,34,72,16) color=#92400eff text="available" font=f1 glyphs=9 advance=72
+  text bounds=(240,26,56,32) pos=(248,34,40,16) color=#92400eff text="here." font=f1 glyphs=5 advance=40
+  text bounds=(24,46,64,32) pos=(32,54,48,16) color=#92400eff text="(WebGL" font=f1 glyphs=6 advance=48
+  text bounds=(80,46,24,32) pos=(88,54,8,16) color=#92400eff text="/" font=f1 glyphs=1 advance=8
+  text bounds=(96,46,80,32) pos=(104,54,64,16) color=#92400eff text="Three.js" font=f1 glyphs=8 advance=64
+  text bounds=(168,46,40,32) pos=(176,54,24,16) color=#92400eff text="not" font=f1 glyphs=3 advance=24
+  text bounds=(200,46,88,32) pos=(208,54,72,16) color=#92400eff text="supported" font=f1 glyphs=9 advance=72
+  text bounds=(280,46,32,32) pos=(288,54,16,16) color=#92400eff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(24,67,48,32) pos=(32,75,32,16) color=#92400eff text="this" font=f1 glyphs=4 advance=32
+  text bounds=(64,67,88,32) pos=(72,75,72,16) color=#92400eff text="runtime.)" font=f1 glyphs=9 advance=72
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

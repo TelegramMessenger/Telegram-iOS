@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body { margin: 0 }
+#ask { display: block; width: 200px; height: 50px; background: #cccccc }
+</style>
+</head>
+<body>
+<div id="ask">ask</div>
+<script>
+// WidgetHarnessNetworkTests (v0.2 W2 plan, Task 2): a tap on #ask asks the bot 'ping'; <html data-log> is ok:<result>
+// when it answers ({ result }, sdk-v1 §2.14), err:<code> when it does not.
+document.getElementById('ask').onclick = () => TelegramWidget.request('ping').then(
+  answer => { document.documentElement.dataset.log = 'ok:' + answer.result; },
+  error => { document.documentElement.dataset.log = 'err:' + error.code; });
+</script>
+</body>
+</html>

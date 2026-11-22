@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "down_arrow.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

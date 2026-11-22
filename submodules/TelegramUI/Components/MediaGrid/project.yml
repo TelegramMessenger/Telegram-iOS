@@ -1,0 +1,105 @@
+name: MediaGrid
+options:
+  bundleIdPrefix: org.telegram
+  deploymentTarget:
+    iOS: "26.2"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    GENERATE_INFOPLIST_FILE: YES
+targets:
+  CoreList:
+    type: framework
+    platform: iOS
+    sources:
+      - path: ../CoreList/CoreListDemo
+        excludes:
+          - AppDelegate.swift
+          - SceneDelegate.swift
+          - ViewController.swift
+          - PhysicsScrollDemoViewController.swift
+          - ScrollComparisonViewController.swift
+          - PipelineDepthProbe.swift
+          - PipelineDepthViewController.swift
+          - DemoRow.swift
+          - AutoLoadResponseScheduler.swift
+          - Info.plist
+          - Assets.xcassets
+          - Base.lproj
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.CoreList
+  MediaGrid:
+    type: framework
+    platform: iOS
+    sources:
+      - Sources
+    dependencies:
+      - target: CoreList
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGrid
+  MediaGridPhotoLibrary:
+    type: framework
+    platform: iOS
+    sources:
+      - ../MediaGridPhotoLibrary/Sources
+    dependencies:
+      - target: MediaGrid
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridPhotoLibrary
+  MediaGridDemo:
+    type: application
+    platform: iOS
+    sources:
+      - Demo
+    dependencies:
+      - target: CoreList
+      - target: MediaGrid
+      - target: MediaGridPhotoLibrary
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridDemo
+        INFOPLIST_FILE: Demo/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+  MediaGridTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: MediaGridDemo
+      - target: MediaGrid
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridTests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/MediaGridDemo.app/MediaGridDemo
+        BUNDLE_LOADER: $(TEST_HOST)
+  MediaGridPhotoLibraryTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - ../MediaGridPhotoLibrary/Tests
+    dependencies:
+      - target: MediaGridDemo
+      - target: MediaGrid
+      - target: MediaGridPhotoLibrary
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridPhotoLibraryTests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/MediaGridDemo.app/MediaGridDemo
+        BUNDLE_LOADER: $(TEST_HOST)
+schemes:
+  MediaGridDemo:
+    build:
+      targets:
+        MediaGridDemo: all
+        MediaGridTests: [test]
+        MediaGridPhotoLibraryTests: [test]
+    test:
+      targets:
+        - MediaGridTests
+        - MediaGridPhotoLibraryTests

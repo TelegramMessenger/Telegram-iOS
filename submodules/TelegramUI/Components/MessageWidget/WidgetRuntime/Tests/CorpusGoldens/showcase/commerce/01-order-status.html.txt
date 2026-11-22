@@ -1,0 +1,262 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="top"><div class="logo">🍜</div><div><h3>Order #4821 · Noodle House</h3><div class="sub">Pad see ew ×2, Tom kha, Thai iced tea</div></div><div class="status"><b id="eta">18 min</b><span id="etaSub">estimated</span></div></div>
+  <div class="steps" id="steps">
+    <div class="step done"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div><div><div class="t">Order confirmed</div><div class="m">Paid with Apple Pay · €31.40</div></div><span class="when">12:41</span></div>
+    <div class="step cur"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div><div><div class="t">Being prepared</div><div class="m">Kitchen is a little busy today</div></div><span class="when">12:43</span></div>
+    <div class="step"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div><div><div class="t">Picked up by courier</div><div class="m" id="courier">Nino is on a bike</div></div><span class="when"></span></div>
+    <div class="step"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div><div><div class="t">Delivered</div><div class="m">Leave at the door, flat 12</div></div><span class="when"></span></div>
+  </div>
+  <div class="items" id="items">
+    <div class="hd" role="button"><span>Receipt · 4 items</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="list">
+      <div class="it"><span>2 × Pad see ew</span><b>€19.80</b></div><div class="it"><span>Tom kha gai</span><b>€7.90</b></div><div class="it"><span>Thai iced tea</span><b>€3.70</b></div><div class="it"><span>Delivery</span><b>€0.00</b></div>
+      <div class="it tot"><span>Total</span><b>€31.40</b></div>
+    </div>
+  </div>
+  <div class="rate" id="rate"><div class="q">How was Noodle House?</div><div class="stars" id="stars"><svg viewBox="0 0 24 24" data-i="1" role="button"><path d="M12 2.5l2.9 6.2 6.7.8-5 4.6 1.4 6.7L12 17.4l-6 3.4 1.4-6.7-5-4.6 6.7-.8z"></path></svg><svg viewBox="0 0 24 24" data-i="2" role="button"><path d="M12 2.5l2.9 6.2 6.7.8-5 4.6 1.4 6.7L12 17.4l-6 3.4 1.4-6.7-5-4.6 6.7-.8z"></path></svg><svg viewBox="0 0 24 24" data-i="3" role="button"><path d="M12 2.5l2.9 6.2 6.7.8-5 4.6 1.4 6.7L12 17.4l-6 3.4 1.4-6.7-5-4.6 6.7-.8z"></path></svg><svg viewBox="0 0 24 24" data-i="4" role="button"><path d="M12 2.5l2.9 6.2 6.7.8-5 4.6 1.4 6.7L12 17.4l-6 3.4 1.4-6.7-5-4.6 6.7-.8z"></path></svg><svg viewBox="0 0 24 24" data-i="5" role="button"><path d="M12 2.5l2.9 6.2 6.7.8-5 4.6 1.4 6.7L12 17.4l-6 3.4 1.4-6.7-5-4.6 6.7-.8z"></path></svg></div><div class="thanks" id="thanks"></div></div>
+  <div class="foot"><button class="btn" id="help">Help with order</button><button class="btn" id="again">Order again</button></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 446.65
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 446.65
+    div 0 0 360 446.65
+      div 18 16 324 74.4
+        div 18 31.2 44 44
+        div 74 16 184 74.4
+          h3 74 16 184 40
+          div 74 58 184 32.4
+        div 270 31.6 72 43.2
+          b 270 31.6 72 24.3
+          span 270 55.9 0 0
+      div 18 108.4 324 228.8
+        div 18 115.4 324 51.3
+          div 20 117.4 20 20
+            svg 23 120.4 14 14
+              path 0 0 0 0
+          div 54 115.4 236 51.3
+            div 54 115.4 236 18.9
+            div 54 134.3 236 32.4
+          span 302 115.4 40 16.2
+        div 18 180.7 324 51.3
+          -tag-before 29 161.7 2 18
+          div 20 182.7 20 20
+            svg 23 182.7 14 14
+              path 0 0 0 0
+            -tag-after 25 196.7 10 10
+          div 54 180.7 236 51.3
+            div 54 180.7 236 18.9
+            div 54 199.6 236 32.4
+          span 302 180.7 40 16.2
+        div 18 246 324 35.1
+          -tag-before 29 227 2 18
+          div 20 248 20 20
+            svg 23 251 14 14
+              path 0 0 0 0
+          div 54 246 160 35.1
+            div 54 246 160 18.9
+            div 54 264.9 160 16.2
+          span 342.333 246 0 0
+        div 18 295.1 324 35.1
+          -tag-before 29 276.1 2 18
+          div 20 297.1 20 20
+            svg 23 300.1 14 14
+              path 0 0 0 0
+          div 54 295.1 208 35.1
+            div 54 295.1 208 18.9
+            div 54 314 208 16.2
+          span 342.333 295.1 0 0
+      div 18 352.2 324 37.55
+        div 18 362.2 324 17.55
+          span 18 362.2 144 17.55
+          svg 326 362.975 16 16
+            path 0 0 0 0
+        div 18 389.75 324 0
+          div 18 393.75 324 17.55
+            span 18 393.75 120 17.55
+            b 278 393.75 64 17.55
+          div 18 419.3 324 17.55
+            span 18 419.3 88 17.55
+            b 286 419.3 56 17.55
+          div 18 444.85 324 17.55
+            span 18 444.85 104 17.55
+            b 286 444.85 56 17.55
+          div 18 470.4 324 17.55
+            span 18 470.4 64 17.55
+            b 286 470.4 56 17.55
+          div 18 504.95 324 17.55
+            span 18 504.95 40 17.55
+            b 278 504.95 64 17.55
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          svg 0 0 0 0
+            path 0 0 0 0
+          svg 0 0 0 0
+            path 0 0 0 0
+          svg 0 0 0 0
+            path 0 0 0 0
+          svg 0 0 0 0
+            path 0 0 0 0
+          svg 0 0 0 0
+            path 0 0 0 0
+        div 0 0 0 0
+      div 18 389.75 324 40.9
+        button 29 400.75 135 18.9
+        button 196 400.75 135 18.9
+
+== paint
+root 360x446.65 items=119
+  solid-fill bounds=(0,0,360,447) layer=(border=(0,0,360,447),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,447),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,446.65) pos=(0,0,360,446.65) radius=(0,0,0,0,0,0,0,0)
+  linear-gradient bounds=(18,31,44,44) layer=(border=(18,31,44,44),radius=(12,12,12,12,12,12,12,12),clip=(18,31,44,44),origin=(18,31,44,44),attachment=0,repeat=0,root=0) points=((0,#ff6b6bff,-),(1,#ffa94dff,-)) space=0 hue=0 start=(18,31) end=(62,75)
+  borders bounds=(18,351,324,39) borders=(left=(0,0,#0a0a0aff),top=(1,4,#00000014),right=(0,0,#0a0a0aff),bottom=(0,0,#0a0a0aff),radius=(0,0,0,0,0,0,0,0)) pos=(18,351,324,39) root=0
+  set-clip bounds=(326,362.975,16,16) pos=(326,362.975,16,16) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(326,362.975,16,16)
+    group opacity=1 matrix=(0.666667,0,0,0.666667,326,362.975) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1,4,22,16) ops=(0,1,1) points=(6,9,12,15,18,9) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#6e6e73ff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(18,389.75,324,0) pos=(18,389.75,324,0) radius=(0,0,0,0,0,0,0,0)
+  borders bounds=(18,496,324,39) borders=(left=(0,0,#0a0a0aff),top=(1,3,#00000014),right=(0,0,#0a0a0aff),bottom=(0,0,#0a0a0aff),radius=(0,0,0,0,0,0,0,0)) pos=(18,496,324,39) root=0
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(18,390,157,41) layer=(border=(18,390,157,41),radius=(8,8,8,8,8,8,8,8),clip=(18,390,157,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  solid-fill bounds=(185,390,157,41) layer=(border=(185,390,157,41),radius=(8,8,8,8,8,8,8,8),clip=(185,390,157,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,446.65) pos=(0,0,360,446.65) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(16,36,48,32) pos=(24,44,32,16) color=#0a0a0aff text="🍜" font=f1 glyphs=4 advance=32
+  text bounds=(66,10,56,32) pos=(74,18,40,16) color=#0a0a0aff text="Order" font=f2 glyphs=5 advance=40
+  text bounds=(114,10,56,32) pos=(122,18,40,16) color=#0a0a0aff text="#4821" font=f2 glyphs=5 advance=40
+  text bounds=(162,10,32,32) pos=(170,18,16,16) color=#0a0a0aff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(186,10,64,32) pos=(194,18,48,16) color=#0a0a0aff text="Noodle" font=f2 glyphs=6 advance=48
+  text bounds=(66,30,56,32) pos=(74,38,40,16) color=#0a0a0aff text="House" font=f2 glyphs=5 advance=40
+  text bounds=(66,50,40,32) pos=(74,58,24,16) color=#6e6e73ff text="Pad" font=f3 glyphs=3 advance=24
+  text bounds=(98,50,40,32) pos=(106,58,24,16) color=#6e6e73ff text="see" font=f3 glyphs=3 advance=24
+  text bounds=(130,50,32,32) pos=(138,58,16,16) color=#6e6e73ff text="ew" font=f3 glyphs=2 advance=16
+  text bounds=(154,50,48,32) pos=(162,58,32,16) color=#6e6e73ff text="×2," font=f3 glyphs=4 advance=32
+  text bounds=(194,50,40,32) pos=(202,58,24,16) color=#6e6e73ff text="Tom" font=f3 glyphs=3 advance=24
+  text bounds=(66,66,48,32) pos=(74,74,32,16) color=#6e6e73ff text="kha," font=f3 glyphs=4 advance=32
+  text bounds=(106,66,48,32) pos=(114,74,32,16) color=#6e6e73ff text="Thai" font=f3 glyphs=4 advance=32
+  text bounds=(146,66,48,32) pos=(154,74,32,16) color=#6e6e73ff text="iced" font=f3 glyphs=4 advance=32
+  text bounds=(186,66,40,32) pos=(194,74,24,16) color=#6e6e73ff text="tea" font=f3 glyphs=3 advance=24
+  text bounds=(286,28,32,32) pos=(294,36,16,16) color=#0a0a0aff text="18" font=f4 glyphs=2 advance=16
+  text bounds=(310,28,40,32) pos=(318,36,24,16) color=#0a0a0aff text="min" font=f4 glyphs=3 advance=24
+  text bounds=(262,49,88,32) pos=(270,57,72,16) color=#6e6e73ff text="estimated" font=f5 glyphs=9 advance=72
+  text bounds=(10,354,72,32) pos=(18,362,56,16) color=#0a0a0aff text="Receipt" font=f6 glyphs=7 advance=56
+  text bounds=(74,354,32,32) pos=(82,362,16,16) color=#0a0a0aff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(98,354,24,32) pos=(106,362,8,16) color=#0a0a0aff text="4" font=f6 glyphs=1 advance=8
+  text bounds=(114,354,56,32) pos=(122,362,40,16) color=#0a0a0aff text="items" font=f6 glyphs=5 advance=40
+  set-clip bounds=(18,389.75,324,0) pos=(18,389.75,324,0) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(10,386,24,32) pos=(18,394,8,16) color=#6e6e73ff text="2" font=f7 glyphs=1 advance=8
+  text bounds=(26,386,32,32) pos=(34,394,16,16) color=#6e6e73ff text="×" font=f7 glyphs=2 advance=16
+  text bounds=(50,386,40,32) pos=(58,394,24,16) color=#6e6e73ff text="Pad" font=f7 glyphs=3 advance=24
+  text bounds=(82,386,40,32) pos=(90,394,24,16) color=#6e6e73ff text="see" font=f7 glyphs=3 advance=24
+  text bounds=(114,386,32,32) pos=(122,394,16,16) color=#6e6e73ff text="ew" font=f7 glyphs=2 advance=16
+  text bounds=(270,386,80,32) pos=(278,394,64,16) color=#0a0a0aff text="€19.80" font=f8 glyphs=8 advance=64
+  text bounds=(10,411,40,32) pos=(18,419,24,16) color=#6e6e73ff text="Tom" font=f7 glyphs=3 advance=24
+  text bounds=(42,411,40,32) pos=(50,419,24,16) color=#6e6e73ff text="kha" font=f7 glyphs=3 advance=24
+  text bounds=(74,411,40,32) pos=(82,419,24,16) color=#6e6e73ff text="gai" font=f7 glyphs=3 advance=24
+  text bounds=(278,411,72,32) pos=(286,419,56,16) color=#0a0a0aff text="€7.90" font=f8 glyphs=7 advance=56
+  text bounds=(10,437,48,32) pos=(18,445,32,16) color=#6e6e73ff text="Thai" font=f7 glyphs=4 advance=32
+  text bounds=(50,437,48,32) pos=(58,445,32,16) color=#6e6e73ff text="iced" font=f7 glyphs=4 advance=32
+  text bounds=(90,437,40,32) pos=(98,445,24,16) color=#6e6e73ff text="tea" font=f7 glyphs=3 advance=24
+  text bounds=(278,437,72,32) pos=(286,445,56,16) color=#0a0a0aff text="€3.70" font=f8 glyphs=7 advance=56
+  text bounds=(10,462,80,32) pos=(18,470,64,16) color=#6e6e73ff text="Delivery" font=f7 glyphs=8 advance=64
+  text bounds=(278,462,72,32) pos=(286,470,56,16) color=#0a0a0aff text="€0.00" font=f8 glyphs=7 advance=56
+  text bounds=(10,497,56,32) pos=(18,505,40,16) color=#0a0a0aff text="Total" font=f9 glyphs=5 advance=40
+  text bounds=(270,497,80,32) pos=(278,505,64,16) color=#0a0a0aff text="€31.40" font=f8 glyphs=8 advance=64
+  del-clip bounds=(0,0,0,0)
+  text bounds=(28.5,394,48,32) pos=(36.5,402,32,16) color=#0a0a0aff text="Help" font=f10 glyphs=4 advance=32
+  text bounds=(68.5,394,48,32) pos=(76.5,402,32,16) color=#0a0a0aff text="with" font=f10 glyphs=4 advance=32
+  text bounds=(108.5,394,56,32) pos=(116.5,402,40,16) color=#0a0a0aff text="order" font=f10 glyphs=5 advance=40
+  text bounds=(211.5,394,56,32) pos=(219.5,402,40,16) color=#0a0a0aff text="Order" font=f10 glyphs=5 advance=40
+  text bounds=(259.5,394,56,32) pos=(267.5,402,40,16) color=#0a0a0aff text="again" font=f10 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,446.65) pos=(0,0,360,446.65) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(18,115,24,24) layer=(border=(18,115,24,24),radius=(12,12,12,12,12,12,12,12),clip=(18,115,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(18,115,24,24) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(12,12,12,12,12,12,12,12)) pos=(18,115,24,24) root=0
+  set-clip bounds=(23,120.4,14,14) pos=(23,120.4,14,14) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,120.4,14,14)
+    group opacity=1 matrix=(0.583333,0,0,0.583333,23,120.4) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(46,108,56,32) pos=(54,116,40,16) color=#0a0a0aff text="Order" font=f11 glyphs=5 advance=40
+  text bounds=(94,108,88,32) pos=(102,116,72,16) color=#0a0a0aff text="confirmed" font=f11 glyphs=9 advance=72
+  text bounds=(46,126,48,32) pos=(54,134,32,16) color=#6e6e73ff text="Paid" font=f3 glyphs=4 advance=32
+  text bounds=(86,126,48,32) pos=(94,134,32,16) color=#6e6e73ff text="with" font=f3 glyphs=4 advance=32
+  text bounds=(126,126,56,32) pos=(134,134,40,16) color=#6e6e73ff text="Apple" font=f3 glyphs=5 advance=40
+  text bounds=(174,126,40,32) pos=(182,134,24,16) color=#6e6e73ff text="Pay" font=f3 glyphs=3 advance=24
+  text bounds=(206,126,32,32) pos=(214,134,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(46,143,80,32) pos=(54,151,64,16) color=#6e6e73ff text="€31.40" font=f3 glyphs=8 advance=64
+  text bounds=(294,107,56,32) pos=(302,115,40,16) color=#6e6e73ff text="12:41" font=f12 glyphs=5 advance=40
+  borders bounds=(18,181,24,24) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(12,12,12,12,12,12,12,12)) pos=(18,181,24,24) root=0
+  set-clip bounds=(23,182.7,14,14) pos=(23,182.7,14,14) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,182.7,14,14)
+    group opacity=1 matrix=(0.583333,0,0,0.583333,23,182.7) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(25,197,10,10) layer=(border=(25,197,10,10),radius=(5,5,5,5,5,5,5,5),clip=(25,197,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  text bounds=(46,174,56,32) pos=(54,182,40,16) color=#0a0a0aff text="Being" font=f11 glyphs=5 advance=40
+  text bounds=(94,174,80,32) pos=(102,182,64,16) color=#0a0a0aff text="prepared" font=f11 glyphs=8 advance=64
+  text bounds=(46,192,72,32) pos=(54,200,56,16) color=#6e6e73ff text="Kitchen" font=f3 glyphs=7 advance=56
+  text bounds=(110,192,32,32) pos=(118,200,16,16) color=#6e6e73ff text="is" font=f3 glyphs=2 advance=16
+  text bounds=(134,192,24,32) pos=(142,200,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(150,192,64,32) pos=(158,200,48,16) color=#6e6e73ff text="little" font=f3 glyphs=6 advance=48
+  text bounds=(206,192,48,32) pos=(214,200,32,16) color=#6e6e73ff text="busy" font=f3 glyphs=4 advance=32
+  text bounds=(46,208,56,32) pos=(54,216,40,16) color=#6e6e73ff text="today" font=f3 glyphs=5 advance=40
+  text bounds=(294,173,56,32) pos=(302,181,40,16) color=#6e6e73ff text="12:43" font=f12 glyphs=5 advance=40
+  solid-fill bounds=(29,162,2,18) layer=(border=(29,162,2,18),radius=(0,0,0,0,0,0,0,0),clip=(29,162,2,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(18,246,24,24) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(12,12,12,12,12,12,12,12)) pos=(18,246,24,24) root=0
+  set-clip bounds=(23,251,14,14) pos=(23,251,14,14) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,251,14,14)
+    group opacity=1 matrix=(0.583333,0,0,0.583333,23,251) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(46,239,64,32) pos=(54,247,48,16) color=#6e6e73ff text="Picked" font=f11 glyphs=6 advance=48
+  text bounds=(102,239,32,32) pos=(110,247,16,16) color=#6e6e73ff text="up" font=f11 glyphs=2 advance=16
+  text bounds=(126,239,32,32) pos=(134,247,16,16) color=#6e6e73ff text="by" font=f11 glyphs=2 advance=16
+  text bounds=(150,239,72,32) pos=(158,247,56,16) color=#6e6e73ff text="courier" font=f11 glyphs=7 advance=56
+  text bounds=(46,257,48,32) pos=(54,265,32,16) color=#6e6e73ff text="Nino" font=f3 glyphs=4 advance=32
+  text bounds=(86,257,32,32) pos=(94,265,16,16) color=#6e6e73ff text="is" font=f3 glyphs=2 advance=16
+  text bounds=(110,257,32,32) pos=(118,265,16,16) color=#6e6e73ff text="on" font=f3 glyphs=2 advance=16
+  text bounds=(134,257,24,32) pos=(142,265,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(150,257,48,32) pos=(158,265,32,16) color=#6e6e73ff text="bike" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(29,227,2,18) layer=(border=(29,227,2,18),radius=(0,0,0,0,0,0,0,0),clip=(29,227,2,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00000014
+  borders bounds=(18,295,24,24) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(12,12,12,12,12,12,12,12)) pos=(18,295,24,24) root=0
+  set-clip bounds=(23,300.1,14,14) pos=(23,300.1,14,14) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,300.1,14,14)
+    group opacity=1 matrix=(0.583333,0,0,0.583333,23,300.1) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(46,288,88,32) pos=(54,296,72,16) color=#6e6e73ff text="Delivered" font=f11 glyphs=9 advance=72
+  text bounds=(46,306,56,32) pos=(54,314,40,16) color=#6e6e73ff text="Leave" font=f3 glyphs=5 advance=40
+  text bounds=(94,306,32,32) pos=(102,314,16,16) color=#6e6e73ff text="at" font=f3 glyphs=2 advance=16
+  text bounds=(118,306,40,32) pos=(126,314,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(150,306,56,32) pos=(158,314,40,16) color=#6e6e73ff text="door," font=f3 glyphs=5 advance=40
+  text bounds=(198,306,48,32) pos=(206,314,32,16) color=#6e6e73ff text="flat" font=f3 glyphs=4 advance=32
+  text bounds=(238,306,32,32) pos=(246,314,16,16) color=#6e6e73ff text="12" font=f3 glyphs=2 advance=16
+  solid-fill bounds=(29,276,2,18) layer=(border=(29,276,2,18),radius=(0,0,0,0,0,0,0,0),clip=(29,276,2,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00000014
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=22,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f9 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

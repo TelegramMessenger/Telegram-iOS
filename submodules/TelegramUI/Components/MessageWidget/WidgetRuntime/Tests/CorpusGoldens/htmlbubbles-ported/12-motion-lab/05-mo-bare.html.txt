@@ -1,0 +1,151 @@
+stop -
+drive time limit
+storage local mu={"u":[2],"o":0,"g":false,"m":false}
+storage local mu={"u":[2],"o":0,"g":false,"m":false}
+refused-loads 0
+
+== dom
+<html><head><style></style></head><body><div id="w"><div class="top"><div class="art art-sunset" id="art"></div><div class="grow"><b id="title">Margin Collapse</b><div class="small muted" id="artist">The Box Model</div><div style="margin-top: 3px"><span class="badge red" id="badge">● LIVE</span><span class="tiny muted" id="bpm">118 BPM</span></div></div><span class="like" id="like" data-action="like">♡</span></div><canvas class="eq" id="eq" width="332" height="72"></canvas><div class="seek"><div class="prog"><div id="prog" style="background-color: #ff2d55; width: 20.46%;"></div></div><div class="knob" id="knob" style="background-color: #ff2d55; left: 20.46%;"></div><span id="hits"><div class="hit" data-action="seek" data-value="0" style="left:0%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="1" style="left:4.166666666666667%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="2" style="left:8.333333333333334%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="3" style="left:12.5%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="4" style="left:16.666666666666668%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="5" style="left:20.833333333333332%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="6" style="left:25%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="7" style="left:29.166666666666668%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="8" style="left:33.333333333333336%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="9" style="left:37.5%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="10" style="left:41.666666666666664%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="11" style="left:45.833333333333336%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="12" style="left:50%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="13" style="left:54.166666666666664%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="14" style="left:58.333333333333336%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="15" style="left:62.5%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="16" style="left:66.66666666666667%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="17" style="left:70.83333333333333%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="18" style="left:75%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="19" style="left:79.16666666666667%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="20" style="left:83.33333333333333%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="21" style="left:87.5%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="22" style="left:91.66666666666667%;width:4.166666666666667%"></div><div class="hit" data-action="seek" data-value="23" style="left:95.83333333333333%;width:4.166666666666667%"></div></span></div><div class="times"><span id="t1">0:41</span><span id="t2">-2:42</span></div><div class="ctl"><span class="tg" id="shuffle" data-action="shuffle" role="button" aria-label="Shuffle" aria-pressed="false">🔀</span><span><span class="b" data-action="prev" role="button" aria-label="Previous track">⏮️</span><span class="b" id="playbtn" data-action="play" role="button" aria-label="Pause">⏸️</span><span class="b" data-action="next" role="button" aria-label="Next track">⏭️</span></span><span class="tg" id="repeat" data-action="repeat" role="button" aria-label="Repeat track" aria-pressed="false">🔂</span></div><div class="row between" style="margin-top: 4px"><span class="tiny muted" id="modeline">In order</span><a class="lnk" href="#" data-action="queue" id="queuelnk">Up next ▾</a></div><div id="list" hidden="" style="margin-top: 8px"><div class="q cur" data-action="pick" data-value="0"><div class="mini art-sunset"></div><div class="grow"><div class="small"><b>Margin Collapse</b></div><div class="tiny muted">The Box Model</div></div><span class="tiny t-red" id="status-0">▶ playing</span></div><div class="q" data-action="pick" data-value="1"><div class="mini art-aurora"></div><div class="grow"><div class="small"><b>Float Left</b></div><div class="tiny muted">Clearfix</div></div><span class="tiny muted" id="status-1">3:07</span></div><div class="q" data-action="pick" data-value="2"><div class="mini art-ocean"></div><div class="grow"><div class="small"><b>Reflow (Night Mix)</b></div><div class="tiny muted">Shrink-to-Fit</div></div><span class="tiny muted" id="status-2">3:56 ♥</span></div><div class="q" data-action="pick" data-value="3"><div class="mini art-dunes"></div><div class="grow"><div class="small"><b>Overflow: Hidden</b></div><div class="tiny muted">Clip Path</div></div><span class="tiny muted" id="status-3">3:32</span></div><div class="q" data-action="pick" data-value="4"><div class="mini art-forest"></div><div class="grow"><div class="small"><b>Z-Index Blues</b></div><div class="tiny muted">Stacking Context</div></div><span class="tiny muted" id="status-4">3:19</span></div></div></div><script></script></body></html>
+
+== layout
+html 0 0 360 264.603
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 248.603
+    div 12 8 336 248.603
+      div 12 8 336 64
+        div 12 8 64 64
+        div 88 9.5 228 61
+          b 88 9.5 228 20
+          div 88 29.5 228 18
+          div 88 50.5 228 20
+            span 96 53.5 48 16
+            span 88 50.5 0 0
+        span 322 25.825 20 28.35
+      canvas 12 86 336 72
+      div 12 166 336 14
+        div 12 171 336 4
+          div 12 171 68.7456 4
+        div 75.7456 168 10 10
+        span 12 166 0 0
+          div 12 166 14 14
+          div 26 166 14 14
+          div 40 166 14 14
+          div 54 166 14 14
+          div 68 166 14 14
+          div 82 166 14 14
+          div 96 166 14 14
+          div 110 166 14 14
+          div 124 166 14 14
+          div 138 166 14 14
+          div 152 166 14 14
+          div 166 166 14 14
+          div 180 166 14 14
+          div 194 166 14 14
+          div 208 166 14 14
+          div 222 166 14 14
+          div 236 166 14 14
+          div 250 166 14 14
+          div 264 166 14 14
+          div 278 166 14 14
+          div 292 166 14 14
+          div 306 166 14 14
+          div 320 166 14 14
+          div 334 166 14 14
+      div 12 182 336 15.1875
+        span 12 182 32 15.1875
+        span 308 182 40 15.1875
+      div 12 199.188 336 36
+        span 12 201.188 32 32
+        span 122 201.188 116 32
+          span 122 201.188 36 32
+          span 162 201.188 36 32
+          span 202 201.188 36 32
+        span 316 201.188 32 32
+      div 12 239.188 336 17.415
+        span 12 239.896 64 15.9975
+        a 260 239.188 88 17.415
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+          span 0 0 0 0
+
+== paint
+root 360x264.603 items=32
+  linear-gradient bounds=(12,8,64,64) layer=(border=(12,8,64,64),radius=(10,10,10,10,10,10,10,10),clip=(12,8,64,64),origin=(12,8,64,64),attachment=0,repeat=0,root=0) points=((0,#ffd60aff,-),(0.35,#ff9f0aff,-),(0.7,#ff2d55ff,-),(1,#5e2b6eff,-)) space=0 hue=0 start=(12,8) end=(12,72)
+  image bounds=(12,86,336,72) layer=(border=(12,86,336,72),radius=(0,0,0,0,0,0,0,0),clip=(12,86,336,72),origin=(12,86,336,72),attachment=0,repeat=3,root=0) size=(332,72)
+  group opacity=0.45 matrix=(1,0,0,1,0,0) backface=0 bounds=(2,199.188,52,36) exact=1
+    text bounds=(4,201,48,32) pos=(12,209,32,16) color=#000000ff text="🔀" font=f1 glyphs=4 advance=32
+  group opacity=0.45 matrix=(1,0,0,1,0,0) backface=0 bounds=(306,199.188,52,36) exact=1
+    text bounds=(308,201,48,32) pos=(316,209,32,16) color=#000000ff text="🔂" font=f1 glyphs=4 advance=32
+  set-clip bounds=(88,9.5,228,20) pos=(88,9.5,228,20) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(80,4,64,32) pos=(88,12,48,16) color=#000000ff text="Margin" font=f2 glyphs=6 advance=48
+  text bounds=(136,4,80,32) pos=(144,12,64,16) color=#000000ff text="Collapse" font=f2 glyphs=8 advance=64
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(88,29.5,228,18) pos=(88,29.5,228,18) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(80,23,40,32) pos=(88,31,24,16) color=#707579ff text="The" font=f3 glyphs=3 advance=24
+  text bounds=(112,23,40,32) pos=(120,31,24,16) color=#707579ff text="Box" font=f3 glyphs=3 advance=24
+  text bounds=(144,23,56,32) pos=(152,31,40,16) color=#707579ff text="Model" font=f3 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(88,53,64,18) layer=(border=(88,53,64,18),radius=(9,9,9,9,9,9,9,9),clip=(88,53,64,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3029
+  text bounds=(88,47,40,32) pos=(96,55,24,16) color=#ff3b30ff text="●" font=f4 glyphs=3 advance=24
+  text bounds=(120,47,48,32) pos=(128,55,32,16) color=#ff3b30ff text="LIVE" font=f4 glyphs=4 advance=32
+  text bounds=(144,45,40,32) pos=(152,53,24,16) color=#707579ff text="118" font=f5 glyphs=3 advance=24
+  text bounds=(176,45,40,32) pos=(184,53,24,16) color=#707579ff text="BPM" font=f5 glyphs=3 advance=24
+  text bounds=(314,24,40,32) pos=(322,32,24,16) color=#707579ff text="♡" font=f6 glyphs=3 advance=24
+  text bounds=(4,174,48,32) pos=(12,182,32,16) color=#707579ff text="0:41" font=f7 glyphs=4 advance=32
+  text bounds=(300,174,56,32) pos=(308,182,40,16) color=#707579ff text="-2:42" font=f7 glyphs=5 advance=40
+  text bounds=(108,201,64,32) pos=(116,209,48,16) color=#000000ff text="⏮️" font=f8 glyphs=6 advance=48
+  text bounds=(148,201,64,32) pos=(156,209,48,16) color=#000000ff text="⏸️" font=f8 glyphs=6 advance=48
+  text bounds=(188,201,64,32) pos=(196,209,48,16) color=#000000ff text="⏭️" font=f8 glyphs=6 advance=48
+  text bounds=(4,232,32,32) pos=(12,240,16,16) color=#707579ff text="In" font=f5 glyphs=2 advance=16
+  text bounds=(28,232,56,32) pos=(36,240,40,16) color=#707579ff text="order" font=f5 glyphs=5 advance=40
+  text bounds=(252,231,32,32) pos=(260,239,16,16) color=#3390ecff text="Up" font=f9 glyphs=2 advance=16
+  text bounds=(276,231,48,32) pos=(284,239,32,16) color=#3390ecff text="next" font=f9 glyphs=4 advance=32
+  text bounds=(316,231,40,32) pos=(324,239,24,16) color=#3390ecff text="▾" font=f9 glyphs=3 advance=24
+  solid-fill bounds=(12,171,336,4) layer=(border=(12,171,336,4),radius=(2,2,2,2,2,2,2,2),clip=(12,171,336,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(12,171,69,4) layer=(border=(12,171,69,4),radius=(2,2,2,2,2,2,2,2),clip=(12,171,69,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(76,168,10,10) layer=(border=(76,168,10,10),radius=(5,5,5,5,5,5,5,5),clip=(76,168,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+
+== fonts
+f1 (family="system-ui",size=18,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12.9,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11.85,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11.85,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=21,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="ui-monospace,monospace",size=11.25,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui",size=22,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=12.9,style=0,weight=400,decoration=(-2147483648,predef0,0,#3390ecff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

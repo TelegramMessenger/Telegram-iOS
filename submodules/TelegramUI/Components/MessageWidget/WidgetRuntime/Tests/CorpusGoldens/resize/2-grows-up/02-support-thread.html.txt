@@ -1,0 +1,124 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Courier help</title>
+<style></style>
+</head><body><div class="an"><b>Anchor: bottom</b> (setResizeAnchor('bottom')). Tap a quick reply: new messages appear at the bottom, the bubble grows upward and the replies stay under your finger.</div>
+<div class="hd"><div class="av">🛵</div><div><div class="nm">Courier help</div><div class="st">Order #4821 · usually replies at once</div></div></div>
+<div class="old" id="old" hidden="">0 earlier messages</div>
+<div id="th"><div class="m in">Hi Alex! Your order #4821 left the depot this morning. How can I help?<i>09:41</i></div></div>
+<div class="qr" id="qr"><button>Where is my parcel?</button><button>Change the time</button><button>Leave it at the door</button><button>Talk to a person</button><button class="x">Start over</button></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 368.95
+  head 0 0 0 0
+    style 0 0 0 0
+  body 10 10 340 350.95
+    div 20 16 320 84
+      b 20 16 0 0
+    div 12 116 336 51.3
+      div 12 125.65 32 32
+      div 52 116 296 51.3
+        div 52 116 296 18.9
+        div 52 134.9 296 32.4
+    div 0 0 0 0
+    div 10 175.3 340 80.85
+      div 20 181.3 272 69.85
+        i 20 236.975 272 14.175
+    div 10 266.15 340 94.8
+      button 21 272.15 152 15.6
+      button 201 272.15 120 15.6
+      button 21 305.75 160 15.6
+      button 209 305.75 128 15.6
+      button 21 339.35 80 15.6
+
+== paint
+root 360x368.95 items=74
+  solid-fill bounds=(10,10,340,96) layer=(border=(10,10,340,96),radius=(8,8,8,8,8,8,8,8),clip=(10,10,340,96),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(12,126,32,32) layer=(border=(12,126,32,32),radius=(16,16,16,16,16,16,16,16),clip=(12,126,32,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(10,175,292,81) layer=(border=(10,175,292,81),radius=(14,14,14,14,14,14,4,4),clip=(10,175,292,81),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  group opacity=0.6 matrix=(1,0,0,1,0,0) backface=0 bounds=(18,226.975,284,36) exact=1
+    text bounds=(244,229,56,32) pos=(252,237,40,16) color=#000000ff text="09:41" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(10,266,174,28) layer=(border=(10,266,174,28),radius=(8,8,8,8,8,8,8,8),clip=(10,266,174,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(190,266,142,28) layer=(border=(190,266,142,28),radius=(8,8,8,8,8,8,8,8),clip=(190,266,142,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(10,300,182,27) layer=(border=(10,300,182,27),radius=(8,8,8,8,8,8,8,8),clip=(10,300,182,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(198,300,150,27) layer=(border=(198,300,150,27),radius=(8,8,8,8,8,8,8,8),clip=(198,300,150,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(12,8,72,32) pos=(20,16,56,16) color=#000000ff text="Anchor:" font=f2 glyphs=7 advance=56
+  text bounds=(76,8,64,32) pos=(84,16,48,16) color=#000000ff text="bottom" font=f2 glyphs=6 advance=48
+  text bounds=(12,25,240,32) pos=(20,33,224,16) color=#707579ff text="(setResizeAnchor('bottom'))." font=f3 glyphs=28 advance=224
+  text bounds=(244,25,40,32) pos=(252,33,24,16) color=#707579ff text="Tap" font=f3 glyphs=3 advance=24
+  text bounds=(276,25,24,32) pos=(284,33,8,16) color=#707579ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(292,25,56,32) pos=(300,33,40,16) color=#707579ff text="quick" font=f3 glyphs=5 advance=40
+  text bounds=(12,42,64,32) pos=(20,50,48,16) color=#707579ff text="reply:" font=f3 glyphs=6 advance=48
+  text bounds=(68,42,40,32) pos=(76,50,24,16) color=#707579ff text="new" font=f3 glyphs=3 advance=24
+  text bounds=(100,42,80,32) pos=(108,50,64,16) color=#707579ff text="messages" font=f3 glyphs=8 advance=64
+  text bounds=(172,42,64,32) pos=(180,50,48,16) color=#707579ff text="appear" font=f3 glyphs=6 advance=48
+  text bounds=(228,42,32,32) pos=(236,50,16,16) color=#707579ff text="at" font=f3 glyphs=2 advance=16
+  text bounds=(252,42,40,32) pos=(260,50,24,16) color=#707579ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(12,58,72,32) pos=(20,66,56,16) color=#707579ff text="bottom," font=f3 glyphs=7 advance=56
+  text bounds=(76,58,40,32) pos=(84,66,24,16) color=#707579ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(108,58,64,32) pos=(116,66,48,16) color=#707579ff text="bubble" font=f3 glyphs=6 advance=48
+  text bounds=(164,58,56,32) pos=(172,66,40,16) color=#707579ff text="grows" font=f3 glyphs=5 advance=40
+  text bounds=(212,58,64,32) pos=(220,66,48,16) color=#707579ff text="upward" font=f3 glyphs=6 advance=48
+  text bounds=(268,58,40,32) pos=(276,66,24,16) color=#707579ff text="and" font=f3 glyphs=3 advance=24
+  text bounds=(300,58,40,32) pos=(308,66,24,16) color=#707579ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(12,75,72,32) pos=(20,83,56,16) color=#707579ff text="replies" font=f3 glyphs=7 advance=56
+  text bounds=(76,75,48,32) pos=(84,83,32,16) color=#707579ff text="stay" font=f3 glyphs=4 advance=32
+  text bounds=(116,75,56,32) pos=(124,83,40,16) color=#707579ff text="under" font=f3 glyphs=5 advance=40
+  text bounds=(164,75,48,32) pos=(172,83,32,16) color=#707579ff text="your" font=f3 glyphs=4 advance=32
+  text bounds=(204,75,72,32) pos=(212,83,56,16) color=#707579ff text="finger." font=f3 glyphs=7 advance=56
+  text bounds=(4,125,48,32) pos=(12,133,32,16) color=#000000ff text="🛵" font=f4 glyphs=4 advance=32
+  text bounds=(44,109,72,32) pos=(52,117,56,16) color=#000000ff text="Courier" font=f5 glyphs=7 advance=56
+  text bounds=(108,109,48,32) pos=(116,117,32,16) color=#000000ff text="help" font=f5 glyphs=4 advance=32
+  text bounds=(44,127,56,32) pos=(52,135,40,16) color=#707579ff text="Order" font=f3 glyphs=5 advance=40
+  text bounds=(92,127,56,32) pos=(100,135,40,16) color=#707579ff text="#4821" font=f3 glyphs=5 advance=40
+  text bounds=(140,127,32,32) pos=(148,135,16,16) color=#707579ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(164,127,72,32) pos=(172,135,56,16) color=#707579ff text="usually" font=f3 glyphs=7 advance=56
+  text bounds=(228,127,72,32) pos=(236,135,56,16) color=#707579ff text="replies" font=f3 glyphs=7 advance=56
+  text bounds=(292,127,32,32) pos=(300,135,16,16) color=#707579ff text="at" font=f3 glyphs=2 advance=16
+  text bounds=(44,143,48,32) pos=(52,151,32,16) color=#707579ff text="once" font=f3 glyphs=4 advance=32
+  text bounds=(12,174,32,32) pos=(20,182,16,16) color=#000000ff text="Hi" font=f6 glyphs=2 advance=16
+  text bounds=(36,174,56,32) pos=(44,182,40,16) color=#000000ff text="Alex!" font=f6 glyphs=5 advance=40
+  text bounds=(84,174,48,32) pos=(92,182,32,16) color=#000000ff text="Your" font=f6 glyphs=4 advance=32
+  text bounds=(124,174,56,32) pos=(132,182,40,16) color=#000000ff text="order" font=f6 glyphs=5 advance=40
+  text bounds=(172,174,56,32) pos=(180,182,40,16) color=#000000ff text="#4821" font=f6 glyphs=5 advance=40
+  text bounds=(220,174,48,32) pos=(228,182,32,16) color=#000000ff text="left" font=f6 glyphs=4 advance=32
+  text bounds=(260,174,40,32) pos=(268,182,24,16) color=#000000ff text="the" font=f6 glyphs=3 advance=24
+  text bounds=(12,193,56,32) pos=(20,201,40,16) color=#000000ff text="depot" font=f6 glyphs=5 advance=40
+  text bounds=(60,193,48,32) pos=(68,201,32,16) color=#000000ff text="this" font=f6 glyphs=4 advance=32
+  text bounds=(100,193,80,32) pos=(108,201,64,16) color=#000000ff text="morning." font=f6 glyphs=8 advance=64
+  text bounds=(172,193,40,32) pos=(180,201,24,16) color=#000000ff text="How" font=f6 glyphs=3 advance=24
+  text bounds=(204,193,40,32) pos=(212,201,24,16) color=#000000ff text="can" font=f6 glyphs=3 advance=24
+  text bounds=(236,193,24,32) pos=(244,201,8,16) color=#000000ff text="I" font=f6 glyphs=1 advance=8
+  text bounds=(12,211,56,32) pos=(20,219,40,16) color=#000000ff text="help?" font=f6 glyphs=5 advance=40
+  text bounds=(13,264,56,32) pos=(21,272,40,16) color=#000000ff text="Where" font=f7 glyphs=5 advance=40
+  text bounds=(61,264,32,32) pos=(69,272,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(85,264,32,32) pos=(93,272,16,16) color=#000000ff text="my" font=f7 glyphs=2 advance=16
+  text bounds=(109,264,72,32) pos=(117,272,56,16) color=#000000ff text="parcel?" font=f7 glyphs=7 advance=56
+  text bounds=(193,264,64,32) pos=(201,272,48,16) color=#000000ff text="Change" font=f7 glyphs=6 advance=48
+  text bounds=(249,264,40,32) pos=(257,272,24,16) color=#000000ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(281,264,48,32) pos=(289,272,32,16) color=#000000ff text="time" font=f7 glyphs=4 advance=32
+  text bounds=(13,298,56,32) pos=(21,306,40,16) color=#000000ff text="Leave" font=f7 glyphs=5 advance=40
+  text bounds=(61,298,32,32) pos=(69,306,16,16) color=#000000ff text="it" font=f7 glyphs=2 advance=16
+  text bounds=(85,298,32,32) pos=(93,306,16,16) color=#000000ff text="at" font=f7 glyphs=2 advance=16
+  text bounds=(109,298,40,32) pos=(117,306,24,16) color=#000000ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(141,298,48,32) pos=(149,306,32,16) color=#000000ff text="door" font=f7 glyphs=4 advance=32
+  text bounds=(201,298,48,32) pos=(209,306,32,16) color=#000000ff text="Talk" font=f7 glyphs=4 advance=32
+  text bounds=(241,298,32,32) pos=(249,306,16,16) color=#000000ff text="to" font=f7 glyphs=2 advance=16
+  text bounds=(265,298,24,32) pos=(273,306,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(281,298,64,32) pos=(289,306,48,16) color=#000000ff text="person" font=f7 glyphs=6 advance=48
+  text bounds=(13,331,56,32) pos=(21,339,40,16) color=#707579ff text="Start" font=f7 glyphs=5 advance=40
+  text bounds=(61,331,48,32) pos=(69,339,32,16) color=#707579ff text="over" font=f7 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=10.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=17,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,11 @@
+build/
+build-*/
+build_*/
+.build/
+.swiftpm/
+*.h264
+*.yuv
+*.mbs
+*.trace/
+Tests/SubcodecTests/Fixtures/
+.DS_Store

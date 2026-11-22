@@ -1,0 +1,138 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Build Timeline</title>
+<style></style>
+</head>
+<body>
+<h2>🗓️ Website Build — 6 Weeks</h2>
+<div class="gantt" id="g"><div></div><div class="head"><div>W1</div><div>W2</div><div>W3</div><div>W4</div><div>W5</div><div>W6</div></div><div class="label">Discovery</div><div class="track"><div class="bar" style="left:0%;width:16.666666666666664%;background:#6366f1" data-name="Discovery">Discovery</div><div class="today" style="left: 38.33333333333333%;"></div></div><div class="label">Wireframes</div><div class="track"><div class="bar" style="left:16.666666666666664%;width:16.666666666666664%;background:#8b5cf6" data-name="Wireframes">Wireframes</div></div><div class="label">Visual design</div><div class="track"><div class="bar" style="left:25%;width:25%;background:#ec4899" data-name="Visual design">Visual design</div></div><div class="label">Development</div><div class="track"><div class="bar" style="left:41.66666666666667%;width:41.66666666666667%;background:#10b981" data-name="Development">Development</div></div><div class="label">Content</div><div class="track"><div class="bar" style="left:50%;width:33.33333333333333%;background:#f59e0b" data-name="Content">Content</div></div><div class="label">QA &amp; launch</div><div class="track"><div class="bar" style="left:83.33333333333334%;width:16.666666666666664%;background:#ef4444" data-name="QA &amp; launch">QA &amp; launch</div></div></div>
+<div class="detail" id="detail">Tap a bar for details.</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 367.65
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 335.65
+    h2 16 16 328 22.5
+    div 16 50.5 328 233.15
+      div 16 50.5 110 19.85
+      div 126 50.5 218 14.85
+        div 126 50.5 36.3333 14.85
+        div 162.333 50.5 36.3333 14.85
+        div 198.667 50.5 36.3333 14.85
+        div 235 50.5 36.3333 14.85
+        div 271.333 50.5 36.3333 14.85
+        div 307.667 50.5 36.3333 14.85
+      div 16 82.35 110 17.55
+      div 126 76.35 218 28
+        div 132 80.35 30.3333 20
+        div 209.567 76.35 2 28
+      div 16 117.9 110 17.55
+      div 126 111.9 218 28
+        div 168.333 115.9 30.3333 20
+      div 16 153.45 110 17.55
+      div 126 147.45 218 28
+        div 186.5 151.45 48.5 20
+      div 16 189 110 17.55
+      div 126 183 218 28
+        div 222.833 187 84.8333 20
+      div 16 224.55 110 17.55
+      div 126 218.55 218 28
+        div 241 222.55 66.6667 20
+      div 16 260.1 110 17.55
+      div 126 254.1 218 28
+        div 313.667 258.1 30.3333 20
+    div 28 305.65 304 36
+
+== paint
+root 360x367.65 items=75
+  solid-fill bounds=(0,0,360,368) layer=(border=(0,0,360,368),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,368),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  borders bounds=(126,51,218,19) borders=(left=(0,0,#6b7280ff),top=(0,0,#6b7280ff),right=(0,0,#6b7280ff),bottom=(1,4,#e5e7ebff),radius=(0,0,0,0,0,0,0,0)) pos=(126,51,218,19) root=0
+  solid-fill bounds=(16,296,328,56) layer=(border=(16,296,328,56),radius=(8,8,8,8,8,8,8,8),clip=(16,296,328,56),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f9fafbff
+  text bounds=(8,11,72,32) pos=(16,19,56,16) color=#111827ff text="🗓️" font=f1 glyphs=7 advance=56
+  text bounds=(72,11,72,32) pos=(80,19,56,16) color=#111827ff text="Website" font=f1 glyphs=7 advance=56
+  text bounds=(136,11,56,32) pos=(144,19,40,16) color=#111827ff text="Build" font=f1 glyphs=5 advance=40
+  text bounds=(184,11,40,32) pos=(192,19,24,16) color=#111827ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(216,11,24,32) pos=(224,19,8,16) color=#111827ff text="6" font=f1 glyphs=1 advance=8
+  text bounds=(232,11,56,32) pos=(240,19,40,16) color=#111827ff text="Weeks" font=f1 glyphs=5 advance=40
+  text bounds=(128.167,43,32,32) pos=(136.167,51,16,16) color=#6b7280ff text="W1" font=f2 glyphs=2 advance=16
+  text bounds=(164.5,43,32,32) pos=(172.5,51,16,16) color=#6b7280ff text="W2" font=f2 glyphs=2 advance=16
+  text bounds=(200.833,43,32,32) pos=(208.833,51,16,16) color=#6b7280ff text="W3" font=f2 glyphs=2 advance=16
+  text bounds=(237.167,43,32,32) pos=(245.167,51,16,16) color=#6b7280ff text="W4" font=f2 glyphs=2 advance=16
+  text bounds=(273.5,43,32,32) pos=(281.5,51,16,16) color=#6b7280ff text="W5" font=f2 glyphs=2 advance=16
+  text bounds=(309.833,43,32,32) pos=(317.833,51,16,16) color=#6b7280ff text="W6" font=f2 glyphs=2 advance=16
+  set-clip bounds=(16,76.35,110,29.55) pos=(16,76.35,110,29.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(8,74,88,32) pos=(16,82,72,16) color=#111827ff text="Discovery" font=f3 glyphs=9 advance=72
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(16,111.9,110,29.55) pos=(16,111.9,110,29.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(8,110,96,32) pos=(16,118,80,16) color=#111827ff text="Wireframes" font=f3 glyphs=10 advance=80
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(16,147.45,110,29.55) pos=(16,147.45,110,29.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(8,145,64,32) pos=(16,153,48,16) color=#111827ff text="Visual" font=f3 glyphs=6 advance=48
+  text bounds=(64,145,64,32) pos=(72,153,48,16) color=#111827ff text="design" font=f3 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(16,183,110,29.55) pos=(16,183,110,29.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(8,181,104,32) pos=(16,189,88,16) color=#111827ff text="Development" font=f3 glyphs=11 advance=88
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(16,218.55,110,29.55) pos=(16,218.55,110,29.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(8,217,72,32) pos=(16,225,56,16) color=#111827ff text="Content" font=f3 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(16,254.1,110,29.55) pos=(16,254.1,110,29.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(8,252,32,32) pos=(16,260,16,16) color=#111827ff text="QA" font=f3 glyphs=2 advance=16
+  text bounds=(32,252,24,32) pos=(40,260,8,16) color=#111827ff text="&" font=f3 glyphs=1 advance=8
+  text bounds=(48,252,64,32) pos=(56,260,48,16) color=#111827ff text="launch" font=f3 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(20,298,40,32) pos=(28,306,24,16) color=#374151ff text="Tap" font=f3 glyphs=3 advance=24
+  text bounds=(52,298,24,32) pos=(60,306,8,16) color=#374151ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(68,298,40,32) pos=(76,306,24,16) color=#374151ff text="bar" font=f3 glyphs=3 advance=24
+  text bounds=(100,298,40,32) pos=(108,306,24,16) color=#374151ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(132,298,80,32) pos=(140,306,64,16) color=#374151ff text="details." font=f3 glyphs=8 advance=64
+  linear-gradient bounds=(126,76,218,28) layer=(border=(126,76,218,28),radius=(0,0,0,0,0,0,0,0),clip=(126,76,218,28),origin=(126,76,218,28),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.162079,#00000000,-),(0.162079,#f3f4f600,-),(0.162079,#f3f4f6ff,-),(0.166667,#f3f4f6ff,-),(0.166667,#00000000,-),(0.328746,#00000000,-),(0.328746,#f3f4f600,-),(0.328746,#f3f4f6ff,-),(0.333333,#f3f4f6ff,-),(0.333333,#00000000,-),(0.495413,#00000000,-),(0.495413,#f3f4f600,-),(0.495413,#f3f4f6ff,-),(0.5,#f3f4f6ff,-),(0.5,#00000000,-),(0.662079,#00000000,-),(0.662079,#f3f4f600,-),(0.662079,#f3f4f6ff,-),(0.666667,#f3f4f6ff,-),(0.666667,#00000000,-),(0.828746,#00000000,-),(0.828746,#f3f4f600,-),(0.828746,#f3f4f6ff,-),(0.833333,#f3f4f6ff,-),(0.833333,#00000000,-),(0.995413,#00000000,-),(0.995413,#f3f4f600,-),(0.995413,#f3f4f6ff,-),(1,#f3f4f6ff,-),(1,#00000000,-),(1.16208,#00000000,-)) space=0 hue=0 start=(126,76) end=(344,76)
+  solid-fill bounds=(126,80,36,20) layer=(border=(126,80,36,20),radius=(6,6,6,6,6,6,6,6),clip=(126,80,36,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#6366f1ff
+  set-clip bounds=(126,80.35,36.3333,20) pos=(126,80.35,36.3333,20) radius=(6,6,6,6,6,6,6,6)
+  text bounds=(124,74,88,32) pos=(132,82,72,16) color=#ffffffff text="Discovery" font=f2 glyphs=9 advance=72
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(210,76,2,28) layer=(border=(210,76,2,28),radius=(0,0,0,0,0,0,0,0),clip=(210,76,2,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef4444ff
+  linear-gradient bounds=(126,112,218,28) layer=(border=(126,112,218,28),radius=(0,0,0,0,0,0,0,0),clip=(126,112,218,28),origin=(126,112,218,28),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.162079,#00000000,-),(0.162079,#f3f4f600,-),(0.162079,#f3f4f6ff,-),(0.166667,#f3f4f6ff,-),(0.166667,#00000000,-),(0.328746,#00000000,-),(0.328746,#f3f4f600,-),(0.328746,#f3f4f6ff,-),(0.333333,#f3f4f6ff,-),(0.333333,#00000000,-),(0.495413,#00000000,-),(0.495413,#f3f4f600,-),(0.495413,#f3f4f6ff,-),(0.5,#f3f4f6ff,-),(0.5,#00000000,-),(0.662079,#00000000,-),(0.662079,#f3f4f600,-),(0.662079,#f3f4f6ff,-),(0.666667,#f3f4f6ff,-),(0.666667,#00000000,-),(0.828746,#00000000,-),(0.828746,#f3f4f600,-),(0.828746,#f3f4f6ff,-),(0.833333,#f3f4f6ff,-),(0.833333,#00000000,-),(0.995413,#00000000,-),(0.995413,#f3f4f600,-),(0.995413,#f3f4f6ff,-),(1,#f3f4f6ff,-),(1,#00000000,-),(1.16208,#00000000,-)) space=0 hue=0 start=(126,112) end=(344,112)
+  solid-fill bounds=(162,116,37,20) layer=(border=(162,116,37,20),radius=(6,6,6,6,6,6,6,6),clip=(162,116,37,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#8b5cf6ff
+  set-clip bounds=(162.333,115.9,36.3333,20) pos=(162.333,115.9,36.3333,20) radius=(6,6,6,6,6,6,6,6)
+  text bounds=(160.333,110,96,32) pos=(168.333,118,80,16) color=#ffffffff text="Wireframes" font=f2 glyphs=10 advance=80
+  del-clip bounds=(0,0,0,0)
+  linear-gradient bounds=(126,147,218,28) layer=(border=(126,147,218,28),radius=(0,0,0,0,0,0,0,0),clip=(126,147,218,28),origin=(126,147,218,28),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.162079,#00000000,-),(0.162079,#f3f4f600,-),(0.162079,#f3f4f6ff,-),(0.166667,#f3f4f6ff,-),(0.166667,#00000000,-),(0.328746,#00000000,-),(0.328746,#f3f4f600,-),(0.328746,#f3f4f6ff,-),(0.333333,#f3f4f6ff,-),(0.333333,#00000000,-),(0.495413,#00000000,-),(0.495413,#f3f4f600,-),(0.495413,#f3f4f6ff,-),(0.5,#f3f4f6ff,-),(0.5,#00000000,-),(0.662079,#00000000,-),(0.662079,#f3f4f600,-),(0.662079,#f3f4f6ff,-),(0.666667,#f3f4f6ff,-),(0.666667,#00000000,-),(0.828746,#00000000,-),(0.828746,#f3f4f600,-),(0.828746,#f3f4f6ff,-),(0.833333,#f3f4f6ff,-),(0.833333,#00000000,-),(0.995413,#00000000,-),(0.995413,#f3f4f600,-),(0.995413,#f3f4f6ff,-),(1,#f3f4f6ff,-),(1,#00000000,-),(1.16208,#00000000,-)) space=0 hue=0 start=(126,147) end=(344,147)
+  solid-fill bounds=(181,151,54,20) layer=(border=(181,151,54,20),radius=(6,6,6,6,6,6,6,6),clip=(181,151,54,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ec4899ff
+  set-clip bounds=(180.5,151.45,54.5,20) pos=(180.5,151.45,54.5,20) radius=(6,6,6,6,6,6,6,6)
+  text bounds=(178.5,145,64,32) pos=(186.5,153,48,16) color=#ffffffff text="Visual" font=f2 glyphs=6 advance=48
+  text bounds=(234.5,145,64,32) pos=(242.5,153,48,16) color=#ffffffff text="design" font=f2 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  linear-gradient bounds=(126,183,218,28) layer=(border=(126,183,218,28),radius=(0,0,0,0,0,0,0,0),clip=(126,183,218,28),origin=(126,183,218,28),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.162079,#00000000,-),(0.162079,#f3f4f600,-),(0.162079,#f3f4f6ff,-),(0.166667,#f3f4f6ff,-),(0.166667,#00000000,-),(0.328746,#00000000,-),(0.328746,#f3f4f600,-),(0.328746,#f3f4f6ff,-),(0.333333,#f3f4f6ff,-),(0.333333,#00000000,-),(0.495413,#00000000,-),(0.495413,#f3f4f600,-),(0.495413,#f3f4f6ff,-),(0.5,#f3f4f6ff,-),(0.5,#00000000,-),(0.662079,#00000000,-),(0.662079,#f3f4f600,-),(0.662079,#f3f4f6ff,-),(0.666667,#f3f4f6ff,-),(0.666667,#00000000,-),(0.828746,#00000000,-),(0.828746,#f3f4f600,-),(0.828746,#f3f4f6ff,-),(0.833333,#f3f4f6ff,-),(0.833333,#00000000,-),(0.995413,#00000000,-),(0.995413,#f3f4f600,-),(0.995413,#f3f4f6ff,-),(1,#f3f4f6ff,-),(1,#00000000,-),(1.16208,#00000000,-)) space=0 hue=0 start=(126,183) end=(344,183)
+  solid-fill bounds=(217,187,91,20) layer=(border=(217,187,91,20),radius=(6,6,6,6,6,6,6,6),clip=(217,187,91,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#10b981ff
+  set-clip bounds=(216.833,187,90.8333,20) pos=(216.833,187,90.8333,20) radius=(6,6,6,6,6,6,6,6)
+  text bounds=(214.833,181,104,32) pos=(222.833,189,88,16) color=#ffffffff text="Development" font=f2 glyphs=11 advance=88
+  del-clip bounds=(0,0,0,0)
+  linear-gradient bounds=(126,219,218,28) layer=(border=(126,219,218,28),radius=(0,0,0,0,0,0,0,0),clip=(126,219,218,28),origin=(126,219,218,28),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.162079,#00000000,-),(0.162079,#f3f4f600,-),(0.162079,#f3f4f6ff,-),(0.166667,#f3f4f6ff,-),(0.166667,#00000000,-),(0.328746,#00000000,-),(0.328746,#f3f4f600,-),(0.328746,#f3f4f6ff,-),(0.333333,#f3f4f6ff,-),(0.333333,#00000000,-),(0.495413,#00000000,-),(0.495413,#f3f4f600,-),(0.495413,#f3f4f6ff,-),(0.5,#f3f4f6ff,-),(0.5,#00000000,-),(0.662079,#00000000,-),(0.662079,#f3f4f600,-),(0.662079,#f3f4f6ff,-),(0.666667,#f3f4f6ff,-),(0.666667,#00000000,-),(0.828746,#00000000,-),(0.828746,#f3f4f600,-),(0.828746,#f3f4f6ff,-),(0.833333,#f3f4f6ff,-),(0.833333,#00000000,-),(0.995413,#00000000,-),(0.995413,#f3f4f600,-),(0.995413,#f3f4f6ff,-),(1,#f3f4f6ff,-),(1,#00000000,-),(1.16208,#00000000,-)) space=0 hue=0 start=(126,219) end=(344,219)
+  solid-fill bounds=(235,223,73,20) layer=(border=(235,223,73,20),radius=(6,6,6,6,6,6,6,6),clip=(235,223,73,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f59e0bff
+  set-clip bounds=(235,222.55,72.6667,20) pos=(235,222.55,72.6667,20) radius=(6,6,6,6,6,6,6,6)
+  text bounds=(233,217,72,32) pos=(241,225,56,16) color=#ffffffff text="Content" font=f2 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  linear-gradient bounds=(126,254,218,28) layer=(border=(126,254,218,28),radius=(0,0,0,0,0,0,0,0),clip=(126,254,218,28),origin=(126,254,218,28),attachment=0,repeat=0,root=0) points=((0,#00000000,-),(0.162079,#00000000,-),(0.162079,#f3f4f600,-),(0.162079,#f3f4f6ff,-),(0.166667,#f3f4f6ff,-),(0.166667,#00000000,-),(0.328746,#00000000,-),(0.328746,#f3f4f600,-),(0.328746,#f3f4f6ff,-),(0.333333,#f3f4f6ff,-),(0.333333,#00000000,-),(0.495413,#00000000,-),(0.495413,#f3f4f600,-),(0.495413,#f3f4f6ff,-),(0.5,#f3f4f6ff,-),(0.5,#00000000,-),(0.662079,#00000000,-),(0.662079,#f3f4f600,-),(0.662079,#f3f4f6ff,-),(0.666667,#f3f4f6ff,-),(0.666667,#00000000,-),(0.828746,#00000000,-),(0.828746,#f3f4f600,-),(0.828746,#f3f4f6ff,-),(0.833333,#f3f4f6ff,-),(0.833333,#00000000,-),(0.995413,#00000000,-),(0.995413,#f3f4f600,-),(0.995413,#f3f4f6ff,-),(1,#f3f4f6ff,-),(1,#00000000,-),(1.16208,#00000000,-)) space=0 hue=0 start=(126,254) end=(344,254)
+  solid-fill bounds=(308,258,36,20) layer=(border=(308,258,36,20),radius=(6,6,6,6,6,6,6,6),clip=(308,258,36,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef4444ff
+  set-clip bounds=(307.667,258.1,36.3333,20) pos=(307.667,258.1,36.3333,20) radius=(6,6,6,6,6,6,6,6)
+  text bounds=(305.667,252,32,32) pos=(313.667,260,16,16) color=#ffffffff text="QA" font=f2 glyphs=2 advance=16
+  text bounds=(329.667,252,24,32) pos=(337.667,260,8,16) color=#ffffffff text="&" font=f2 glyphs=1 advance=8
+  text bounds=(345.667,252,64,32) pos=(353.667,260,48,16) color=#ffffffff text="launch" font=f2 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

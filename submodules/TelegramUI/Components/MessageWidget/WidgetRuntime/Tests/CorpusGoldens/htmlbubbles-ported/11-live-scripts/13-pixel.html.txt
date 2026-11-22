@@ -1,0 +1,80 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body>Every call into a script is capped at <b>50 ms</b>, and a message gets at most <b>200 ms of JS per second</b>. Break either rule and the script is stopped for good. The card keeps its last HTML, or the static HTML around the <code>&lt;script&gt;</code>. Here are some badly behaved messages:
+</body></html>
+
+== layout
+html 0 0 360 109.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 109.2
+    b 0 0 0 0
+    b 0 0 0 0
+    code 0 0 0 0
+
+== paint
+root 360x109.2 items=55
+  text bounds=(-8,-7,56,32) pos=(0,1,40,16) color=#000000ff text="Every" font=f1 glyphs=5 advance=40
+  text bounds=(40,-7,48,32) pos=(48,1,32,16) color=#000000ff text="call" font=f1 glyphs=4 advance=32
+  text bounds=(80,-7,48,32) pos=(88,1,32,16) color=#000000ff text="into" font=f1 glyphs=4 advance=32
+  text bounds=(120,-7,24,32) pos=(128,1,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(136,-7,64,32) pos=(144,1,48,16) color=#000000ff text="script" font=f1 glyphs=6 advance=48
+  text bounds=(192,-7,32,32) pos=(200,1,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(216,-7,64,32) pos=(224,1,48,16) color=#000000ff text="capped" font=f1 glyphs=6 advance=48
+  text bounds=(272,-7,32,32) pos=(280,1,16,16) color=#000000ff text="at" font=f1 glyphs=2 advance=16
+  text bounds=(296,-7,32,32) pos=(304,1,16,16) color=#000000ff text="50" font=f2 glyphs=2 advance=16
+  text bounds=(320,-7,32,32) pos=(328,1,16,16) color=#000000ff text="ms" font=f2 glyphs=2 advance=16
+  text bounds=(336,-7,24,32) pos=(344,1,8,16) color=#000000ff text="," font=f1 glyphs=1 advance=8
+  text bounds=(-8,11,40,32) pos=(0,19,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(24,11,24,32) pos=(32,19,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(40,11,72,32) pos=(48,19,56,16) color=#000000ff text="message" font=f1 glyphs=7 advance=56
+  text bounds=(104,11,48,32) pos=(112,19,32,16) color=#000000ff text="gets" font=f1 glyphs=4 advance=32
+  text bounds=(144,11,32,32) pos=(152,19,16,16) color=#000000ff text="at" font=f1 glyphs=2 advance=16
+  text bounds=(168,11,48,32) pos=(176,19,32,16) color=#000000ff text="most" font=f1 glyphs=4 advance=32
+  text bounds=(208,11,40,32) pos=(216,19,24,16) color=#000000ff text="200" font=f2 glyphs=3 advance=24
+  text bounds=(240,11,32,32) pos=(248,19,16,16) color=#000000ff text="ms" font=f2 glyphs=2 advance=16
+  text bounds=(264,11,32,32) pos=(272,19,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(288,11,32,32) pos=(296,19,16,16) color=#000000ff text="JS" font=f2 glyphs=2 advance=16
+  text bounds=(312,11,40,32) pos=(320,19,24,16) color=#000000ff text="per" font=f2 glyphs=3 advance=24
+  text bounds=(-8,29,64,32) pos=(0,37,48,16) color=#000000ff text="second" font=f2 glyphs=6 advance=48
+  text bounds=(40,29,24,32) pos=(48,37,8,16) color=#000000ff text="." font=f1 glyphs=1 advance=8
+  text bounds=(56,29,56,32) pos=(64,37,40,16) color=#000000ff text="Break" font=f1 glyphs=5 advance=40
+  text bounds=(104,29,64,32) pos=(112,37,48,16) color=#000000ff text="either" font=f1 glyphs=6 advance=48
+  text bounds=(160,29,48,32) pos=(168,37,32,16) color=#000000ff text="rule" font=f1 glyphs=4 advance=32
+  text bounds=(200,29,40,32) pos=(208,37,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(232,29,40,32) pos=(240,37,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(264,29,64,32) pos=(272,37,48,16) color=#000000ff text="script" font=f1 glyphs=6 advance=48
+  text bounds=(320,29,32,32) pos=(328,37,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(-8,48,72,32) pos=(0,56,56,16) color=#000000ff text="stopped" font=f1 glyphs=7 advance=56
+  text bounds=(56,48,40,32) pos=(64,56,24,16) color=#000000ff text="for" font=f1 glyphs=3 advance=24
+  text bounds=(88,48,56,32) pos=(96,56,40,16) color=#000000ff text="good." font=f1 glyphs=5 advance=40
+  text bounds=(136,48,40,32) pos=(144,56,24,16) color=#000000ff text="The" font=f1 glyphs=3 advance=24
+  text bounds=(168,48,48,32) pos=(176,56,32,16) color=#000000ff text="card" font=f1 glyphs=4 advance=32
+  text bounds=(208,48,56,32) pos=(216,56,40,16) color=#000000ff text="keeps" font=f1 glyphs=5 advance=40
+  text bounds=(256,48,40,32) pos=(264,56,24,16) color=#000000ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(288,48,48,32) pos=(296,56,32,16) color=#000000ff text="last" font=f1 glyphs=4 advance=32
+  text bounds=(-8,66,56,32) pos=(0,74,40,16) color=#000000ff text="HTML," font=f1 glyphs=5 advance=40
+  text bounds=(40,66,32,32) pos=(48,74,16,16) color=#000000ff text="or" font=f1 glyphs=2 advance=16
+  text bounds=(64,66,40,32) pos=(72,74,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(96,66,64,32) pos=(104,74,48,16) color=#000000ff text="static" font=f1 glyphs=6 advance=48
+  text bounds=(152,66,48,32) pos=(160,74,32,16) color=#000000ff text="HTML" font=f1 glyphs=4 advance=32
+  text bounds=(192,66,64,32) pos=(200,74,48,16) color=#000000ff text="around" font=f1 glyphs=6 advance=48
+  text bounds=(248,66,40,32) pos=(256,74,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  solid-fill bounds=(288,73,72,18) layer=(border=(288,73,72,18),radius=(4,4,4,4,4,4,4,4),clip=(288,73,72,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(284,66,80,32) pos=(292,74,64,16) color=#000000ff text="<script>" font=f3 glyphs=8 advance=64
+  text bounds=(-8,84,24,32) pos=(0,92,8,16) color=#000000ff text="." font=f1 glyphs=1 advance=8
+  text bounds=(8,84,48,32) pos=(16,92,32,16) color=#000000ff text="Here" font=f1 glyphs=4 advance=32
+  text bounds=(48,84,40,32) pos=(56,92,24,16) color=#000000ff text="are" font=f1 glyphs=3 advance=24
+  text bounds=(80,84,48,32) pos=(88,92,32,16) color=#000000ff text="some" font=f1 glyphs=4 advance=32
+  text bounds=(120,84,56,32) pos=(128,92,40,16) color=#000000ff text="badly" font=f1 glyphs=5 advance=40
+  text bounds=(168,84,72,32) pos=(176,92,56,16) color=#000000ff text="behaved" font=f1 glyphs=7 advance=56
+  text bounds=(232,84,88,32) pos=(240,92,72,16) color=#000000ff text="messages:" font=f1 glyphs=9 advance=72
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,42 @@
+import Foundation
+import UIKit
+import Display
+import TelegramCore
+
+public enum ChatListControllerLocation: Equatable {
+    case chatList(groupId: EngineChatList.Group)
+    case forum(peerId: EnginePeer.Id)
+    case savedMessagesChats(peerId: EnginePeer.Id)
+}
+
+public protocol ChatListController: ViewController {
+    var context: AccountContext { get }
+    var location: ChatListControllerLocation { get }
+    var lockViewFrame: CGRect? { get }
+    
+    /// Set by a host that opens the list's threads itself (the chat side list). Called with the parent peer and thread a
+    /// tap resolved to; returning true consumes the tap.
+    var interceptPeerSelection: ((EnginePeer.Id, Int64?, EngineMessage.Id?) -> Bool)? { get set }
+    
+    var isSearchActive: Bool { get }
+    func activateSearch(filter: ChatListSearchFilter, query: String?)
+    func deactivateSearch(animated: Bool)
+    func activateCompose()
+    func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool, deleteGloballyIfPossible: Bool, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void)
+    
+    func playSignUpCompletedAnimation()
+    
+    func navigateToFolder(folderId: Int32, completion: @escaping () -> Void)
+    
+    func openStories(peerId: EnginePeer.Id)
+    func openStoriesFromNotification(peerId: EnginePeer.Id, storyId: Int32)
+    
+    func resetForumStackIfOpen()
+    
+    func activateEdit()
+    func openEmojiStatusSetup()
+}
+
+public protocol CommunityViewScreen: ViewController {
+    
+}

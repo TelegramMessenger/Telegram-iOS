@@ -1,0 +1,88 @@
+Source: jpeg-xl
+Maintainer: JPEG XL Maintainers <jpegxl@google.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.8
+Build-Depends:
+ asciidoc,
+ cmake,
+ debhelper (>= 9),
+ libbrotli-dev,
+ libgdk-pixbuf-2.0-dev | libgdk-pixbuf2.0-dev,
+ libgif-dev,
+ libgimp2.0-dev,
+ libgmock-dev,
+ libgoogle-perftools-dev,
+ libgtest-dev,
+ libhwy-dev (>= 1.0.0),
+ libjpeg-dev,
+ libopenexr-dev,
+ libpng-dev,
+ libwebp-dev,
+ pkg-config,
+ xdg-utils,
+ xmlto,
+Homepage: https://github.com/libjxl/libjxl
+Rules-Requires-Root: no
+
+Package: jxl
+Architecture: any
+Section: utils
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: JPEG XL Image Coding System - "JXL" (command line utility)
+ The JPEG XL Image Coding System (ISO/IEC 18181) is a lossy and
+ lossless image compression format. It has a rich feature set and is
+ particularly optimized for responsive web environments, so that
+ content renders well on a wide range of devices. Moreover, it includes
+ several features that help transition from the legacy JPEG format.
+ .
+ This package installs the command line utilities.
+
+Package: libjxl-dev
+Architecture: any
+Section: libdevel
+Depends: libjxl (= ${binary:Version}), ${misc:Depends}
+ libhwy-dev,
+Description: JPEG XL Image Coding System - "JXL" (development files)
+ The JPEG XL Image Coding System (ISO/IEC 18181) is a lossy and
+ lossless image compression format. It has a rich feature set and is
+ particularly optimized for responsive web environments, so that
+ content renders well on a wide range of devices. Moreover, it includes
+ several features that help transition from the legacy JPEG format.
+ .
+ This package installs development files.
+
+Package: libjxl
+Architecture: any
+Multi-Arch: same
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Description: JPEG XL Image Coding System - "JXL" (shared libraries)
+ The JPEG XL Image Coding System (ISO/IEC 18181) is a lossy and
+ lossless image compression format. It has a rich feature set and is
+ particularly optimized for responsive web environments, so that
+ content renders well on a wide range of devices. Moreover, it includes
+ several features that help transition from the legacy JPEG format.
+ .
+ This package installs shared libraries.
+
+Package: libjxl-gdk-pixbuf
+Architecture: any
+Multi-Arch: same
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Description: JPEG XL Plugin for gdk-pixbuf
+ This package installs the required files for reading JPEG XL files in
+ GTK applications.
+
+Package: libjxl-gimp-plugin
+Architecture: any
+Multi-Arch: same
+Section: graphics
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Enhances: gimp
+Description: JPEG XL Import and Export Plugin for GIMP
+ This is a plugin for GIMP version 2.10.x to import and export JPEG XL images.

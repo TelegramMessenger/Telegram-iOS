@@ -1,0 +1,144 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad dp" id="w">
+  <div class="row between"><span><b id="hd">🛠 Deploy #1041</b> <span class="badge blue" id="badge">running</span></span><span id="topbtn"><button data-action="cancel">■ Cancel</button></span></div>
+  <div style="margin-top: 6px" id="steps"><div class="st" data-i="0"><div class="ic" data-st="run"><div class="ring"><div class="hole"></div></div></div>
+    <div class="grow"><span class="name fg">Install dependencies</span><div class="lv"><div class="pbar"><div style="transition: width 821ms cubic-bezier(.37,0,.63,1); width: 100%;"></div></div><div class="live muted">added 1,284 packages in 8.1 s</div></div></div>
+    <span class="small rt muted">97%</span></div><div class="log" hidden=""></div><div class="st" data-i="1"><div class="ic" data-st="wait"><div class="wait"></div></div>
+    <div class="grow"><span class="name muted">Build (release)</span><div class="lv" hidden=""><div class="pbar"><div></div></div><div class="live muted"></div></div></div>
+    <span class="small rt muted"></span></div><div class="log" hidden=""></div><div class="st" data-i="2"><div class="ic" data-st="wait"><div class="wait"></div></div>
+    <div class="grow"><span class="name muted">Run 214 tests</span><div class="lv" hidden=""><div class="pbar"><div></div></div><div class="live muted"></div></div></div>
+    <span class="small rt muted"></span></div><div class="log" hidden=""></div><div class="st" data-i="3"><div class="ic" data-st="wait"><div class="wait"></div></div>
+    <div class="grow"><span class="name muted">Upload bundle</span><div class="lv" hidden=""><div class="pbar"><div></div></div><div class="live muted"></div></div></div>
+    <span class="small rt muted"></span></div><div class="log" hidden=""></div><div class="st" data-i="4"><div class="ic" data-st="wait"><div class="wait"></div></div>
+    <div class="grow"><span class="name muted">Roll out to 3 regions</span><div class="lv" hidden=""><div class="pbar"><div></div></div><div class="live muted"></div></div></div>
+    <span class="small rt muted"></span></div><div class="log" hidden=""></div></div>
+  <div id="foot"></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 241.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 241.3
+    div 15 13 330 215.3
+      div 15 13 330 26.8
+        span 15 17.3 216 18.2
+          b 15 17.3 0 0
+          span 167 18.3 56 14.3
+        span 239 13 106 26.8
+          button 252 18 80 16.8
+      div 15 45.8 330 182.5
+        div 19 51.8 322 42.5
+          div 19 63.05 20 20
+            div 19 66.05 20 20
+              div 22 66.05 14 14
+          div 49 51.8 268 42.5
+            span 49 51.8 0 0
+            div 49 74 268 20.3
+              div 49 74 268 4
+                div 49 74 260.652 4
+              div 49 80 268 14.3
+          span 317 65.25 24 15.6
+        div 0 0 0 0
+        div 19 106.3 322 20
+          div 19 106.3 20 20
+            div 21 108.3 16 16
+          div 49 107.2 292 18.2
+            span 49 107.2 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                div 0 0 0 0
+              div 0 0 0 0
+          span 341 116.3 0 0
+        div 0 0 0 0
+        div 19 138.3 322 20
+          div 19 138.3 20 20
+            div 21 140.3 16 16
+          div 49 139.2 292 18.2
+            span 49 139.2 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                div 0 0 0 0
+              div 0 0 0 0
+          span 341 148.3 0 0
+        div 0 0 0 0
+        div 19 170.3 322 20
+          div 19 170.3 20 20
+            div 21 172.3 16 16
+          div 49 171.2 292 18.2
+            span 49 171.2 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                div 0 0 0 0
+              div 0 0 0 0
+          span 341 180.3 0 0
+        div 0 0 0 0
+        div 19 202.3 322 20
+          div 19 202.3 20 20
+            div 21 204.3 16 16
+          div 49 203.2 292 18.2
+            span 49 203.2 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                div 0 0 0 0
+              div 0 0 0 0
+          span 341 212.3 0 0
+        div 0 0 0 0
+      div 15 228.3 330 0
+
+== paint
+root 360x241.3 items=39
+  solid-fill bounds=(0,0,360,241) layer=(border=(0,0,360,241),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,241),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,241) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,241) root=0
+  group opacity=1 matrix=(-0.104528,-0.994522,0.994522,-0.104528,-43.6021,112.841) backface=0 bounds=(19,66.05,20,20) exact=0
+    conic-gradient bounds=(19,66,20,20) layer=(border=(19,66,20,20),radius=(10,10,10,10,10,10,10,10),clip=(19,66,20,20),origin=(19,66,20,20),attachment=0,repeat=0,root=0) points=((0,#0a84ff00,-),(0.833333,#0a84ffff,-),(0.833333,#0a84ff00,-),(0.833333,#0a84ff00,-),(1,#0a84ff00,-)) space=8 hue=1 position=(29,76) angle=0 radius=14.1421
+    solid-fill bounds=(22,66,14,14) layer=(border=(22,66,14,14),radius=(7,7,7,7,7,7,7,7),clip=(22,66,14,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(49,74,268,4) layer=(border=(49,74,268,4),radius=(2,2,2,2,2,2,2,2),clip=(49,74,268,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  solid-fill bounds=(49,74,261,4) layer=(border=(49,74,261,4),radius=(2,2,2,2,2,2,2,2),clip=(49,74,261,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0a84ffff
+  solid-fill bounds=(21,108,16,16) layer=(border=(21,108,16,16),radius=(8,8,8,8,8,8,8,8),clip=(21,108,16,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  solid-fill bounds=(21,140,16,16) layer=(border=(21,140,16,16),radius=(8,8,8,8,8,8,8,8),clip=(21,140,16,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  solid-fill bounds=(21,172,16,16) layer=(border=(21,172,16,16),radius=(8,8,8,8,8,8,8,8),clip=(21,172,16,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  solid-fill bounds=(21,204,16,16) layer=(border=(21,204,16,16),radius=(8,8,8,8,8,8,8,8),clip=(21,204,16,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f40
+  text bounds=(7,10,48,32) pos=(15,18,32,16) color=#000000ff text="🛠" font=f1 glyphs=4 advance=32
+  text bounds=(47,10,64,32) pos=(55,18,48,16) color=#000000ff text="Deploy" font=f1 glyphs=6 advance=48
+  text bounds=(103,10,56,32) pos=(111,18,40,16) color=#000000ff text="#1041" font=f1 glyphs=5 advance=40
+  solid-fill bounds=(159,17,72,17) layer=(border=(159,17,72,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(159,17,72,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff29
+  text bounds=(159,10,72,32) pos=(167,18,56,16) color=#007affff text="running" font=f2 glyphs=7 advance=56
+  solid-fill bounds=(239,13,106,27) layer=(border=(239,13,106,27),radius=(8,8,8,8,8,8,8,8),clip=(239,13,106,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(244,10,40,32) pos=(252,18,24,16) color=#000000ff text="■" font=f1 glyphs=3 advance=24
+  text bounds=(276,10,64,32) pos=(284,18,48,16) color=#000000ff text="Cancel" font=f1 glyphs=6 advance=48
+  text bounds=(41,45,72,32) pos=(49,53,56,16) color=#000000ff text="Install" font=f3 glyphs=7 advance=56
+  text bounds=(105,45,112,32) pos=(113,53,96,16) color=#000000ff text="dependencies" font=f3 glyphs=12 advance=96
+  text bounds=(41,72,56,32) pos=(49,80,40,16) color=#6e6e73ff text="added" font=f4 glyphs=5 advance=40
+  text bounds=(89,72,56,32) pos=(97,80,40,16) color=#6e6e73ff text="1,284" font=f4 glyphs=5 advance=40
+  text bounds=(137,72,80,32) pos=(145,80,64,16) color=#6e6e73ff text="packages" font=f4 glyphs=8 advance=64
+  text bounds=(209,72,32,32) pos=(217,80,16,16) color=#6e6e73ff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(233,72,40,32) pos=(241,80,24,16) color=#6e6e73ff text="8.1" font=f4 glyphs=3 advance=24
+  text bounds=(265,72,24,32) pos=(273,80,8,16) color=#6e6e73ff text="s" font=f4 glyphs=1 advance=8
+  text bounds=(309,57,40,32) pos=(317,65,24,16) color=#6e6e73ff text="97%" font=f5 glyphs=3 advance=24
+  text bounds=(41,100,56,32) pos=(49,108,40,16) color=#6e6e73ff text="Build" font=f3 glyphs=5 advance=40
+  text bounds=(89,100,88,32) pos=(97,108,72,16) color=#6e6e73ff text="(release)" font=f3 glyphs=9 advance=72
+  text bounds=(41,132,40,32) pos=(49,140,24,16) color=#6e6e73ff text="Run" font=f3 glyphs=3 advance=24
+  text bounds=(73,132,40,32) pos=(81,140,24,16) color=#6e6e73ff text="214" font=f3 glyphs=3 advance=24
+  text bounds=(105,132,56,32) pos=(113,140,40,16) color=#6e6e73ff text="tests" font=f3 glyphs=5 advance=40
+  text bounds=(41,164,64,32) pos=(49,172,48,16) color=#6e6e73ff text="Upload" font=f3 glyphs=6 advance=48
+  text bounds=(97,164,64,32) pos=(105,172,48,16) color=#6e6e73ff text="bundle" font=f3 glyphs=6 advance=48
+  text bounds=(41,196,48,32) pos=(49,204,32,16) color=#6e6e73ff text="Roll" font=f3 glyphs=4 advance=32
+  text bounds=(81,196,40,32) pos=(89,204,24,16) color=#6e6e73ff text="out" font=f3 glyphs=3 advance=24
+  text bounds=(113,196,32,32) pos=(121,204,16,16) color=#6e6e73ff text="to" font=f3 glyphs=2 advance=16
+  text bounds=(137,196,24,32) pos=(145,204,8,16) color=#6e6e73ff text="3" font=f3 glyphs=1 advance=8
+  text bounds=(153,196,72,32) pos=(161,204,56,16) color=#6e6e73ff text="regions" font=f3 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

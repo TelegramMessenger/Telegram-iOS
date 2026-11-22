@@ -1,37 +1,146 @@
 import Foundation
 import CoreMedia
-import FFMpeg
+import FFMpegBinding
 
 final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     private let codecContext: FFMpegAVCodecContext
     private let swrContext: FFMpegSWResample
     
-    private let audioFrame: FFMpegAVFrame
+    private var timescale: CMTimeScale = 44000
+    private let audioFrame: FFMpegAVFrame?
     private var resetDecoderOnNextFrame = true
     
-    init(codecContext: FFMpegAVCodecContext) {
-        self.codecContext = codecContext
-        self.audioFrame = FFMpegAVFrame()
-        
-        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: 2, destinationSampleRate: 44100, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+    private let channelCount: Int
+    private let formatDescription: CMAudioFormatDescription
+    
+    private var delayedFrames: [MediaTrackFrame] = []
+    
+    // Playback output: stereo for a source with two or more channels, mono for a mono source.
+    static func playbackChannelCount(codecContext: FFMpegAVCodecContext) -> Int {
+        return codecContext.channels() == 1 ? 1 : 2
     }
     
-    func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
+    init(codecContext: FFMpegAVCodecContext, sampleRate: Int = 44100, channelCount: Int = 2) {
+        self.codecContext = codecContext
+        self.audioFrame = FFMpegAVFrame()
+        self.channelCount = channelCount
+        
+        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: channelCount, destinationSampleRate: sampleRate, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+        
+        var outputDescription = AudioStreamBasicDescription(
+            mSampleRate: Float64(sampleRate),
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: UInt32(2 * channelCount),
+            mFramesPerPacket: 1,
+            mBytesPerFrame: UInt32(2 * channelCount),
+            mChannelsPerFrame: UInt32(channelCount),
+            mBitsPerChannel: 16,
+            mReserved: 0
+        )
+        
+        var channelLayout = AudioChannelLayout()
+        memset(&channelLayout, 0, MemoryLayout<AudioChannelLayout>.size)
+        channelLayout.mChannelLayoutTag = channelCount == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo
+        
+        var formatDescription: CMAudioFormatDescription?
+        CMAudioFormatDescriptionCreate(allocator: nil, asbd: &outputDescription, layoutSize: MemoryLayout<AudioChannelLayout>.size, layout: &channelLayout, magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &formatDescription)
+        
+        self.formatDescription = formatDescription!
+    }
+    
+    func decodeRaw(frame: MediaTrackDecodableFrame) -> Data? {
+        guard let audioFrame = self.audioFrame else {
+            return nil
+        }
+        
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
-            if self.codecContext.receive(into: self.audioFrame) {
-                return convertAudioFrame(self.audioFrame, pts: frame.pts, duration: frame.duration)
+            let result = self.codecContext.receive(into: audioFrame)
+            if case .success = result {
+                guard let data = self.swrContext.resample(audioFrame) else {
+                    return nil
+                }
+                
+                return data
+            } else {
+                return nil
             }
+        } else {
+            return nil
+        }
+    }
+    
+    func send(frame: MediaTrackDecodableFrame) -> Bool {
+        self.timescale = frame.pts.timescale
+        let status = frame.packet.send(toDecoder: self.codecContext)
+        return status == 0
+    }
+    
+    func decode() -> MediaTrackFrame? {
+        guard let audioFrame = self.audioFrame else {
+            return nil
+        }
+        
+        while true {
+            let result = self.codecContext.receive(into: audioFrame)
+            if case .success = result {
+                if let convertedFrame = convertAudioFrame(audioFrame) {
+                    self.delayedFrames.append(convertedFrame)
+                }
+            } else {
+                break
+            }
+        }
+        
+        if self.delayedFrames.count >= 1 {
+            var minFrameIndex = 0
+            var minPosition = self.delayedFrames[0].position
+            for i in 1 ..< self.delayedFrames.count {
+                if CMTimeCompare(self.delayedFrames[i].position, minPosition) < 0 {
+                    minFrameIndex = i
+                    minPosition = self.delayedFrames[i].position
+                }
+            }
+            return self.delayedFrames.remove(at: minFrameIndex)
         }
         
         return nil
     }
     
-    func takeRemainingFrame() -> MediaTrackFrame? {
-        return nil
+    func takeQueuedFrame() -> MediaTrackFrame? {
+        if self.delayedFrames.count >= 1 {
+            var minFrameIndex = 0
+            var minPosition = self.delayedFrames[0].position
+            for i in 1 ..< self.delayedFrames.count {
+                if CMTimeCompare(self.delayedFrames[i].position, minPosition) < 0 {
+                    minFrameIndex = i
+                    minPosition = self.delayedFrames[i].position
+                }
+            }
+            return self.delayedFrames.remove(at: minFrameIndex)
+        } else {
+            return nil
+        }
     }
     
-    private func convertAudioFrame(_ frame: FFMpegAVFrame, pts: CMTime, duration: CMTime) -> MediaTrackFrame? {
+    func takeRemainingFrame() -> MediaTrackFrame? {
+        if !self.delayedFrames.isEmpty {
+            var minFrameIndex = 0
+            var minPosition = self.delayedFrames[0].position
+            for i in 1 ..< self.delayedFrames.count {
+                if CMTimeCompare(self.delayedFrames[i].position, minPosition) < 0 {
+                    minFrameIndex = i
+                    minPosition = self.delayedFrames[i].position
+                }
+            }
+            return self.delayedFrames.remove(at: minFrameIndex)
+        } else {
+            return nil
+        }
+    }
+    
+    private func convertAudioFrame(_ frame: FFMpegAVFrame) -> MediaTrackFrame? {
         guard let data = self.swrContext.resample(frame) else {
             return nil
         }
@@ -45,10 +154,11 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
         
-        var timingInfo = CMSampleTimingInfo(duration: duration, presentationTimeStamp: pts, decodeTimeStamp: pts)
         var sampleBuffer: CMSampleBuffer?
-        var sampleSize = data.count
-        guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
+        
+        let pts = CMTime(value: frame.pts, timescale: self.timescale)
+        
+        guard CMAudioSampleBufferCreateReadyWithPacketDescriptions(allocator: nil, dataBuffer: blockBuffer!, formatDescription: self.formatDescription, sampleCount: data.count / (2 * self.channelCount), presentationTimeStamp: pts, packetDescriptions: nil, sampleBufferOut: &sampleBuffer) == noErr else {
             return nil
         }
         
@@ -61,5 +171,9 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     func reset() {
         self.codecContext.flushBuffers()
         self.resetDecoderOnNextFrame = true
+    }
+    
+    func sendEndToDecoder() -> Bool {
+        return true
     }
 }

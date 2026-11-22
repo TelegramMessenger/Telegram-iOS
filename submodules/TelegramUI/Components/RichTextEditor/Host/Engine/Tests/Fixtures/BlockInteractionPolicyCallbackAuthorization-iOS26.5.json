@@ -1,0 +1,47 @@
+{
+  "osVersion": "26.5",
+  "build": "23F73",
+  "selectors": [
+    {
+      "name": "_updateSelectionGestures",
+      "decision": "safeFallback",
+      "evidence": [
+        "docs/hopper/UIKitCore-iOS26.5.md#block-interaction-policy-callback-reduction-evidence",
+        ".interaction-policy-reduction-task3-update-gestures-units.xcresult",
+        ".interaction-policy-reduction-task4-update-gestures-common-ui.xcresult",
+        ".interaction-policy-reduction-task4-update-gestures-policy-ui.xcresult"
+      ]
+    },
+    {
+      "name": "_isInteractiveTextSelectionDisabled",
+      "decision": "safeFallback",
+      "evidence": [
+        "docs/hopper/UIKitCore-iOS26.5.md#block-interaction-policy-callback-reduction-evidence",
+        ".interaction-policy-reduction-task3-interactive-disabled-units.xcresult",
+        ".interaction-policy-reduction-task4-interactive-disabled-common-ui.xcresult",
+        ".interaction-policy-reduction-task4-interactive-disabled-policy-ui.xcresult"
+      ]
+    },
+    {
+      "name": "hasEditableSelection",
+      "decision": "safeFallback",
+      "evidence": [
+        "docs/hopper/UIKitCore-iOS26.5.md#block-interaction-policy-callback-reduction-evidence",
+        ".interaction-policy-reduction-task3-editable-selection-units.xcresult",
+        ".interaction-policy-reduction-task3-oracles.xcresult",
+        ".interaction-policy-reduction-task4-editable-selection-common-ui.xcresult",
+        ".interaction-policy-reduction-task4-editable-selection-actions-ui.xcresult"
+      ]
+    },
+    {
+      "name": "_textKit2CanvasDidLayout",
+      "decision": "safeFallback",
+      "evidence": [
+        "docs/hopper/UIKitCore-iOS26.5.md#block-interaction-policy-callback-reduction-evidence",
+        ".interaction-policy-reduction-task3-canvas-layout-units.xcresult",
+        ".interaction-policy-reduction-task4-canvas-layout-common-ui.xcresult",
+        ".interaction-policy-reduction-task4-canvas-layout-scroll-ui.xcresult"
+      ]
+    }
+  ]
+}

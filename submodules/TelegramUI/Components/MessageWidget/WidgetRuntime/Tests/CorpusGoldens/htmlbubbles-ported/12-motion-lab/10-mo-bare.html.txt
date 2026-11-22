@@ -1,0 +1,157 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad lp" id="w">
+  <div class="row between" style="margin-bottom: 8px"><span class="small muted">🔗 eatlisboa.example</span><span><span class="small muted" id="loading">loading… </span><a class="lnk" href="#" data-action="reload">↻ Reload</a></span></div>
+  <div id="p-loading">
+    <div class="sk" style="width: 100%; height: 150px"></div>
+    <div style="margin-top: 10px"><div class="sk" style="width: 85%; height: 16px"></div><div class="sk" style="width: 100%; height: 12px"></div><div class="sk" style="width: 60%; height: 12px"></div></div>
+  </div>
+  <div id="p-card" hidden="">
+    <div class="img"><div class="lift" id="lift"><div class="strip" id="strip"><div class="slide art-ocean"></div><div class="slide art-sunset"></div><div class="slide art-map"></div></div></div>
+      <span class="cap" id="cap"></span>
+      <div class="arrow" id="arrow-l" data-action="step" data-value="-1" style="left: 8px">‹</div>
+      <div class="arrow" id="arrow-r" data-action="step" data-value="1" style="left: 276px">›</div>
+      <div class="dots" id="dots"><span data-action="go" data-value="0"></span><span data-action="go" data-value="1"></span><span data-action="go" data-value="2"></span></div></div>
+    <div class="txt"><div id="txtin"><b id="title-c">The 12 best pastéis de nata in Lisbon, ranked</b>
+      <div class="small muted" style="margin-top: 3px">We ate 61 custard tarts in four days so you don't have to. #1 is not where you think.</div></div></div>
+    <div class="acts"><span><button class="primary" data-action="open">Read article</button><button data-action="save" class="savebtn"><span class="bm">🔖</span> <span class="sv">Save</span></button></span><a class="lnk" href="#" data-action="collapse">▴ Collapse</a></div>
+  </div>
+  <div id="p-compact" hidden="">
+    <div class="mini" data-action="expand"><div class="thumb" id="thumb"></div><div class="grow"><b class="small" id="title-m">The 12 best pastéis de nata in Lisbon, ranked</b>
+      <div class="tiny muted" id="cmeta">4 min read · 12 bakeries</div></div><span class="muted">▾</span></div>
+  </div>
+  <div id="p-reader" hidden="">
+    <div class="reader"><a class="lnk" href="#" data-action="back">‹ Back to preview</a>
+      <div style="margin-top: 6px"><b id="title-r">The 12 best pastéis de nata in Lisbon, ranked</b></div><div class="tiny muted">By Inês Duarte · 4 min read</div>
+      <p>The perfect nata has a blistered, almost burnt top, a shell that shatters, and custard that is still a little warm. We rated each one on all three.</p>
+      <div class="caps" style="margin-bottom: 2px">Top 5</div><div id="ranks"><div class="rank" style="transition-delay: 120ms">
+      <span class="n">1</span><span class="grow"><b>Manteigaria</b> <span class="small muted">Chiado</span></span><span class="small">€1.20</span></div><div class="rank" style="transition-delay: 190ms">
+      <span class="n">2</span><span class="grow"><b>Pastéis de Belém</b> <span class="small muted">Belém</span></span><span class="small">€1.40</span></div><div class="rank" style="transition-delay: 260ms">
+      <span class="n">3</span><span class="grow"><b>Aloma</b> <span class="small muted">Campo de Ourique</span></span><span class="small">€1.10</span></div><div class="rank" style="transition-delay: 330ms">
+      <span class="n">4</span><span class="grow"><b>Fábrica da Nata</b> <span class="small muted">Baixa</span></span><span class="small">€1.30</span></div><div class="rank" style="transition-delay: 400ms">
+      <span class="n">5</span><span class="grow"><b>Confeitaria Nacional</b> <span class="small muted">Rossio</span></span><span class="small">€1.50</span></div></div>
+      <div class="acts"><button data-action="save" class="savebtn"><span class="bm">🔖</span> <span class="sv">Save</span></button><span class="tiny muted">7 more in the full list</span></div></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 294.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 294.4
+    div 15 13 310 268.4
+      div 15 13 310 36.4
+        span 15 15.6 158.605 31.2
+        span 173.605 13 151.395 36.4
+          span 173.605 13 0 0
+          a 173.605 13 0 0
+      div 15 57.4 310 216
+        div 15 57.4 310 150
+        div 15 217.4 310 56
+          div 15 217.4 263.5 16
+          div 15 241.4 310 12
+          div 15 261.4 186 12
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+            div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+            button 0 0 0 0
+            button 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+          a 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+            div 0 0 0 0
+          span 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          a 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+          div 0 0 0 0
+          p 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                b 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                b 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                b 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                b 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+                b 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+          div 0 0 0 0
+            button 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+
+== paint
+root 360x294.4 items=15
+  solid-fill bounds=(0,0,340,294) layer=(border=(0,0,340,294),radius=(14,14,14,14,14,14,14,14),clip=(0,0,340,294),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,340,294) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,340,294) root=0
+  solid-fill bounds=(15,57,310,150) layer=(border=(15,57,310,150),radius=(6,6,6,6,6,6,6,6),clip=(15,57,310,150),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  linear-gradient bounds=(15,57,310,150) layer=(border=(15,57,310,150),radius=(6,6,6,6,6,6,6,6),clip=(15,57,310,150),origin=(277,57,124,150),attachment=0,repeat=3,root=0) points=((0,#7f7f7f00,-),(0.5,#7f7f7f38,-),(1,#7f7f7f00,-)) space=0 hue=0 start=(277,57) end=(401,57)
+  solid-fill bounds=(15,217,264,16) layer=(border=(15,217,264,16),radius=(6,6,6,6,6,6,6,6),clip=(15,217,264,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  linear-gradient bounds=(15,217,264,16) layer=(border=(15,217,264,16),radius=(6,6,6,6,6,6,6,6),clip=(15,217,264,16),origin=(238,217,105,16),attachment=0,repeat=3,root=0) points=((0,#7f7f7f00,-),(0.5,#7f7f7f38,-),(1,#7f7f7f00,-)) space=0 hue=0 start=(238,217) end=(343,217)
+  solid-fill bounds=(15,241,310,12) layer=(border=(15,241,310,12),radius=(6,6,6,6,6,6,6,6),clip=(15,241,310,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  linear-gradient bounds=(15,241,310,12) layer=(border=(15,241,310,12),radius=(6,6,6,6,6,6,6,6),clip=(15,241,310,12),origin=(277,241,124,12),attachment=0,repeat=3,root=0) points=((0,#7f7f7f00,-),(0.5,#7f7f7f38,-),(1,#7f7f7f00,-)) space=0 hue=0 start=(277,241) end=(401,241)
+  solid-fill bounds=(15,261,186,12) layer=(border=(15,261,186,12),radius=(6,6,6,6,6,6,6,6),clip=(15,261,186,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  linear-gradient bounds=(15,261,186,12) layer=(border=(15,261,186,12),radius=(6,6,6,6,6,6,6,6),clip=(15,261,186,12),origin=(172,261,75,12),attachment=0,repeat=3,root=0) points=((0,#7f7f7f00,-),(0.5,#7f7f7f38,-),(1,#7f7f7f00,-)) space=0 hue=0 start=(172,261) end=(247,261)
+  text bounds=(7,8,48,32) pos=(15,16,32,16) color=#6e6e73ff text="🔗" font=f1 glyphs=4 advance=32
+  text bounds=(7,23,152,32) pos=(15,31,136,16) color=#6e6e73ff text="eatlisboa.example" font=f1 glyphs=17 advance=136
+  text bounds=(165.605,6,96,32) pos=(173.605,14,80,16) color=#6e6e73ff text="loading…" font=f1 glyphs=10 advance=80
+  text bounds=(253.605,6,40,32) pos=(261.605,14,24,16) color=#007affff text="↻" font=f2 glyphs=3 advance=24
+  text bounds=(165.605,24,64,32) pos=(173.605,32,48,16) color=#007affff text="Reload" font=f2 glyphs=6 advance=48
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(-2147483648,predef0,0,#007affff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

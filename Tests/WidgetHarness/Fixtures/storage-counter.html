@@ -1,0 +1,9 @@
+<!doctype html>
+<html><head><style>body { margin: 0; } div { background: #36c; }</style></head>
+<body><div id="d"></div>
+<script>
+// Counts its boots in localStorage and is 50 px tall per boot plus 50 (WidgetHarnessStorageTests).
+const boots = Number(localStorage.getItem('boots') || '0') + 1;
+localStorage.setItem('boots', String(boots));
+document.getElementById('d').style.height = (50 + 50 * boots) + 'px';
+</script></body></html>

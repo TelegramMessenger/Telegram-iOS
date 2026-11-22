@@ -1,0 +1,34 @@
+# html5lib cases our DOM builder fails (M1b Task 15). "<file>.dat:<index>", then optionally a reason. A case gumbo
+# itself fails (third-party/gumbo/tests/html5lib-expected-failures.txt) is listed bare; one only the Builder fails says
+# why, after a space. Remove a line when its case starts passing.
+adoption02.dat:2
+menuitem-element.dat:13
+quirks01.dat:2
+quirks01.dat:3
+tests_innerHTML_1.dat:76
+tests_innerHTML_1.dat:77
+tests1.dat:29
+tests1.dat:99
+tests10.dat:3
+tests10.dat:4
+tests10.dat:16
+tests10.dat:17
+tests18.dat:13
+tests18.dat:14
+tests7.dat:33
+tests9.dat:4
+tests9.dat:5
+tests9.dat:17
+tests9.dat:18
+webkit02.dat:18
+webkit02.dat:35
+webkit02.dat:37
+webkit02.dat:38
+webkit02.dat:39
+webkit02.dat:40
+webkit02.dat:41
+webkit02.dat:42
+webkit02.dat:44
+webkit02.dat:45
+webkit02.dat:46
+webkit02.dat:47

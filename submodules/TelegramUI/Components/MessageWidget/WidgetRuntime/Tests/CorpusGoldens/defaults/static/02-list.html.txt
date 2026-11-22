@@ -1,0 +1,84 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Before the hike</title>
+</head><body><h3>Before the hike</h3>
+<ol>
+  <li>Check the forecast the evening before</li>
+  <li>Pack
+    <ul>
+      <li>two litres of water</li>
+      <li>lunch and something sweet</li>
+      <li>a rain jacket</li>
+    </ul>
+  </li>
+  <li>Tell someone your route</li>
+</ol>
+<p>We meet at the <b>north car park</b> at 8:30.</p>
+</body></html>
+
+== layout
+html 0 0 360 198.25
+  head 0 0 0 0
+  body 12 8 336 182.25
+    h3 12 8 336 22.5
+    ol 34.5 39.5 313.5 121.5
+      li 34.5 39.5 313.5 20.25
+      li 34.5 59.75 313.5 81
+        ul 57 80 291 60.75
+          li 57 80 291 20.25
+          li 57 100.25 291 20.25
+          li 57 120.5 291 20.25
+      li 34.5 140.75 313.5 20.25
+    p 12 170 336 20.25
+      b 12 170 0 0
+
+== paint
+root 360x198.25 items=40
+  text bounds=(3,34,32,32) pos=(11,42,16,16) color=#000000ff text="1." font=f1 glyphs=2 advance=16
+  text bounds=(3,54,32,32) pos=(11,62,16,16) color=#000000ff text="2." font=f1 glyphs=2 advance=16
+  list-marker bounds=(42,87.625,5,5) marker=(type=1,color=#000000ff,pos=(42,87.625,5,5),index=-1) font=1 image=-
+  list-marker bounds=(42,107.875,5,5) marker=(type=1,color=#000000ff,pos=(42,107.875,5,5),index=-1) font=1 image=-
+  list-marker bounds=(42,128.125,5,5) marker=(type=1,color=#000000ff,pos=(42,128.125,5,5),index=-1) font=1 image=-
+  text bounds=(3,135,32,32) pos=(11,143,16,16) color=#000000ff text="3." font=f1 glyphs=2 advance=16
+  text bounds=(4,3,64,32) pos=(12,11,48,16) color=#000000ff text="Before" font=f2 glyphs=6 advance=48
+  text bounds=(60,3,40,32) pos=(68,11,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(92,3,48,32) pos=(100,11,32,16) color=#000000ff text="hike" font=f2 glyphs=4 advance=32
+  text bounds=(26.5,34,56,32) pos=(34.5,42,40,16) color=#000000ff text="Check" font=f1 glyphs=5 advance=40
+  text bounds=(74.5,34,40,32) pos=(82.5,42,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(106.5,34,80,32) pos=(114.5,42,64,16) color=#000000ff text="forecast" font=f1 glyphs=8 advance=64
+  text bounds=(178.5,34,40,32) pos=(186.5,42,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(210.5,34,72,32) pos=(218.5,42,56,16) color=#000000ff text="evening" font=f1 glyphs=7 advance=56
+  text bounds=(274.5,34,64,32) pos=(282.5,42,48,16) color=#000000ff text="before" font=f1 glyphs=6 advance=48
+  text bounds=(26.5,54,48,32) pos=(34.5,62,32,16) color=#000000ff text="Pack" font=f1 glyphs=4 advance=32
+  text bounds=(49,74,40,32) pos=(57,82,24,16) color=#000000ff text="two" font=f1 glyphs=3 advance=24
+  text bounds=(81,74,64,32) pos=(89,82,48,16) color=#000000ff text="litres" font=f1 glyphs=6 advance=48
+  text bounds=(137,74,32,32) pos=(145,82,16,16) color=#000000ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(161,74,56,32) pos=(169,82,40,16) color=#000000ff text="water" font=f1 glyphs=5 advance=40
+  text bounds=(49,94,56,32) pos=(57,102,40,16) color=#000000ff text="lunch" font=f1 glyphs=5 advance=40
+  text bounds=(97,94,40,32) pos=(105,102,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(129,94,88,32) pos=(137,102,72,16) color=#000000ff text="something" font=f1 glyphs=9 advance=72
+  text bounds=(209,94,56,32) pos=(217,102,40,16) color=#000000ff text="sweet" font=f1 glyphs=5 advance=40
+  text bounds=(49,115,24,32) pos=(57,123,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(65,115,48,32) pos=(73,123,32,16) color=#000000ff text="rain" font=f1 glyphs=4 advance=32
+  text bounds=(105,115,64,32) pos=(113,123,48,16) color=#000000ff text="jacket" font=f1 glyphs=6 advance=48
+  text bounds=(26.5,135,48,32) pos=(34.5,143,32,16) color=#000000ff text="Tell" font=f1 glyphs=4 advance=32
+  text bounds=(66.5,135,72,32) pos=(74.5,143,56,16) color=#000000ff text="someone" font=f1 glyphs=7 advance=56
+  text bounds=(130.5,135,48,32) pos=(138.5,143,32,16) color=#000000ff text="your" font=f1 glyphs=4 advance=32
+  text bounds=(170.5,135,56,32) pos=(178.5,143,40,16) color=#000000ff text="route" font=f1 glyphs=5 advance=40
+  text bounds=(4,164,32,32) pos=(12,172,16,16) color=#000000ff text="We" font=f1 glyphs=2 advance=16
+  text bounds=(28,164,48,32) pos=(36,172,32,16) color=#000000ff text="meet" font=f1 glyphs=4 advance=32
+  text bounds=(68,164,32,32) pos=(76,172,16,16) color=#000000ff text="at" font=f1 glyphs=2 advance=16
+  text bounds=(92,164,40,32) pos=(100,172,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(124,164,56,32) pos=(132,172,40,16) color=#000000ff text="north" font=f3 glyphs=5 advance=40
+  text bounds=(172,164,40,32) pos=(180,172,24,16) color=#000000ff text="car" font=f3 glyphs=3 advance=24
+  text bounds=(204,164,48,32) pos=(212,172,32,16) color=#000000ff text="park" font=f3 glyphs=4 advance=32
+  text bounds=(244,164,32,32) pos=(252,172,16,16) color=#000000ff text="at" font=f1 glyphs=2 advance=16
+  text bounds=(268,164,56,32) pos=(276,172,40,16) color=#000000ff text="8:30." font=f1 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

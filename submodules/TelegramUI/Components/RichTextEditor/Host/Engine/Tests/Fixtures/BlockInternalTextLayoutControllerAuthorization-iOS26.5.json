@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "runtime": {"platform": "iOS", "version": "26.5", "build": "23F73"},
+  "selector": "_internalTextLayoutController",
+  "owner": "IDBlockTextView(PrivateCallbacks)",
+  "decision": "safeFallback",
+  "retainedAuthority": {
+    "selector": "textLayoutController",
+    "owner": "IDBlockTextView(PrivateCallbacks)",
+    "algorithmAuthority": "IDRichTextLayoutController"
+  },
+  "hopper": {
+    "selectorStub": "0x214d520",
+    "canvasXref": "0xc084fc",
+    "textFieldXref": "0x15d7924",
+    "textViewXref": "0x16215dc",
+    "stockProvider": "0x1621580"
+  },
+  "artifacts": {
+    "retainedAuthority": ".block-internal-controller-task4-retained-authority.xcresult",
+    "withdrawnAuthority": ".block-internal-controller-task4-withdrawn-authority.xcresult",
+    "retainedLifecycle": ".block-internal-controller-task4-retained-lifecycle.xcresult",
+    "withdrawnLifecycle": ".block-internal-controller-task4-withdrawn-lifecycle.xcresult",
+    "retainedUI": ".block-internal-controller-task4-retained-ui.xcresult",
+    "withdrawnUI": ".block-internal-controller-task4-withdrawn-ui.xcresult"
+  }
+}

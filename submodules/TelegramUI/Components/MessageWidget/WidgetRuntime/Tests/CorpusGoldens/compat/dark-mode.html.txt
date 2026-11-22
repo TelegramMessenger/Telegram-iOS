@@ -1,0 +1,51 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div class="card">Current scheme: <span id="mode">light ☀️</span><br><small id="js">JS sees: matchMedia.matches = false</small><br><small id="tg">TelegramWidget theme: light</small></div>
+<button id="check">Re-check</button>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 153.55
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 125.55
+    div 30 26 304 60.75
+      span 30 26 0 0
+      br 254 26 0 0
+      small 30 26 0 0
+      br 310 46.25 0 0
+      small 30 26 0 0
+    button 27 115.75 64 16.8
+
+== paint
+root 360x153.55 items=18
+  solid-fill bounds=(0,0,360,154) layer=(border=(0,0,360,154),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,154),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(14,14,332,85) layer=(border=(14,14,332,85),radius=(10,10,10,10,10,10,10,10),clip=(14,14,332,85),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f3f4f6ff
+  borders bounds=(14,14,332,85) borders=(left=(4,4,#2481ccff),top=(0,0,#222222ff),right=(0,0,#222222ff),bottom=(0,0,#222222ff),radius=(10,10,10,10,10,10,10,10)) pos=(14,14,332,85) root=0
+  text bounds=(22,20,72,32) pos=(30,28,56,16) color=#222222ff text="Current" font=f1 glyphs=7 advance=56
+  text bounds=(86,20,72,32) pos=(94,28,56,16) color=#222222ff text="scheme:" font=f1 glyphs=7 advance=56
+  text bounds=(150,20,56,32) pos=(158,28,40,16) color=#2481ccff text="light" font=f2 glyphs=5 advance=40
+  text bounds=(198,20,64,32) pos=(206,28,48,16) color=#2481ccff text="☀️" font=f2 glyphs=6 advance=48
+  text bounds=(22,40,32,32) pos=(30,48,16,16) color=#222222ff text="JS" font=f3 glyphs=2 advance=16
+  text bounds=(46,40,56,32) pos=(54,48,40,16) color=#222222ff text="sees:" font=f3 glyphs=5 advance=40
+  text bounds=(94,40,160,32) pos=(102,48,144,16) color=#222222ff text="matchMedia.matches" font=f3 glyphs=18 advance=144
+  text bounds=(246,40,24,32) pos=(254,48,8,16) color=#222222ff text="=" font=f3 glyphs=1 advance=8
+  text bounds=(262,40,56,32) pos=(270,48,40,16) color=#222222ff text="false" font=f3 glyphs=5 advance=40
+  text bounds=(22,61,128,32) pos=(30,69,112,16) color=#222222ff text="TelegramWidget" font=f3 glyphs=14 advance=112
+  text bounds=(142,61,64,32) pos=(150,69,48,16) color=#222222ff text="theme:" font=f3 glyphs=6 advance=48
+  text bounds=(198,61,56,32) pos=(206,69,40,16) color=#222222ff text="light" font=f3 glyphs=5 advance=40
+  borders bounds=(14,109,90,31) borders=(left=(1,4,#2481ccff),top=(1,4,#2481ccff),right=(1,4,#2481ccff),bottom=(1,4,#2481ccff),radius=(8,8,8,8,8,8,8,8)) pos=(14,109,90,31) root=0
+  text bounds=(19,108,40,32) pos=(27,116,24,16) color=#222222ff text="Re-" font=f4 glyphs=3 advance=24
+  text bounds=(43,108,56,32) pos=(51,116,40,16) color=#222222ff text="check" font=f4 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12.75,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

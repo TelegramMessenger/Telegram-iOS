@@ -1,0 +1,236 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad th">
+  <div class="small muted"><svg class="sf" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-3.5 3v-3H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="#ff9500"></path><path d="M4 5h8M4 7.5h6" stroke="#fff" stroke-width="1.2" stroke-linecap="round"></path></svg> Review thread on <b class="fg">src/LHDocument.mm</b> line 53</div>
+  <div class="snip">        width = std::ceil(natural + 0.01);</div>
+  <div class="cmt"><span class="av" style="background-color: #ff9500">RS</span><div class="bubble2"><b>Rin Sato</b> <span class="tiny muted">· 16:05</span><p style="margin: 2px 0 4px 0">Why <code>+ 0.01</code>? Feels like a magic number 🤔 If <code>natural</code> is already integral we add a whole pixel after <code>ceil</code>.</p><div class="react"><span>👀 2</span><span>🤔 1</span></div></div></div>
+  <div class="reply">
+    <div class="cmt"><span class="av" style="background-color: #34c759">LP</span><div class="bubble2"><b>Leo Park</b> <span class="tiny muted">· 16:07</span><p style="margin: 2px 0 4px 0">Float noise: <code>natural</code> comes back as e.g. <code>212.99998</code>, and rendering at exactly that width wraps the last word. The epsilon only matters in that case — <code>ceil(213.0 + 0.01)</code> is 214, you're right, I'll use <code>ceil(natural - 0.001)</code> + a comment.</p><div class="react"><span>👍 3</span><span>🎯 1</span></div></div></div>
+    <div class="cmt"><span class="av" style="background-color: #ff9500">RS</span><div class="bubble2"><b>Rin Sato</b> <span class="tiny muted">· 16:08</span><p style="margin: 2px 0 4px 0">Perfect, thanks! Approving once that lands ✅</p></div></div>
+    <div class="cmt" id="mine" hidden=""><span class="av" style="background-color: #007aff">ME</span><div class="bubble2"><b>You</b> <span class="tiny muted">· this device</span><p style="margin: 2px 0 4px 0">LGTM 🚀</p></div></div>
+  </div>
+  <div class="row" style="margin-top: 6px"><span class="badge green">RESOLVED</span><span class="grow"></span><a class="btn" href="#" id="reply">Reply</a></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 496.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 496.5
+    div 15 13 360 470.5
+      div 15 13 360 15.6
+        svg 15 16 12 12
+          path 0 0 0 0
+          path 0 0 0 0
+        b 15 13 0 0
+      div 23 37.6 344 14.3
+      div 15 70.9 360 98.4
+        span 15 70.9 28 28
+        div 53 70.9 322 98.4
+          b 53 70.9 0 0
+          span 53 70.9 0 0
+          p 53 91.1 322 54.6
+            code 53 91.1 0 0
+            code 53 91.1 0 0
+            code 53 91.1 0 0
+          div 53 149.7 322 19.6
+            span 61 151.7 48 15.6
+            span 129 151.7 48 15.6
+      div 65 173.3 310 274
+        div 65 183.3 310 189.4
+          span 65 183.3 28 28
+          div 103 183.3 272 189.4
+            b 103 183.3 0 0
+            span 103 183.3 0 0
+            p 103 203.5 272 145.6
+              code 103 203.5 0 0
+              code 103 203.5 0 0
+              code 103 203.5 0 0
+              code 103 203.5 0 0
+            div 103 353.1 272 19.6
+              span 111 355.1 48 15.6
+              span 179 355.1 48 15.6
+        div 65 386.7 310 56.6
+          span 65 386.7 28 28
+          div 103 386.7 272 56.6
+            b 103 386.7 0 0
+            span 103 386.7 0 0
+            p 103 406.9 272 36.4
+        div 0 0 0 0
+          span 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+            span 0 0 0 0
+            p 0 0 0 0
+      div 15 453.3 360 30.2
+        span 23 461.25 64 14.3
+        span 95 468.4 212 0
+        a 321 459.3 40 18.2
+
+== paint
+root 390x496.5 items=145
+  solid-fill bounds=(0,0,390,497) layer=(border=(0,0,390,497),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,497),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,497) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,497) root=0
+  solid-fill bounds=(15,33,360,24) layer=(border=(15,33,360,24),radius=(6,6,6,6,6,6,6,6),clip=(15,33,360,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c75921
+  solid-fill bounds=(15,71,28,28) layer=(border=(15,71,28,28),radius=(14,14,14,14,14,14,14,14),clip=(15,71,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  borders bounds=(53,173,322,274) borders=(left=(2,4,#7f7f7f40),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(53,173,322,274) root=0
+  solid-fill bounds=(65,183,28,28) layer=(border=(65,183,28,28),radius=(14,14,14,14,14,14,14,14),clip=(65,183,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(65,387,28,28) layer=(border=(65,387,28,28),radius=(14,14,14,14,14,14,14,14),clip=(65,387,28,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(15,460,80,17) layer=(border=(15,460,80,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(15,460,80,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  solid-fill bounds=(307,453,68,31) layer=(border=(307,453,68,31),radius=(9,9,9,9,9,9,9,9),clip=(307,453,68,31),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  set-clip bounds=(15,16,12,12) pos=(15,16,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15,16,12,12)
+    group opacity=1 matrix=(0.75,0,0,0.75,15,16) backface=0 bounds=(0,0,16,16) exact=0
+      path bounds=(0,1,16,14) ops=(0,1,3,1,3,1,1,1,1,3,1,3,4) points=(2,2,14,2,14.5523,2,15,2.44772,15,3,15,10,15,10.5523,14.5523,11,14,11,8,11,4.5,14,4.5,11,2,11,1.44772,11,1,10.5523,1,10,1,3,1,2.44772,1.44772,2,2,2) fill=1 fill-color=#ff9500ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(0.6,1.6,14.8,9.3) ops=(0,1,0,1) points=(4,5,12,5,4,7.5,10,7.5) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(27,5,64,32) pos=(35,13,48,16) color=#6e6e73ff text="Review" font=f1 glyphs=6 advance=48
+  text bounds=(83,5,64,32) pos=(91,13,48,16) color=#6e6e73ff text="thread" font=f1 glyphs=6 advance=48
+  text bounds=(139,5,32,32) pos=(147,13,16,16) color=#6e6e73ff text="on" font=f1 glyphs=2 advance=16
+  text bounds=(163,5,152,32) pos=(171,13,136,16) color=#000000ff text="src/LHDocument.mm" font=f2 glyphs=17 advance=136
+  text bounds=(307,5,48,32) pos=(315,13,32,16) color=#6e6e73ff text="line" font=f1 glyphs=4 advance=32
+  text bounds=(347,5,32,32) pos=(355,13,16,16) color=#6e6e73ff text="53" font=f1 glyphs=2 advance=16
+  text bounds=(15,30,24,32) pos=(23,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(23,30,24,32) pos=(31,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(31,30,24,32) pos=(39,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(39,30,24,32) pos=(47,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(47,30,24,32) pos=(55,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(55,30,24,32) pos=(63,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(63,30,24,32) pos=(71,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(71,30,24,32) pos=(79,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(79,30,56,32) pos=(87,38,40,16) color=#000000ff text="width" font=f3 glyphs=5 advance=40
+  text bounds=(119,30,24,32) pos=(127,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(127,30,24,32) pos=(135,38,8,16) color=#000000ff text="=" font=f3 glyphs=1 advance=8
+  text bounds=(135,30,24,32) pos=(143,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(143,30,152,32) pos=(151,38,136,16) color=#000000ff text="std::ceil(natural" font=f3 glyphs=17 advance=136
+  text bounds=(279,30,24,32) pos=(287,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(287,30,24,32) pos=(295,38,8,16) color=#000000ff text="+" font=f3 glyphs=1 advance=8
+  text bounds=(295,30,24,32) pos=(303,38,8,16) color=#000000ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(303,30,64,32) pos=(311,38,48,16) color=#000000ff text="0.01);" font=f3 glyphs=6 advance=48
+  text bounds=(13,69,32,32) pos=(21,77,16,16) color=#ffffffff text="RS" font=f4 glyphs=2 advance=16
+  text bounds=(45,64,40,32) pos=(53,72,24,16) color=#000000ff text="Rin" font=f5 glyphs=3 advance=24
+  text bounds=(77,64,48,32) pos=(85,72,32,16) color=#000000ff text="Sato" font=f5 glyphs=4 advance=32
+  text bounds=(117,64,32,32) pos=(125,72,16,16) color=#6e6e73ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(141,64,56,32) pos=(149,72,40,16) color=#6e6e73ff text="16:05" font=f6 glyphs=5 advance=40
+  text bounds=(45,84,40,32) pos=(53,92,24,16) color=#000000ff text="Why" font=f7 glyphs=3 advance=24
+  solid-fill bounds=(85,91,56,18) layer=(border=(85,91,56,18),radius=(4,4,4,4,4,4,4,4),clip=(85,91,56,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(81,84,24,32) pos=(89,92,8,16) color=#000000ff text="+" font=f8 glyphs=1 advance=8
+  text bounds=(97,84,48,32) pos=(105,92,32,16) color=#000000ff text="0.01" font=f8 glyphs=4 advance=32
+  text bounds=(133,84,24,32) pos=(141,92,8,16) color=#000000ff text="?" font=f7 glyphs=1 advance=8
+  text bounds=(149,84,56,32) pos=(157,92,40,16) color=#000000ff text="Feels" font=f7 glyphs=5 advance=40
+  text bounds=(197,84,48,32) pos=(205,92,32,16) color=#000000ff text="like" font=f7 glyphs=4 advance=32
+  text bounds=(237,84,24,32) pos=(245,92,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(253,84,56,32) pos=(261,92,40,16) color=#000000ff text="magic" font=f7 glyphs=5 advance=40
+  text bounds=(301,84,64,32) pos=(309,92,48,16) color=#000000ff text="number" font=f7 glyphs=6 advance=48
+  text bounds=(45,102,48,32) pos=(53,110,32,16) color=#000000ff text="🤔" font=f7 glyphs=4 advance=32
+  text bounds=(85,102,32,32) pos=(93,110,16,16) color=#000000ff text="If" font=f7 glyphs=2 advance=16
+  solid-fill bounds=(117,109,64,18) layer=(border=(117,109,64,18),radius=(4,4,4,4,4,4,4,4),clip=(117,109,64,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(113,102,72,32) pos=(121,110,56,16) color=#000000ff text="natural" font=f8 glyphs=7 advance=56
+  text bounds=(181,102,32,32) pos=(189,110,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(205,102,72,32) pos=(213,110,56,16) color=#000000ff text="already" font=f7 glyphs=7 advance=56
+  text bounds=(269,102,80,32) pos=(277,110,64,16) color=#000000ff text="integral" font=f7 glyphs=8 advance=64
+  text bounds=(341,102,32,32) pos=(349,110,16,16) color=#000000ff text="we" font=f7 glyphs=2 advance=16
+  text bounds=(45,121,40,32) pos=(53,129,24,16) color=#000000ff text="add" font=f7 glyphs=3 advance=24
+  text bounds=(77,121,24,32) pos=(85,129,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(93,121,56,32) pos=(101,129,40,16) color=#000000ff text="whole" font=f7 glyphs=5 advance=40
+  text bounds=(141,121,56,32) pos=(149,129,40,16) color=#000000ff text="pixel" font=f7 glyphs=5 advance=40
+  text bounds=(189,121,56,32) pos=(197,129,40,16) color=#000000ff text="after" font=f7 glyphs=5 advance=40
+  solid-fill bounds=(245,128,40,18) layer=(border=(245,128,40,18),radius=(4,4,4,4,4,4,4,4),clip=(245,128,40,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(241,121,48,32) pos=(249,129,32,16) color=#000000ff text="ceil" font=f8 glyphs=4 advance=32
+  text bounds=(277,121,24,32) pos=(285,129,8,16) color=#000000ff text="." font=f7 glyphs=1 advance=8
+  borders bounds=(53,150,64,19) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5)) pos=(53,150,64,19) root=0
+  text bounds=(53,144,48,32) pos=(61,152,32,16) color=#000000ff text="👀" font=f1 glyphs=4 advance=32
+  text bounds=(93,144,24,32) pos=(101,152,8,16) color=#000000ff text="2" font=f1 glyphs=1 advance=8
+  borders bounds=(121,150,64,19) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5)) pos=(121,150,64,19) root=0
+  text bounds=(121,144,48,32) pos=(129,152,32,16) color=#000000ff text="🤔" font=f1 glyphs=4 advance=32
+  text bounds=(161,144,24,32) pos=(169,152,8,16) color=#000000ff text="1" font=f1 glyphs=1 advance=8
+  text bounds=(63,181,32,32) pos=(71,189,16,16) color=#ffffffff text="LP" font=f4 glyphs=2 advance=16
+  text bounds=(95,176,40,32) pos=(103,184,24,16) color=#000000ff text="Leo" font=f5 glyphs=3 advance=24
+  text bounds=(127,176,48,32) pos=(135,184,32,16) color=#000000ff text="Park" font=f5 glyphs=4 advance=32
+  text bounds=(167,176,32,32) pos=(175,184,16,16) color=#6e6e73ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(191,176,56,32) pos=(199,184,40,16) color=#6e6e73ff text="16:07" font=f6 glyphs=5 advance=40
+  text bounds=(95,196,56,32) pos=(103,204,40,16) color=#000000ff text="Float" font=f7 glyphs=5 advance=40
+  text bounds=(143,196,64,32) pos=(151,204,48,16) color=#000000ff text="noise:" font=f7 glyphs=6 advance=48
+  solid-fill bounds=(207,203,64,18) layer=(border=(207,203,64,18),radius=(4,4,4,4,4,4,4,4),clip=(207,203,64,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(203,196,72,32) pos=(211,204,56,16) color=#000000ff text="natural" font=f8 glyphs=7 advance=56
+  text bounds=(271,196,56,32) pos=(279,204,40,16) color=#000000ff text="comes" font=f7 glyphs=5 advance=40
+  text bounds=(319,196,48,32) pos=(327,204,32,16) color=#000000ff text="back" font=f7 glyphs=4 advance=32
+  text bounds=(95,215,32,32) pos=(103,223,16,16) color=#000000ff text="as" font=f7 glyphs=2 advance=16
+  text bounds=(119,215,48,32) pos=(127,223,32,16) color=#000000ff text="e.g." font=f7 glyphs=4 advance=32
+  solid-fill bounds=(167,222,80,18) layer=(border=(167,222,80,18),radius=(4,4,4,4,4,4,4,4),clip=(167,222,80,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(163,215,88,32) pos=(171,223,72,16) color=#000000ff text="212.99998" font=f8 glyphs=9 advance=72
+  text bounds=(239,215,24,32) pos=(247,223,8,16) color=#000000ff text="," font=f7 glyphs=1 advance=8
+  text bounds=(255,215,40,32) pos=(263,223,24,16) color=#000000ff text="and" font=f7 glyphs=3 advance=24
+  text bounds=(287,215,88,32) pos=(295,223,72,16) color=#000000ff text="rendering" font=f7 glyphs=9 advance=72
+  text bounds=(95,233,32,32) pos=(103,241,16,16) color=#000000ff text="at" font=f7 glyphs=2 advance=16
+  text bounds=(119,233,72,32) pos=(127,241,56,16) color=#000000ff text="exactly" font=f7 glyphs=7 advance=56
+  text bounds=(183,233,48,32) pos=(191,241,32,16) color=#000000ff text="that" font=f7 glyphs=4 advance=32
+  text bounds=(223,233,56,32) pos=(231,241,40,16) color=#000000ff text="width" font=f7 glyphs=5 advance=40
+  text bounds=(271,233,56,32) pos=(279,241,40,16) color=#000000ff text="wraps" font=f7 glyphs=5 advance=40
+  text bounds=(319,233,40,32) pos=(327,241,24,16) color=#000000ff text="the" font=f7 glyphs=3 advance=24
+  text bounds=(95,251,48,32) pos=(103,259,32,16) color=#000000ff text="last" font=f7 glyphs=4 advance=32
+  text bounds=(135,251,56,32) pos=(143,259,40,16) color=#000000ff text="word." font=f7 glyphs=5 advance=40
+  text bounds=(183,251,40,32) pos=(191,259,24,16) color=#000000ff text="The" font=f7 glyphs=3 advance=24
+  text bounds=(215,251,72,32) pos=(223,259,56,16) color=#000000ff text="epsilon" font=f7 glyphs=7 advance=56
+  text bounds=(279,251,48,32) pos=(287,259,32,16) color=#000000ff text="only" font=f7 glyphs=4 advance=32
+  text bounds=(95,269,72,32) pos=(103,277,56,16) color=#000000ff text="matters" font=f7 glyphs=7 advance=56
+  text bounds=(159,269,32,32) pos=(167,277,16,16) color=#000000ff text="in" font=f7 glyphs=2 advance=16
+  text bounds=(183,269,48,32) pos=(191,277,32,16) color=#000000ff text="that" font=f7 glyphs=4 advance=32
+  text bounds=(223,269,48,32) pos=(231,277,32,16) color=#000000ff text="case" font=f7 glyphs=4 advance=32
+  text bounds=(263,269,40,32) pos=(271,277,24,16) color=#000000ff text="—" font=f7 glyphs=3 advance=24
+  solid-fill bounds=(103,294,152,18) layer=(border=(103,294,152,18),radius=(4,4,4,4,4,4,4,4),clip=(103,294,152,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(99,287,96,32) pos=(107,295,80,16) color=#000000ff text="ceil(213.0" font=f8 glyphs=10 advance=80
+  text bounds=(187,287,24,32) pos=(195,295,8,16) color=#000000ff text="+" font=f8 glyphs=1 advance=8
+  text bounds=(203,287,56,32) pos=(211,295,40,16) color=#000000ff text="0.01)" font=f8 glyphs=5 advance=40
+  text bounds=(255,287,32,32) pos=(263,295,16,16) color=#000000ff text="is" font=f7 glyphs=2 advance=16
+  text bounds=(279,287,48,32) pos=(287,295,32,16) color=#000000ff text="214," font=f7 glyphs=4 advance=32
+  text bounds=(319,287,64,32) pos=(327,295,48,16) color=#000000ff text="you're" font=f7 glyphs=6 advance=48
+  text bounds=(95,306,64,32) pos=(103,314,48,16) color=#000000ff text="right," font=f7 glyphs=6 advance=48
+  text bounds=(151,306,48,32) pos=(159,314,32,16) color=#000000ff text="I'll" font=f7 glyphs=4 advance=32
+  text bounds=(191,306,40,32) pos=(199,314,24,16) color=#000000ff text="use" font=f7 glyphs=3 advance=24
+  solid-fill bounds=(231,313,116,18) layer=(border=(231,313,116,18),radius=(4,4,0,0,0,0,4,4),clip=(231,313,116,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  solid-fill bounds=(103,331,52,18) layer=(border=(103,331,52,18),radius=(0,0,4,4,4,4,0,0),clip=(103,331,52,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(227,306,112,32) pos=(235,314,96,16) color=#000000ff text="ceil(natural" font=f8 glyphs=12 advance=96
+  text bounds=(331,306,24,32) pos=(339,314,8,16) color=#000000ff text="-" font=f8 glyphs=1 advance=8
+  text bounds=(95,324,64,32) pos=(103,332,48,16) color=#000000ff text="0.001)" font=f8 glyphs=6 advance=48
+  text bounds=(155,324,24,32) pos=(163,332,8,16) color=#000000ff text="+" font=f7 glyphs=1 advance=8
+  text bounds=(171,324,24,32) pos=(179,332,8,16) color=#000000ff text="a" font=f7 glyphs=1 advance=8
+  text bounds=(187,324,80,32) pos=(195,332,64,16) color=#000000ff text="comment." font=f7 glyphs=8 advance=64
+  borders bounds=(103,353,64,20) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(10,10,10,10,10,10,10,10)) pos=(103,353,64,20) root=0
+  text bounds=(103,347,48,32) pos=(111,355,32,16) color=#000000ff text="👍" font=f1 glyphs=4 advance=32
+  text bounds=(143,347,24,32) pos=(151,355,8,16) color=#000000ff text="3" font=f1 glyphs=1 advance=8
+  borders bounds=(171,353,64,20) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(10,10,10,10,10,10,10,10)) pos=(171,353,64,20) root=0
+  text bounds=(171,347,48,32) pos=(179,355,32,16) color=#000000ff text="🎯" font=f1 glyphs=4 advance=32
+  text bounds=(211,347,24,32) pos=(219,355,8,16) color=#000000ff text="1" font=f1 glyphs=1 advance=8
+  text bounds=(63,385,32,32) pos=(71,393,16,16) color=#ffffffff text="RS" font=f4 glyphs=2 advance=16
+  text bounds=(95,380,40,32) pos=(103,388,24,16) color=#000000ff text="Rin" font=f5 glyphs=3 advance=24
+  text bounds=(127,380,48,32) pos=(135,388,32,16) color=#000000ff text="Sato" font=f5 glyphs=4 advance=32
+  text bounds=(167,380,32,32) pos=(175,388,16,16) color=#6e6e73ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(191,380,56,32) pos=(199,388,40,16) color=#6e6e73ff text="16:08" font=f6 glyphs=5 advance=40
+  text bounds=(95,400,80,32) pos=(103,408,64,16) color=#000000ff text="Perfect," font=f7 glyphs=8 advance=64
+  text bounds=(167,400,72,32) pos=(175,408,56,16) color=#000000ff text="thanks!" font=f7 glyphs=7 advance=56
+  text bounds=(231,400,88,32) pos=(239,408,72,16) color=#000000ff text="Approving" font=f7 glyphs=9 advance=72
+  text bounds=(311,400,48,32) pos=(319,408,32,16) color=#000000ff text="once" font=f7 glyphs=4 advance=32
+  text bounds=(95,418,48,32) pos=(103,426,32,16) color=#000000ff text="that" font=f7 glyphs=4 advance=32
+  text bounds=(135,418,56,32) pos=(143,426,40,16) color=#000000ff text="lands" font=f7 glyphs=5 advance=40
+  text bounds=(183,418,40,32) pos=(191,426,24,16) color=#000000ff text="✅" font=f7 glyphs=3 advance=24
+  text bounds=(15,453,80,32) pos=(23,461,64,16) color=#34c759ff text="RESOLVED" font=f9 glyphs=8 advance=64
+  text bounds=(313,452,56,32) pos=(321,460,40,16) color=#000000ff text="Reply" font=f10 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(-2147483648,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

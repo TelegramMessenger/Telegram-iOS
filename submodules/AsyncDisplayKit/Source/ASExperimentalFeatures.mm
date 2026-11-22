@@ -31,9 +31,21 @@ NSArray<NSString *> *ASExperimentalFeaturesGetNames(ASExperimentalFeatures flags
   
   // Go through all names, testing each bit.
   NSUInteger i = 0;
+    
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic push
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180500
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
+#endif
+    
   return ASArrayByFlatMapping(allNames, NSString *name, ({
     (flags & (1 << i++)) ? name : nil;
   }));
+    
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic pop
+#endif
 }
 
 // O(N^2) but with counts this small, it's probably faster

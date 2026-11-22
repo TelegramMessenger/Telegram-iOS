@@ -1,0 +1,114 @@
+/*
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with FFmpeg; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+#pragma shader_stage(compute)
+#extension GL_GOOGLE_include_directive : require
+
+#include "common.glsl"
+#include "dct.glsl"
+
+layout (constant_id = 0) const bool interlaced = false;
+
+layout (set = 0, binding = 0) readonly buffer quant_idx_buf {
+    uint8_t quant_idx[];
+};
+layout (set = 0, binding = 1) readonly buffer qmat_buf {
+    uint8_t qmat[];
+};
+layout (set = 0, binding = 2) uniform uimage2D dst[];
+
+layout (push_constant, scalar) uniform pushConstants {
+   u8buf    slice_data;
+   uint     bitstream_size;
+
+   uint16_t width;
+   uint16_t height;
+   uint16_t mb_width;
+   uint16_t mb_height;
+   uint16_t slice_width;
+   uint16_t slice_height;
+   uint8_t  log2_slice_width;
+   uint8_t  log2_chroma_w;
+   uint8_t  depth;
+   uint8_t  alpha_info;
+   uint8_t  bottom_field;
+};
+
+uint get_px(uint tex_idx, ivec2 pos)
+{
+    if (interlaced)
+        pos = ivec2(pos.x, (pos.y << 1) + bottom_field);
+    return uint(imageLoad(dst[nonuniformEXT(tex_idx)], pos).x);
+}
+
+void put_px(uint tex_idx, ivec2 pos, uint v)
+{
+    if (interlaced)
+        pos = ivec2(pos.x, (pos.y << 1) + bottom_field);
+    imageStore(dst[nonuniformEXT(tex_idx)], pos, uvec4(v));
+}
+
+void main(void)
+{
+    uvec3 gid = gl_GlobalInvocationID, lid = gl_LocalInvocationID;
+    uint comp = gid.z, block = (lid.y << 2) | (lid.x >> 3), idx = lid.x & 0x7;
+    uint chroma_shift = comp != 0 ? log2_chroma_w : 0;
+    bool act = gid.x < mb_width << (4 - chroma_shift);
+
+    /**
+     * Normalize coefficients to [-1, 1] for increased precision during the iDCT.
+     * DCT coeffs have the range of a 12-bit signed integer (7.4 Inverse Transform).
+     */
+    const float norm = 1.0f / (1 << 11);
+
+    /* Coalesced load of DCT coeffs in shared memory, inverse quantization */
+    if (act) {
+        /* Table 15 */
+        uint8_t qidx = quant_idx[(gid.y >> 1) * mb_width + (gid.x >> (4 - chroma_shift))];
+        int qscale = qidx > 128 ? (qidx - 96) << 2 : qidx, mat = int(gid.z != 0) << 6;
+
+        [[unroll]] for (uint i = 0; i < 8; ++i) {
+            uint cidx = (i << 3) + idx;
+            int   c = sign_extend(int(get_px(comp, ivec2(gid.x, (gid.y << 3) + i))), 16);
+            float v = float(c * qscale * int(qmat[mat + cidx])) * norm;
+            blocks[block][i * 9 + idx] = v * idct_scale[cidx];
+        }
+    }
+
+    /* Column-wise iDCT */
+    idct8(block, idx, 9);
+    barrier();
+
+    /* Remap [-1, 1] to [0, 2] to remove a per-element addition in the output loop */
+    blocks[block][idx * 9] += 1.0f;
+
+    /* Row-wise iDCT */
+    idct8(block, idx * 9, 1);
+    barrier();
+
+    float fact = 1 << (depth - 1);
+    int maxv = (1 << depth) - 1;
+
+    /* 7.5.1 Color Component Samples. Rescale, clamp and write back to global memory */
+    if (act) {
+        [[unroll]] for (uint i = 0; i < 8; ++i) {
+            float v = round(blocks[block][i * 9 + idx] * fact);
+            put_px(comp, ivec2(gid.x, (gid.y << 3) + i), clamp(int(v), 0, maxv));
+        }
+    }
+}

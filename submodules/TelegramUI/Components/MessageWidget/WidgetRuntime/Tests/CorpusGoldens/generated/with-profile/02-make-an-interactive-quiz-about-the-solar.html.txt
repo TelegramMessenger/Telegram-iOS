@@ -1,0 +1,83 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar System Quiz</title>
+<style></style>
+</head>
+<body>
+<div id="quiz">
+  <h2>🪐 Solar System Quiz</h2>
+  <div class="progress" id="progress">Question 1 of 5</div>
+  <div class="bar"><div id="fill" style="width:0%"></div></div>
+  <div class="question" id="question">Which planet is closest to the Sun?</div>
+  <div id="options"><button class="option" id="opt-0">Venus</button><button class="option" id="opt-1">Mercury</button><button class="option" id="opt-2">Earth</button><button class="option" id="opt-3">Mars</button></div>
+  <button class="next" id="next" hidden="">Next →</button>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 342.45
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 314.45
+    div 14 14 332 306.45
+      h2 14 14 332 22.5
+      div 14 38.5 332 17.55
+      div 14 68.05 332 4
+        div 14 68.05 0 4
+      div 14 86.05 332 22.4
+      div 14 120.45 332 200
+        button 29 133.45 302 18
+        button 29 185.45 302 18
+        button 29 237.45 302 18
+        button 29 289.45 302 18
+      button 0 0 0 0
+
+== paint
+root 360x342.45 items=32
+  solid-fill bounds=(0,0,360,342) layer=(border=(0,0,360,342),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,342),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#f8fafcff
+  solid-fill bounds=(14,68,332,4) layer=(border=(14,68,332,4),radius=(2,2,2,2,2,2,2,2),clip=(14,68,332,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e2e8f0ff
+  set-clip bounds=(14,68.05,332,4) pos=(14,68.05,332,4) radius=(2,2,2,2,2,2,2,2)
+  solid-fill bounds=(14,68,0,4) layer=(border=(14,68,0,4),radius=(0,0,0,0,0,0,0,0),clip=(14,68,0,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(14,120,332,44) layer=(border=(14,120,332,44),radius=(8,8,8,8,8,8,8,8),clip=(14,120,332,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e2e8f0ff
+  borders bounds=(14,120,332,44) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(14,120,332,44) root=0
+  solid-fill bounds=(14,172,332,44) layer=(border=(14,172,332,44),radius=(8,8,8,8,8,8,8,8),clip=(14,172,332,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e2e8f0ff
+  borders bounds=(14,172,332,44) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(14,172,332,44) root=0
+  solid-fill bounds=(14,224,332,44) layer=(border=(14,224,332,44),radius=(8,8,8,8,8,8,8,8),clip=(14,224,332,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e2e8f0ff
+  borders bounds=(14,224,332,44) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(14,224,332,44) root=0
+  solid-fill bounds=(14,276,332,44) layer=(border=(14,276,332,44),radius=(8,8,8,8,8,8,8,8),clip=(14,276,332,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e2e8f0ff
+  borders bounds=(14,276,332,44) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(14,276,332,44) root=0
+  text bounds=(6,9,48,32) pos=(14,17,32,16) color=#0f172aff text="🪐" font=f1 glyphs=4 advance=32
+  text bounds=(46,9,56,32) pos=(54,17,40,16) color=#0f172aff text="Solar" font=f1 glyphs=5 advance=40
+  text bounds=(94,9,64,32) pos=(102,17,48,16) color=#0f172aff text="System" font=f1 glyphs=6 advance=48
+  text bounds=(150,9,48,32) pos=(158,17,32,16) color=#0f172aff text="Quiz" font=f1 glyphs=4 advance=32
+  text bounds=(6,31,80,32) pos=(14,39,64,16) color=#64748bff text="Question" font=f2 glyphs=8 advance=64
+  text bounds=(78,31,24,32) pos=(86,39,8,16) color=#64748bff text="1" font=f2 glyphs=1 advance=8
+  text bounds=(94,31,32,32) pos=(102,39,16,16) color=#64748bff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(118,31,24,32) pos=(126,39,8,16) color=#64748bff text="5" font=f2 glyphs=1 advance=8
+  text bounds=(6,81,56,32) pos=(14,89,40,16) color=#0f172aff text="Which" font=f3 glyphs=5 advance=40
+  text bounds=(54,81,64,32) pos=(62,89,48,16) color=#0f172aff text="planet" font=f3 glyphs=6 advance=48
+  text bounds=(110,81,32,32) pos=(118,89,16,16) color=#0f172aff text="is" font=f3 glyphs=2 advance=16
+  text bounds=(134,81,72,32) pos=(142,89,56,16) color=#0f172aff text="closest" font=f3 glyphs=7 advance=56
+  text bounds=(198,81,32,32) pos=(206,89,16,16) color=#0f172aff text="to" font=f3 glyphs=2 advance=16
+  text bounds=(222,81,40,32) pos=(230,89,24,16) color=#0f172aff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(254,81,48,32) pos=(262,89,32,16) color=#0f172aff text="Sun?" font=f3 glyphs=4 advance=32
+  text bounds=(21,126,56,32) pos=(29,134,40,16) color=#0f172aff text="Venus" font=f4 glyphs=5 advance=40
+  text bounds=(21,178,72,32) pos=(29,186,56,16) color=#0f172aff text="Mercury" font=f4 glyphs=7 advance=56
+  text bounds=(21,230,56,32) pos=(29,238,40,16) color=#0f172aff text="Earth" font=f4 glyphs=5 advance=40
+  text bounds=(21,282,48,32) pos=(29,290,32,16) color=#0f172aff text="Mars" font=f4 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=15,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -68,7 +68,7 @@ final class VideoPlayerProxy {
     init(queue: Queue) {
         self.queue = queue
         
-        self.contextQueue.async {
+        self.contextQueue.async { [self] in
             let context = VideoPlayerProxyContext(queue: self.contextQueue)
             context.updateVideoInHierarchy = { [weak self] value in
                 queue.async {
@@ -112,6 +112,14 @@ final class VideoPlayerProxy {
                 context.node = nodeRef.takeUnretainedValue()
             }
             nodeRef.release()
+        }
+    }
+    
+    func flush() {
+        self.withContext { context in
+            if let context = context {
+                context.node?.reset()
+            }
         }
     }
 }

@@ -1,0 +1,383 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="term" id="root">
+  <div class="bar"><span class="dot" style="background-color: #ff5f57"></span><span class="dot" style="background-color: #febc2e"></span><span class="dot" style="background-color: #28c840"></span><span class="grow" style="margin-left: 8px">zsh — litechat — 120×32</span><span id="state"><span class="y">● running</span></span></div>
+  <div class="prog"><div id="pv" style="width: 0.0%;" class=""></div></div>
+  <div class="scr" id="scr"><div><span class="g">~/litechat</span> <span class="m">(feature/html-bubbles)</span> <span class="w">$</span> make dev</div><div><span class="dim">cmake -S . -B build -DCMAKE_BUILD_TYPE=Release</span></div><div class="v">-- The CXX compiler identification is AppleClang 17.0.0</div><div class="v">-- Detecting CXX compile features - done</div><div>-- Configuring done (0.4s)</div><div class="v">-- Generating done (0.1s)</div><div>-- Build files have been written to: build</div><div>[ 12%] <span class="g">Building C object</span> gumbo/parser.c.o</div><div class="v">[ 23%] <span class="g">Building C object</span> gumbo/tokenizer.c.o</div><div class="v">[ 35%] <span class="g">Building CXX object</span> litehtml/document.cpp.o</div><div>[ 47%] <span class="g">Building CXX object</span> litehtml/render_flex.cpp.o</div><div class="v">[ 61%] <span class="g">Building CXX object</span> litehtml/render_table.cpp.o</div><div class="v">[ 74%] <span class="g">Building CXX object</span> litehtml/style.cpp.o</div><div>[ 89%] <span class="g">Building OBJCXX object</span> lhmac/LHContainer.mm.o</div><div><span class="y">src/LHContainer.mm:418:21: warning: unused variable 'isSystemFamily' [-Wunused-variable]</span></div><div class="v"><span class="dim">  418 |     bool isSystemFamily = false;</span></div><div>[100%] <span class="b">Linking OBJCXX executable LiteChat.app/Contents/MacOS/LiteChat</span></div><div>[100%] Built target LiteChat</div><div><span class="g">~/litechat</span> <span class="m">(feature/html-bubbles)</span> <span class="w">$</span> ./build/lhrender tests/kitchen_sink.html out.png 460 --dark</div><div class="v"><span class="dim">fonts: SF Pro, SF Mono, Apple Color Emoji · images: 2 decoded</span></div><div>render: 460x736 parse 2.84 ms, layout 0.06 ms -&gt; out.png</div><div><span class="g">~/litechat</span> <span class="m">(feature/html-bubbles)</span> <span class="w">$</span> ls -lh build/LiteChat.app/Contents/MacOS</div><div>total 4024</div><div>-rwxr-xr-x  1 alex  staff   <span class="g">1.9M</span> Oct  7 16:10 LiteChat</div><div><span class="g">~/litechat</span> <span class="m">(feature/html-bubbles)</span> <span class="w">$</span> git push -u origin feature/html-bubbles</div><div>Enumerating objects: 31, done.</div><div class="v">Counting objects: 100% (31/31), done.</div><div class="v">Delta compression using up to 10 threads</div><div class="v">Compressing objects: 100% (17/17), done.</div><div>Writing objects: 100% (19/19), 14.21 KiB | 14.21 MiB/s, done.</div><div>remote: Create a pull request for 'feature/html-bubbles':</div><div>remote:   <span class="u">https://github.com/acme/litechat/pull/128</span></div><div class="v">To github.com:acme/litechat.git</div><div id="cur"><span class="cur blink" id="caret"></span></div></div>
+  <div class="foot"><span class="tb" data-action="rerun" id="rerun">↻ Restart</span><span class="tb" data-action="skip" id="skip">⏭ Skip</span><span class="tb" data-action="clear" id="clear" hidden="">⌘K Clear</span><span class="tb" data-action="verbose" id="verbose">Verbose</span><span class="tb" data-action="speed" id="speedBtn">1× speed</span><span class="grow"></span><span class="st" id="lines">20 lines</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 689.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 689.2
+    div 0 0 360 689.2
+      div 10 7 340 28.6
+        span 10 15.8 10.0116 11
+        span 26.0116 15.8 10.0116 11
+        span 42.0232 15.8 10.0116 11
+        span 66.0348 7 203.872 28.6
+        span 269.907 7 80.0928 28.6
+          span 269.907 7 0 0
+      div 0 42.6 360 2
+        div 0 42.6 0 2
+      div 12 54.6 336 579
+        div 12 54.6 336 31.5
+          span 12 54.6 0 0
+          span 12 54.6 0 0
+          span 12 54.6 0 0
+        div 12 86.1 336 31.5
+          span 12 86.1 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+        div 12 117.6 336 15.75
+        div 0 0 0 0
+        div 12 133.35 336 15.75
+        div 12 149.1 336 15.75
+          span 12 149.1 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 12 164.85 336 31.5
+          span 12 164.85 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 12 196.35 336 31.5
+          span 12 196.35 0 0
+        div 12 227.85 336 47.25
+          span 12 227.85 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 12 275.1 336 31.5
+          span 12 275.1 0 0
+        div 12 306.6 336 15.75
+        div 12 322.35 336 47.25
+          span 12 322.35 0 0
+          span 12 322.35 0 0
+          span 12 322.35 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+        div 12 369.6 336 31.5
+        div 12 401.1 336 31.5
+          span 12 401.1 0 0
+          span 12 401.1 0 0
+          span 12 401.1 0 0
+        div 12 432.6 336 15.75
+        div 12 448.35 336 31.5
+          span 12 448.35 0 0
+        div 12 479.85 336 31.5
+          span 12 479.85 0 0
+          span 12 479.85 0 0
+          span 12 479.85 0 0
+        div 12 511.35 336 15.75
+        div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+        div 12 527.1 336 31.5
+        div 12 558.6 336 31.5
+        div 12 590.1 336 31.5
+          span 12 590.1 0 0
+        div 0 0 0 0
+        div 12 621.6 336 12
+          span 12 621.6 7 12
+      div 8 650.6 344 32.6
+        span 16 652.6 63.5556 28.6
+        span 99.5556 652.6 46.2222 28.6
+        span 0 0 0 0
+        span 165.778 659.75 56 14.3
+        span 241.778 652.6 52 28.6
+        span 305.778 666.9 0 0
+        span 305.778 652.6 46.2222 28.6
+
+== paint
+root 360x689.2 items=273
+  solid-fill bounds=(0,0,360,689) layer=(border=(0,0,360,689),radius=(12,12,12,12,12,12,12,12),clip=(0,0,360,689),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e1e2eff
+  set-clip bounds=(0,0,360,689.2) pos=(0,0,360,689.2) radius=(12,12,12,12,12,12,12,12)
+  solid-fill bounds=(0,0,360,43) layer=(border=(0,0,360,43),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#313244ff
+  solid-fill bounds=(10,16,10,11) layer=(border=(10,16,10,11),radius=(5.0058,5.0058,5.0058,5.0058,5.0058,5.0058,5.0058,5.0058),clip=(10,16,10,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff5f57ff
+  solid-fill bounds=(26,16,10,11) layer=(border=(26,16,10,11),radius=(5.0058,5.0058,5.0058,5.0058,5.0058,5.0058,5.0058,5.0058),clip=(26,16,10,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#febc2eff
+  solid-fill bounds=(42,16,10,11) layer=(border=(42,16,10,11),radius=(5.0058,5.0058,5.0058,5.0058,5.0058,5.0058,5.0058,5.0058),clip=(42,16,10,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#28c840ff
+  solid-fill bounds=(0,43,360,2) layer=(border=(0,43,360,2),radius=(0,0,0,0,0,0,0,0),clip=(0,43,360,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#313244ff
+  solid-fill bounds=(0,43,0,2) layer=(border=(0,43,0,2),radius=(0,0,0,0,0,0,0,0),clip=(0,43,0,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a6e3a1ff
+  borders bounds=(0,644,360,45) borders=(left=(0,0,#cdd6f4ff),top=(1,4,#313244ff),right=(0,0,#cdd6f4ff),bottom=(0,0,#cdd6f4ff),radius=(0,0,0,0,0,0,0,0)) pos=(0,644,360,45) root=0
+  solid-fill bounds=(8,651,80,32) layer=(border=(8,651,80,32),radius=(6,6,6,6,6,6,6,6),clip=(8,651,80,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#313244ff
+  solid-fill bounds=(92,651,62,32) layer=(border=(92,651,62,32),radius=(6,6,6,6,6,6,6,6),clip=(92,651,62,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#313244ff
+  solid-fill bounds=(158,658,72,18) layer=(border=(158,658,72,18),radius=(6,6,6,6,6,6,6,6),clip=(158,658,72,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#313244ff
+  solid-fill bounds=(234,651,68,32) layer=(border=(234,651,68,32),radius=(6,6,6,6,6,6,6,6),clip=(234,651,68,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#313244ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,689.2) pos=(0,0,360,689.2) radius=(12,12,12,12,12,12,12,12)
+  text bounds=(58.0348,-1,40,32) pos=(66.0348,7,24,16) color=#a6adc8ff text="zsh" font=f1 glyphs=3 advance=24
+  text bounds=(90.0348,-1,40,32) pos=(98.0348,7,24,16) color=#a6adc8ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(122.035,-1,80,32) pos=(130.035,7,64,16) color=#a6adc8ff text="litechat" font=f1 glyphs=8 advance=64
+  text bounds=(194.035,-1,40,32) pos=(202.035,7,24,16) color=#a6adc8ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(58.0348,13,72,32) pos=(66.0348,21,56,16) color=#a6adc8ff text="120×32" font=f1 glyphs=7 advance=56
+  text bounds=(261.907,-1,40,32) pos=(269.907,7,24,16) color=#f9e2afff text="●" font=f1 glyphs=3 advance=24
+  text bounds=(261.907,13,72,32) pos=(269.907,21,56,16) color=#f9e2afff text="running" font=f1 glyphs=7 advance=56
+  text bounds=(4,47,96,32) pos=(12,55,80,16) color=#a6e3a1ff text="~/litechat" font=f2 glyphs=10 advance=80
+  text bounds=(84,47,24,32) pos=(92,55,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(92,47,128,32) pos=(100,55,112,16) color=#cba6f7ff text="(feature/html-" font=f2 glyphs=14 advance=112
+  text bounds=(204,47,80,32) pos=(212,55,64,16) color=#cba6f7ff text="bubbles)" font=f2 glyphs=8 advance=64
+  text bounds=(268,47,24,32) pos=(276,55,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(276,47,24,32) pos=(284,55,8,16) color=#ffffffff text="$" font=f3 glyphs=1 advance=8
+  text bounds=(284,47,24,32) pos=(292,55,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(292,47,48,32) pos=(300,55,32,16) color=#cdd6f4ff text="make" font=f2 glyphs=4 advance=32
+  text bounds=(324,47,24,32) pos=(332,55,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,62,40,32) pos=(12,70,24,16) color=#cdd6f4ff text="dev" font=f2 glyphs=3 advance=24
+  text bounds=(4,78,56,32) pos=(12,86,40,16) color=#6c7086ff text="cmake" font=f2 glyphs=5 advance=40
+  text bounds=(44,78,24,32) pos=(52,86,8,16) color=#6c7086ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(52,78,32,32) pos=(60,86,16,16) color=#6c7086ff text="-S" font=f2 glyphs=2 advance=16
+  text bounds=(68,78,24,32) pos=(76,86,8,16) color=#6c7086ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(76,78,24,32) pos=(84,86,8,16) color=#6c7086ff text="." font=f2 glyphs=1 advance=8
+  text bounds=(84,78,24,32) pos=(92,86,8,16) color=#6c7086ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(92,78,32,32) pos=(100,86,16,16) color=#6c7086ff text="-B" font=f2 glyphs=2 advance=16
+  text bounds=(108,78,24,32) pos=(116,86,8,16) color=#6c7086ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(116,78,56,32) pos=(124,86,40,16) color=#6c7086ff text="build" font=f2 glyphs=5 advance=40
+  text bounds=(156,78,24,32) pos=(164,86,8,16) color=#6c7086ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,94,224,32) pos=(12,102,208,16) color=#6c7086ff text="-DCMAKE_BUILD_TYPE=Release" font=f2 glyphs=26 advance=208
+  text bounds=(4,110,32,32) pos=(12,118,16,16) color=#cdd6f4ff text="--" font=f2 glyphs=2 advance=16
+  text bounds=(20,110,24,32) pos=(28,118,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(28,110,104,32) pos=(36,118,88,16) color=#cdd6f4ff text="Configuring" font=f2 glyphs=11 advance=88
+  text bounds=(116,110,24,32) pos=(124,118,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(124,110,48,32) pos=(132,118,32,16) color=#cdd6f4ff text="done" font=f2 glyphs=4 advance=32
+  text bounds=(156,110,24,32) pos=(164,118,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(164,110,64,32) pos=(172,118,48,16) color=#cdd6f4ff text="(0.4s)" font=f2 glyphs=6 advance=48
+  text bounds=(4,125,32,32) pos=(12,133,16,16) color=#cdd6f4ff text="--" font=f2 glyphs=2 advance=16
+  text bounds=(20,125,24,32) pos=(28,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(28,125,56,32) pos=(36,133,40,16) color=#cdd6f4ff text="Build" font=f2 glyphs=5 advance=40
+  text bounds=(68,125,24,32) pos=(76,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(76,125,56,32) pos=(84,133,40,16) color=#cdd6f4ff text="files" font=f2 glyphs=5 advance=40
+  text bounds=(116,125,24,32) pos=(124,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(124,125,48,32) pos=(132,133,32,16) color=#cdd6f4ff text="have" font=f2 glyphs=4 advance=32
+  text bounds=(156,125,24,32) pos=(164,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(164,125,48,32) pos=(172,133,32,16) color=#cdd6f4ff text="been" font=f2 glyphs=4 advance=32
+  text bounds=(196,125,24,32) pos=(204,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(204,125,72,32) pos=(212,133,56,16) color=#cdd6f4ff text="written" font=f2 glyphs=7 advance=56
+  text bounds=(260,125,24,32) pos=(268,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(268,125,40,32) pos=(276,133,24,16) color=#cdd6f4ff text="to:" font=f2 glyphs=3 advance=24
+  text bounds=(292,125,24,32) pos=(300,133,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(300,125,56,32) pos=(308,133,40,16) color=#cdd6f4ff text="build" font=f2 glyphs=5 advance=40
+  text bounds=(4,141,24,32) pos=(12,149,8,16) color=#cdd6f4ff text="[" font=f2 glyphs=1 advance=8
+  text bounds=(12,141,24,32) pos=(20,149,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(20,141,48,32) pos=(28,149,32,16) color=#cdd6f4ff text="12%]" font=f2 glyphs=4 advance=32
+  text bounds=(52,141,24,32) pos=(60,149,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(60,141,80,32) pos=(68,149,64,16) color=#a6e3a1ff text="Building" font=f2 glyphs=8 advance=64
+  text bounds=(124,141,24,32) pos=(132,149,8,16) color=#a6e3a1ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(132,141,24,32) pos=(140,149,8,16) color=#a6e3a1ff text="C" font=f2 glyphs=1 advance=8
+  text bounds=(140,141,24,32) pos=(148,149,8,16) color=#a6e3a1ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(148,141,64,32) pos=(156,149,48,16) color=#a6e3a1ff text="object" font=f2 glyphs=6 advance=48
+  text bounds=(196,141,24,32) pos=(204,149,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(204,141,144,32) pos=(212,149,128,16) color=#cdd6f4ff text="gumbo/parser.c.o" font=f2 glyphs=16 advance=128
+  text bounds=(4,157,24,32) pos=(12,165,8,16) color=#cdd6f4ff text="[" font=f2 glyphs=1 advance=8
+  text bounds=(12,157,24,32) pos=(20,165,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(20,157,48,32) pos=(28,165,32,16) color=#cdd6f4ff text="47%]" font=f2 glyphs=4 advance=32
+  text bounds=(52,157,24,32) pos=(60,165,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(60,157,80,32) pos=(68,165,64,16) color=#a6e3a1ff text="Building" font=f2 glyphs=8 advance=64
+  text bounds=(124,157,24,32) pos=(132,165,8,16) color=#a6e3a1ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(132,157,40,32) pos=(140,165,24,16) color=#a6e3a1ff text="CXX" font=f2 glyphs=3 advance=24
+  text bounds=(156,157,24,32) pos=(164,165,8,16) color=#a6e3a1ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(164,157,64,32) pos=(172,165,48,16) color=#a6e3a1ff text="object" font=f2 glyphs=6 advance=48
+  text bounds=(212,157,24,32) pos=(220,165,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,173,224,32) pos=(12,181,208,16) color=#cdd6f4ff text="litehtml/render_flex.cpp.o" font=f2 glyphs=26 advance=208
+  text bounds=(4,188,24,32) pos=(12,196,8,16) color=#cdd6f4ff text="[" font=f2 glyphs=1 advance=8
+  text bounds=(12,188,24,32) pos=(20,196,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(20,188,48,32) pos=(28,196,32,16) color=#cdd6f4ff text="89%]" font=f2 glyphs=4 advance=32
+  text bounds=(52,188,24,32) pos=(60,196,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(60,188,80,32) pos=(68,196,64,16) color=#a6e3a1ff text="Building" font=f2 glyphs=8 advance=64
+  text bounds=(124,188,24,32) pos=(132,196,8,16) color=#a6e3a1ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(132,188,64,32) pos=(140,196,48,16) color=#a6e3a1ff text="OBJCXX" font=f2 glyphs=6 advance=48
+  text bounds=(180,188,24,32) pos=(188,196,8,16) color=#a6e3a1ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(188,188,64,32) pos=(196,196,48,16) color=#a6e3a1ff text="object" font=f2 glyphs=6 advance=48
+  text bounds=(236,188,24,32) pos=(244,196,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,204,192,32) pos=(12,212,176,16) color=#cdd6f4ff text="lhmac/LHContainer.mm.o" font=f2 glyphs=22 advance=176
+  text bounds=(4,220,224,32) pos=(12,228,208,16) color=#f9e2afff text="src/LHContainer.mm:418:21:" font=f2 glyphs=26 advance=208
+  text bounds=(212,220,24,32) pos=(220,228,8,16) color=#f9e2afff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(220,220,80,32) pos=(228,228,64,16) color=#f9e2afff text="warning:" font=f2 glyphs=8 advance=64
+  text bounds=(284,220,24,32) pos=(292,228,8,16) color=#f9e2afff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(292,220,64,32) pos=(300,228,48,16) color=#f9e2afff text="unused" font=f2 glyphs=6 advance=48
+  text bounds=(340,220,24,32) pos=(348,228,8,16) color=#f9e2afff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,236,80,32) pos=(12,244,64,16) color=#f9e2afff text="variable" font=f2 glyphs=8 advance=64
+  text bounds=(68,236,24,32) pos=(76,244,8,16) color=#f9e2afff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(76,236,144,32) pos=(84,244,128,16) color=#f9e2afff text="'isSystemFamily'" font=f2 glyphs=16 advance=128
+  text bounds=(204,236,24,32) pos=(212,244,8,16) color=#f9e2afff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(212,236,96,32) pos=(220,244,80,16) color=#f9e2afff text="[-Wunused-" font=f2 glyphs=10 advance=80
+  text bounds=(4,251,88,32) pos=(12,259,72,16) color=#f9e2afff text="variable]" font=f2 glyphs=9 advance=72
+  text bounds=(4,267,64,32) pos=(12,275,48,16) color=#cdd6f4ff text="[100%]" font=f2 glyphs=6 advance=48
+  text bounds=(52,267,24,32) pos=(60,275,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(60,267,72,32) pos=(68,275,56,16) color=#89b4faff text="Linking" font=f2 glyphs=7 advance=56
+  text bounds=(116,267,24,32) pos=(124,275,8,16) color=#89b4faff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(124,267,64,32) pos=(132,275,48,16) color=#89b4faff text="OBJCXX" font=f2 glyphs=6 advance=48
+  text bounds=(172,267,24,32) pos=(180,275,8,16) color=#89b4faff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(180,267,96,32) pos=(188,275,80,16) color=#89b4faff text="executable" font=f2 glyphs=10 advance=80
+  text bounds=(260,267,24,32) pos=(268,275,8,16) color=#89b4faff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,283,304,32) pos=(12,291,288,16) color=#89b4faff text="LiteChat.app/Contents/MacOS/LiteChat" font=f2 glyphs=36 advance=288
+  text bounds=(4,299,64,32) pos=(12,307,48,16) color=#cdd6f4ff text="[100%]" font=f2 glyphs=6 advance=48
+  text bounds=(52,299,24,32) pos=(60,307,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(60,299,56,32) pos=(68,307,40,16) color=#cdd6f4ff text="Built" font=f2 glyphs=5 advance=40
+  text bounds=(100,299,24,32) pos=(108,307,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(108,299,64,32) pos=(116,307,48,16) color=#cdd6f4ff text="target" font=f2 glyphs=6 advance=48
+  text bounds=(156,299,24,32) pos=(164,307,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(164,299,80,32) pos=(172,307,64,16) color=#cdd6f4ff text="LiteChat" font=f2 glyphs=8 advance=64
+  text bounds=(4,314,96,32) pos=(12,322,80,16) color=#a6e3a1ff text="~/litechat" font=f2 glyphs=10 advance=80
+  text bounds=(84,314,24,32) pos=(92,322,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(92,314,128,32) pos=(100,322,112,16) color=#cba6f7ff text="(feature/html-" font=f2 glyphs=14 advance=112
+  text bounds=(204,314,80,32) pos=(212,322,64,16) color=#cba6f7ff text="bubbles)" font=f2 glyphs=8 advance=64
+  text bounds=(268,314,24,32) pos=(276,322,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(276,314,24,32) pos=(284,322,8,16) color=#ffffffff text="$" font=f3 glyphs=1 advance=8
+  text bounds=(284,314,24,32) pos=(292,322,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,330,144,32) pos=(12,338,128,16) color=#cdd6f4ff text="./build/lhrender" font=f2 glyphs=16 advance=128
+  text bounds=(132,330,24,32) pos=(140,338,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(140,330,200,32) pos=(148,338,184,16) color=#cdd6f4ff text="tests/kitchen_sink.html" font=f2 glyphs=23 advance=184
+  text bounds=(324,330,24,32) pos=(332,338,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,346,72,32) pos=(12,354,56,16) color=#cdd6f4ff text="out.png" font=f2 glyphs=7 advance=56
+  text bounds=(60,346,24,32) pos=(68,354,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(68,346,40,32) pos=(76,354,24,16) color=#cdd6f4ff text="460" font=f2 glyphs=3 advance=24
+  text bounds=(92,346,24,32) pos=(100,354,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(100,346,64,32) pos=(108,354,48,16) color=#cdd6f4ff text="--dark" font=f2 glyphs=6 advance=48
+  text bounds=(4,362,72,32) pos=(12,370,56,16) color=#cdd6f4ff text="render:" font=f2 glyphs=7 advance=56
+  text bounds=(60,362,24,32) pos=(68,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(68,362,72,32) pos=(76,370,56,16) color=#cdd6f4ff text="460x736" font=f2 glyphs=7 advance=56
+  text bounds=(124,362,24,32) pos=(132,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(132,362,56,32) pos=(140,370,40,16) color=#cdd6f4ff text="parse" font=f2 glyphs=5 advance=40
+  text bounds=(172,362,24,32) pos=(180,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(180,362,48,32) pos=(188,370,32,16) color=#cdd6f4ff text="2.84" font=f2 glyphs=4 advance=32
+  text bounds=(212,362,24,32) pos=(220,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(220,362,40,32) pos=(228,370,24,16) color=#cdd6f4ff text="ms," font=f2 glyphs=3 advance=24
+  text bounds=(244,362,24,32) pos=(252,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(252,362,64,32) pos=(260,370,48,16) color=#cdd6f4ff text="layout" font=f2 glyphs=6 advance=48
+  text bounds=(300,362,24,32) pos=(308,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(308,362,48,32) pos=(316,370,32,16) color=#cdd6f4ff text="0.06" font=f2 glyphs=4 advance=32
+  text bounds=(340,362,24,32) pos=(348,370,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,377,32,32) pos=(12,385,16,16) color=#cdd6f4ff text="ms" font=f2 glyphs=2 advance=16
+  text bounds=(20,377,24,32) pos=(28,385,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(28,377,32,32) pos=(36,385,16,16) color=#cdd6f4ff text="->" font=f2 glyphs=2 advance=16
+  text bounds=(44,377,24,32) pos=(52,385,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(52,377,72,32) pos=(60,385,56,16) color=#cdd6f4ff text="out.png" font=f2 glyphs=7 advance=56
+  text bounds=(4,393,96,32) pos=(12,401,80,16) color=#a6e3a1ff text="~/litechat" font=f2 glyphs=10 advance=80
+  text bounds=(84,393,24,32) pos=(92,401,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(92,393,128,32) pos=(100,401,112,16) color=#cba6f7ff text="(feature/html-" font=f2 glyphs=14 advance=112
+  text bounds=(204,393,80,32) pos=(212,401,64,16) color=#cba6f7ff text="bubbles)" font=f2 glyphs=8 advance=64
+  text bounds=(268,393,24,32) pos=(276,401,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(276,393,24,32) pos=(284,401,8,16) color=#ffffffff text="$" font=f3 glyphs=1 advance=8
+  text bounds=(284,393,24,32) pos=(292,401,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(292,393,32,32) pos=(300,401,16,16) color=#cdd6f4ff text="ls" font=f2 glyphs=2 advance=16
+  text bounds=(308,393,24,32) pos=(316,401,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(316,393,40,32) pos=(324,401,24,16) color=#cdd6f4ff text="-lh" font=f2 glyphs=3 advance=24
+  text bounds=(340,393,24,32) pos=(348,401,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,409,280,32) pos=(12,417,264,16) color=#cdd6f4ff text="build/LiteChat.app/Contents/MacOS" font=f2 glyphs=33 advance=264
+  text bounds=(4,425,56,32) pos=(12,433,40,16) color=#cdd6f4ff text="total" font=f2 glyphs=5 advance=40
+  text bounds=(44,425,24,32) pos=(52,433,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(52,425,48,32) pos=(60,433,32,16) color=#cdd6f4ff text="4024" font=f2 glyphs=4 advance=32
+  text bounds=(4,440,64,32) pos=(12,448,48,16) color=#cdd6f4ff text="-rwxr-" font=f2 glyphs=6 advance=48
+  text bounds=(52,440,40,32) pos=(60,448,24,16) color=#cdd6f4ff text="xr-" font=f2 glyphs=3 advance=24
+  text bounds=(76,440,24,32) pos=(84,448,8,16) color=#cdd6f4ff text="x" font=f2 glyphs=1 advance=8
+  text bounds=(84,440,24,32) pos=(92,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(92,440,24,32) pos=(100,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(100,440,24,32) pos=(108,448,8,16) color=#cdd6f4ff text="1" font=f2 glyphs=1 advance=8
+  text bounds=(108,440,24,32) pos=(116,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(116,440,48,32) pos=(124,448,32,16) color=#cdd6f4ff text="alex" font=f2 glyphs=4 advance=32
+  text bounds=(148,440,24,32) pos=(156,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(156,440,24,32) pos=(164,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(164,440,56,32) pos=(172,448,40,16) color=#cdd6f4ff text="staff" font=f2 glyphs=5 advance=40
+  text bounds=(204,440,24,32) pos=(212,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(212,440,24,32) pos=(220,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(220,440,24,32) pos=(228,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(228,440,48,32) pos=(236,448,32,16) color=#a6e3a1ff text="1.9M" font=f2 glyphs=4 advance=32
+  text bounds=(260,440,24,32) pos=(268,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(268,440,40,32) pos=(276,448,24,16) color=#cdd6f4ff text="Oct" font=f2 glyphs=3 advance=24
+  text bounds=(292,440,24,32) pos=(300,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(300,440,24,32) pos=(308,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(308,440,24,32) pos=(316,448,8,16) color=#cdd6f4ff text="7" font=f2 glyphs=1 advance=8
+  text bounds=(316,440,24,32) pos=(324,448,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,456,56,32) pos=(12,464,40,16) color=#cdd6f4ff text="16:10" font=f2 glyphs=5 advance=40
+  text bounds=(44,456,24,32) pos=(52,464,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(52,456,80,32) pos=(60,464,64,16) color=#cdd6f4ff text="LiteChat" font=f2 glyphs=8 advance=64
+  text bounds=(4,472,96,32) pos=(12,480,80,16) color=#a6e3a1ff text="~/litechat" font=f2 glyphs=10 advance=80
+  text bounds=(84,472,24,32) pos=(92,480,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(92,472,128,32) pos=(100,480,112,16) color=#cba6f7ff text="(feature/html-" font=f2 glyphs=14 advance=112
+  text bounds=(204,472,80,32) pos=(212,480,64,16) color=#cba6f7ff text="bubbles)" font=f2 glyphs=8 advance=64
+  text bounds=(268,472,24,32) pos=(276,480,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(276,472,24,32) pos=(284,480,8,16) color=#ffffffff text="$" font=f3 glyphs=1 advance=8
+  text bounds=(284,472,24,32) pos=(292,480,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(292,472,40,32) pos=(300,480,24,16) color=#cdd6f4ff text="git" font=f2 glyphs=3 advance=24
+  text bounds=(316,472,24,32) pos=(324,480,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,488,48,32) pos=(12,496,32,16) color=#cdd6f4ff text="push" font=f2 glyphs=4 advance=32
+  text bounds=(36,488,24,32) pos=(44,496,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(44,488,32,32) pos=(52,496,16,16) color=#cdd6f4ff text="-u" font=f2 glyphs=2 advance=16
+  text bounds=(60,488,24,32) pos=(68,496,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(68,488,64,32) pos=(76,496,48,16) color=#cdd6f4ff text="origin" font=f2 glyphs=6 advance=48
+  text bounds=(116,488,24,32) pos=(124,496,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(124,488,120,32) pos=(132,496,104,16) color=#cdd6f4ff text="feature/html-" font=f2 glyphs=13 advance=104
+  text bounds=(228,488,72,32) pos=(236,496,56,16) color=#cdd6f4ff text="bubbles" font=f2 glyphs=7 advance=56
+  text bounds=(4,503,104,32) pos=(12,511,88,16) color=#cdd6f4ff text="Enumerating" font=f2 glyphs=11 advance=88
+  text bounds=(92,503,24,32) pos=(100,511,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(100,503,80,32) pos=(108,511,64,16) color=#cdd6f4ff text="objects:" font=f2 glyphs=8 advance=64
+  text bounds=(164,503,24,32) pos=(172,511,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(172,503,40,32) pos=(180,511,24,16) color=#cdd6f4ff text="31," font=f2 glyphs=3 advance=24
+  text bounds=(196,503,24,32) pos=(204,511,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(204,503,56,32) pos=(212,511,40,16) color=#cdd6f4ff text="done." font=f2 glyphs=5 advance=40
+  text bounds=(4,519,72,32) pos=(12,527,56,16) color=#cdd6f4ff text="Writing" font=f2 glyphs=7 advance=56
+  text bounds=(60,519,24,32) pos=(68,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(68,519,80,32) pos=(76,527,64,16) color=#cdd6f4ff text="objects:" font=f2 glyphs=8 advance=64
+  text bounds=(132,519,24,32) pos=(140,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(140,519,48,32) pos=(148,527,32,16) color=#cdd6f4ff text="100%" font=f2 glyphs=4 advance=32
+  text bounds=(172,519,24,32) pos=(180,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(180,519,80,32) pos=(188,527,64,16) color=#cdd6f4ff text="(19/19)," font=f2 glyphs=8 advance=64
+  text bounds=(244,519,24,32) pos=(252,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(252,519,56,32) pos=(260,527,40,16) color=#cdd6f4ff text="14.21" font=f2 glyphs=5 advance=40
+  text bounds=(292,519,24,32) pos=(300,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(300,519,40,32) pos=(308,527,24,16) color=#cdd6f4ff text="KiB" font=f2 glyphs=3 advance=24
+  text bounds=(324,519,24,32) pos=(332,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(332,519,24,32) pos=(340,527,8,16) color=#cdd6f4ff text="|" font=f2 glyphs=1 advance=8
+  text bounds=(340,519,24,32) pos=(348,527,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,535,56,32) pos=(12,543,40,16) color=#cdd6f4ff text="14.21" font=f2 glyphs=5 advance=40
+  text bounds=(44,535,24,32) pos=(52,543,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(52,535,64,32) pos=(60,543,48,16) color=#cdd6f4ff text="MiB/s," font=f2 glyphs=6 advance=48
+  text bounds=(100,535,24,32) pos=(108,543,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(108,535,56,32) pos=(116,543,40,16) color=#cdd6f4ff text="done." font=f2 glyphs=5 advance=40
+  text bounds=(4,551,72,32) pos=(12,559,56,16) color=#cdd6f4ff text="remote:" font=f2 glyphs=7 advance=56
+  text bounds=(60,551,24,32) pos=(68,559,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(68,551,64,32) pos=(76,559,48,16) color=#cdd6f4ff text="Create" font=f2 glyphs=6 advance=48
+  text bounds=(116,551,24,32) pos=(124,559,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(124,551,24,32) pos=(132,559,8,16) color=#cdd6f4ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(132,551,24,32) pos=(140,559,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(140,551,48,32) pos=(148,559,32,16) color=#cdd6f4ff text="pull" font=f2 glyphs=4 advance=32
+  text bounds=(172,551,24,32) pos=(180,559,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(180,551,72,32) pos=(188,559,56,16) color=#cdd6f4ff text="request" font=f2 glyphs=7 advance=56
+  text bounds=(236,551,24,32) pos=(244,559,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(244,551,40,32) pos=(252,559,24,16) color=#cdd6f4ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(268,551,24,32) pos=(276,559,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,566,128,32) pos=(12,574,112,16) color=#cdd6f4ff text="'feature/html-" font=f2 glyphs=14 advance=112
+  text bounds=(116,566,88,32) pos=(124,574,72,16) color=#cdd6f4ff text="bubbles':" font=f2 glyphs=9 advance=72
+  text bounds=(4,582,72,32) pos=(12,590,56,16) color=#cdd6f4ff text="remote:" font=f2 glyphs=7 advance=56
+  text bounds=(60,582,24,32) pos=(68,590,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(68,582,24,32) pos=(76,590,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(76,582,24,32) pos=(84,590,8,16) color=#cdd6f4ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(4,598,344,32) pos=(12,606,328,16) color=#89dcebff text="https://github.com/acme/litechat/pull/128" font=f4 glyphs=41 advance=328
+  solid-fill bounds=(12,622,7,12) layer=(border=(12,622,7,12),radius=(0,0,0,0,0,0,0,0),clip=(12,622,7,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#cdd6f4ff
+  text bounds=(8,645,40,32) pos=(16,653,24,16) color=#cdd6f4ff text="↻" font=f5 glyphs=3 advance=24
+  text bounds=(8,659,72,32) pos=(16,667,56,16) color=#cdd6f4ff text="Restart" font=f5 glyphs=7 advance=56
+  text bounds=(91.5556,645,40,32) pos=(99.5556,653,24,16) color=#cdd6f4ff text="⏭" font=f5 glyphs=3 advance=24
+  text bounds=(91.5556,659,48,32) pos=(99.5556,667,32,16) color=#cdd6f4ff text="Skip" font=f5 glyphs=4 advance=32
+  text bounds=(157.778,652,72,32) pos=(165.778,660,56,16) color=#cdd6f4ff text="Verbose" font=f5 glyphs=7 advance=56
+  text bounds=(233.778,645,40,32) pos=(241.778,653,24,16) color=#cdd6f4ff text="1×" font=f5 glyphs=3 advance=24
+  text bounds=(233.778,659,56,32) pos=(241.778,667,40,16) color=#cdd6f4ff text="speed" font=f5 glyphs=5 advance=40
+  text bounds=(297.778,645,32,32) pos=(305.778,653,16,16) color=#6c7086ff text="20" font=f1 glyphs=2 advance=16
+  text bounds=(297.778,659,56,32) pos=(305.778,667,40,16) color=#6c7086ff text="lines" font=f1 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="ui-monospace,monospace",size=10.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=10.5,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=10.5,style=0,weight=400,decoration=(1,predef0,0,#89dcebff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

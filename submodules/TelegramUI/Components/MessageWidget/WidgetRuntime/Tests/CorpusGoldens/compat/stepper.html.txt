@@ -1,0 +1,66 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div class="bar"><i id="fill" style="width: 0%;"></i></div>
+<div class="steps" id="steps"><b>Account</b><span>Profile</span><span>Preferences</span><span>Done</span></div>
+<div class="panel" id="panel"><h3 style="margin:0 0 6px">Account</h3>Create your account with an email address.</div>
+<div class="nav"><button id="back" disabled="">Back</button><button id="next" class="primary">Next</button></div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 212
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 184
+    div 14 14 332 6
+      i 14 14 0 6
+    div 14 28 332 16.2
+      b 14 28 56 16.2
+      span 103.333 28 56 16.2
+      span 192.667 28 88 16.2
+      span 314 28 32 16.2
+    div 26 70.2 308 69
+      h3 26 70.2 308 22.5
+    div 14 163.2 332 34.8
+      button 29 172.2 32 16.8
+      button 299 172.2 32 16.8
+
+== paint
+root 360x212 items=24
+  solid-fill bounds=(0,0,360,212) layer=(border=(0,0,360,212),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,212),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(14,14,332,6) layer=(border=(14,14,332,6),radius=(3,3,3,3,3,3,3,3),clip=(14,14,332,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e5e7ebff
+  set-clip bounds=(14,14,332,6) pos=(14,14,332,6) radius=(3,3,3,3,3,3,3,3)
+  solid-fill bounds=(14,14,0,6) layer=(border=(14,14,0,6),radius=(0,0,0,0,0,0,0,0),clip=(14,14,0,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(14,58,332,93) layer=(border=(14,58,332,93),radius=(8,8,8,8,8,8,8,8),clip=(14,58,332,93),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f9fafbff
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(12,161.2,66,38.8) exact=1
+    solid-fill bounds=(14,163,62,35) layer=(border=(14,163,62,35),radius=(8,8,8,8,8,8,8,8),clip=(14,163,62,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+    borders bounds=(14,163,62,35) borders=(left=(1,4,#ccccccff),top=(1,4,#ccccccff),right=(1,4,#ccccccff),bottom=(1,4,#ccccccff),radius=(8,8,8,8,8,8,8,8)) pos=(14,163,62,35) root=0
+    text bounds=(21,164,48,32) pos=(29,172,32,16) color=#222222ff text="Back" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(284,163,62,35) layer=(border=(284,163,62,35),radius=(8,8,8,8,8,8,8,8),clip=(284,163,62,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  borders bounds=(284,163,62,35) borders=(left=(1,4,#2481ccff),top=(1,4,#2481ccff),right=(1,4,#2481ccff),bottom=(1,4,#2481ccff),radius=(8,8,8,8,8,8,8,8)) pos=(284,163,62,35) root=0
+  text bounds=(6,20,72,32) pos=(14,28,56,16) color=#2481ccff text="Account" font=f2 glyphs=7 advance=56
+  text bounds=(95.3333,20,72,32) pos=(103.333,28,56,16) color=#999999ff text="Profile" font=f3 glyphs=7 advance=56
+  text bounds=(184.667,20,104,32) pos=(192.667,28,88,16) color=#999999ff text="Preferences" font=f3 glyphs=11 advance=88
+  text bounds=(306,20,48,32) pos=(314,28,32,16) color=#999999ff text="Done" font=f3 glyphs=4 advance=32
+  text bounds=(18,65,72,32) pos=(26,73,56,16) color=#222222ff text="Account" font=f4 glyphs=7 advance=56
+  text bounds=(18,93,64,32) pos=(26,101,48,16) color=#222222ff text="Create" font=f5 glyphs=6 advance=48
+  text bounds=(74,93,48,32) pos=(82,101,32,16) color=#222222ff text="your" font=f5 glyphs=4 advance=32
+  text bounds=(114,93,72,32) pos=(122,101,56,16) color=#222222ff text="account" font=f5 glyphs=7 advance=56
+  text bounds=(178,93,48,32) pos=(186,101,32,16) color=#222222ff text="with" font=f5 glyphs=4 advance=32
+  text bounds=(218,93,32,32) pos=(226,101,16,16) color=#222222ff text="an" font=f5 glyphs=2 advance=16
+  text bounds=(242,93,56,32) pos=(250,101,40,16) color=#222222ff text="email" font=f5 glyphs=5 advance=40
+  text bounds=(18,113,80,32) pos=(26,121,64,16) color=#222222ff text="address." font=f5 glyphs=8 advance=64
+  text bounds=(291,164,48,32) pos=(299,172,32,16) color=#ffffffff text="Next" font=f1 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

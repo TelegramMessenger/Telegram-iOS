@@ -1,0 +1,40 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<canvas id="gl" style="display: none;"></canvas>
+<div id="fallback" style="display: block;">WebGL is not available — showing the 2D fallback below.</div>
+<canvas id="c2d" style="display: block; height: 120px;" width="360" height="120"></canvas>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 216.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 192.5
+    canvas 12 12 0 0
+    div 28 28 304 40.5
+    canvas 12 84.5 336 120
+
+== paint
+root 360x216.5 items=13
+  solid-fill bounds=(0,0,360,217) layer=(border=(0,0,360,217),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,217),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(12,12,336,73) layer=(border=(12,12,336,73),radius=(8,8,8,8,8,8,8,8),clip=(12,12,336,73),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#fee2e2ff
+  image bounds=(12,85,336,120) layer=(border=(12,85,336,120),radius=(8,8,8,8,8,8,8,8),clip=(12,85,336,120),origin=(12,85,336,120),attachment=0,repeat=3,root=0) size=(360,120)
+  text bounds=(20,22,56,32) pos=(28,30,40,16) color=#991b1bff text="WebGL" font=f1 glyphs=5 advance=40
+  text bounds=(68,22,32,32) pos=(76,30,16,16) color=#991b1bff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(92,22,40,32) pos=(100,30,24,16) color=#991b1bff text="not" font=f1 glyphs=3 advance=24
+  text bounds=(124,22,88,32) pos=(132,30,72,16) color=#991b1bff text="available" font=f1 glyphs=9 advance=72
+  text bounds=(204,22,40,32) pos=(212,30,24,16) color=#991b1bff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(236,22,72,32) pos=(244,30,56,16) color=#991b1bff text="showing" font=f1 glyphs=7 advance=56
+  text bounds=(300,22,40,32) pos=(308,30,24,16) color=#991b1bff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(20,42,32,32) pos=(28,50,16,16) color=#991b1bff text="2D" font=f1 glyphs=2 advance=16
+  text bounds=(44,42,80,32) pos=(52,50,64,16) color=#991b1bff text="fallback" font=f1 glyphs=8 advance=64
+  text bounds=(116,42,64,32) pos=(124,50,48,16) color=#991b1bff text="below." font=f1 glyphs=6 advance=48
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

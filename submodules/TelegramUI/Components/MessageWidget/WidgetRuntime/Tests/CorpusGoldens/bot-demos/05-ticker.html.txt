@@ -1,0 +1,89 @@
+stop -
+drive time limit
+bridge watchPublicData ["true"]
+bridge ready []
+refused-loads 0
+
+== dom
+<html><head><meta name="tw-bot" content="quote">
+<style></style>
+</head><body class="nd"><div class="hd"><div class="lg" id="lg">…</div><div class="nm"><b id="nm">Live quote</b><span id="sy">Waiting for the bot</span></div><div class="lv" id="lv"><i></i>Live</div></div>
+<div class="px" id="px"></div>
+<div class="ch"><span class="pl"><svg width="9" height="9" viewBox="0 0 10 10"><path d="M5 1 9.5 8.5H.5z" fill="currentColor"></path></svg><span id="cv"></span></span>Today</div>
+<div class="cw"><svg id="sv" viewBox="0 0 360 96" preserveAspectRatio="none"><defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".3"></stop><stop offset="1" stop-opacity="0"></stop></linearGradient></defs><line id="op" x1="0" x2="360" y1="0.0" y2="0.0"></line><path id="ar" fill="url(#gr)" d="M0.0 66.2Q15.0 58.9 22.4 55.7Q29.9 52.5 37.4 50.1Q44.9 47.8 52.3 46.5Q59.8 45.2 67.3 45.0Q74.8 44.9 82.3 45.8Q89.7 46.7 97.2 48.3Q104.7 50.0 112.2 52.0Q119.7 54.1 127.1 56.1Q134.6 58.1 142.1 59.6Q149.6 61.0 157.0 61.6Q164.5 62.2 172.0 61.8Q179.5 61.3 187.0 59.6Q194.4 58.0 201.9 55.4Q209.4 52.7 216.9 49.4Q224.3 46.0 231.8 42.3Q239.3 38.6 246.8 35.1Q254.3 31.5 261.7 28.5Q269.2 25.5 276.7 23.5Q284.2 21.4 291.7 20.4Q299.1 19.5 306.6 19.6Q314.1 19.8 321.6 21.0Q329.0 22.1 336.5 23.9L344.0 25.8L344.0 96L0.0 96Z"></path><path id="ln" d="M0.0 66.2Q15.0 58.9 22.4 55.7Q29.9 52.5 37.4 50.1Q44.9 47.8 52.3 46.5Q59.8 45.2 67.3 45.0Q74.8 44.9 82.3 45.8Q89.7 46.7 97.2 48.3Q104.7 50.0 112.2 52.0Q119.7 54.1 127.1 56.1Q134.6 58.1 142.1 59.6Q149.6 61.0 157.0 61.6Q164.5 62.2 172.0 61.8Q179.5 61.3 187.0 59.6Q194.4 58.0 201.9 55.4Q209.4 52.7 216.9 49.4Q224.3 46.0 231.8 42.3Q239.3 38.6 246.8 35.1Q254.3 31.5 261.7 28.5Q269.2 25.5 276.7 23.5Q284.2 21.4 291.7 20.4Q299.1 19.5 306.6 19.6Q314.1 19.8 321.6 21.0Q329.0 22.1 336.5 23.9L344.0 25.8"></path><circle class="dt pu" id="d2" r="4" cx="344.0" cy="25.8"></circle><circle class="dt" id="d1" r="4" cx="344.0" cy="25.8"></circle></svg></div>
+<div class="rg"><div><span id="lo"></span><span id="hi"></span></div><div class="bar"><i id="mk"></i></div></div>
+<div class="ft"><span id="up">Not updated yet</span><span id="on"></span></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 245.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 14 328 219.9
+    div 16 14 328 40
+      div 16 14 40 40
+      div 66 15.15 278 37.7
+        b 66 15.15 278 20.8
+        span 66 35.95 278 16.9
+      div 0 0 0 0
+        i 0 0 0 0
+          -tag-after 0 0 0 0
+    div 16 66 328 37
+      -tag-before 16 66 140 37
+    div 0 0 0 0
+      span 0 0 0 0
+        -tag-before 0 0 0 0
+        svg 0 0 0 0
+          path 0 0 0 0
+        span 0 0 0 0
+    div 0 111 360 96
+      svg 0 111 360 96
+        defs 0 0 0 0
+          lineargradient 0 0 0 0
+            stop 0 0 0 0
+            stop 0 0 0 0
+        line 0 0 0 0
+        path 0 0 0 0
+        path 0 0 0 0
+        circle 0 0 0 0
+        circle 0 0 0 0
+    div 0 0 0 0
+      div 0 0 0 0
+        span 0 0 0 0
+        span 0 0 0 0
+      div 0 0 0 0
+        i 0 0 0 0
+    div 16 217 328 16.9
+      span 16 217 120 16.9
+      span 344 217 0 16.9
+
+== paint
+root 360x245.9 items=19
+  solid-fill bounds=(16,14,40,40) layer=(border=(16,14,40,40),radius=(20,20,20,20,20,20,20,20),clip=(16,14,40,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(16,66,140,37) layer=(border=(16,66,140,37),radius=(10,10,10,10,10,10,10,10),clip=(16,66,140,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  set-clip bounds=(0,111,360,96) pos=(0,111,360,96) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(0,111,360,96)
+    group opacity=1 matrix=(1,0,0,1,0,111) backface=0 bounds=(0,0,360,96) exact=0
+      group opacity=0.1599 matrix=(1,0,0,1,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-5.4,14.19,354.8,57.41) ops=(0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1) points=(0,66.2,15,58.9,22.4,55.7,29.9,52.5,37.4,50.1,44.9,47.8,52.3,46.5,59.8,45.2,67.3,45,74.8,44.9,82.3,45.8,89.7,46.7,97.2,48.3,104.7,50,112.2,52,119.7,54.1,127.1,56.1,134.6,58.1,142.1,59.6,149.6,61,157,61.6,164.5,62.2,172,61.8,179.5,61.3,187,59.6,194.4,58,201.9,55.4,209.4,52.7,216.9,49.4,224.3,46,231.8,42.3,239.3,38.6,246.8,35.1,254.3,31.5,261.7,28.5,269.2,25.5,276.7,23.5,284.2,21.4,291.7,20.4,299.1,19.5,306.6,19.6,314.1,19.8,321.6,21,329,22.1,336.5,23.9,344,25.8) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#707579ff stroke-width=2.2 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(16,18,40,32) pos=(24,26,24,16) color=#707579ff text="…" font=f1 glyphs=3 advance=24
+  set-clip bounds=(66,15.15,278,20.8) pos=(66,15.15,278,20.8) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(58,9,48,32) pos=(66,17,32,16) color=#000000ff text="Live" font=f2 glyphs=4 advance=32
+  text bounds=(98,9,56,32) pos=(106,17,40,16) color=#000000ff text="quote" font=f2 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(66,35.95,278,16.9) pos=(66,35.95,278,16.9) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(58,28,72,32) pos=(66,36,56,16) color=#707579ff text="Waiting" font=f3 glyphs=7 advance=56
+  text bounds=(122,28,40,32) pos=(130,36,24,16) color=#707579ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(154,28,40,32) pos=(162,36,24,16) color=#707579ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(186,28,40,32) pos=(194,36,24,16) color=#707579ff text="bot" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  text bounds=(8,209,40,32) pos=(16,217,24,16) color=#707579ff text="Not" font=f3 glyphs=3 advance=24
+  text bounds=(40,209,72,32) pos=(48,217,56,16) color=#707579ff text="updated" font=f3 glyphs=7 advance=56
+  text bounds=(104,209,40,32) pos=(112,217,24,16) color=#707579ff text="yet" font=f3 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.39,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f2 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

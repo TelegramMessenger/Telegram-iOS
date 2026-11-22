@@ -1,0 +1,29 @@
+ 
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
+objc_library(
+    name = "boost_regex",
+    enable_modules = True,
+    module_name = "boost_regex",
+    srcs = glob([
+        "Sources/**/*.c",
+        "Sources/**/*.cpp",
+        "Sources/**/*.h",
+        "Sources/**/*.hpp",
+    ], allow_empty=True),
+    hdrs = glob([
+        "include/**/*.h",
+        "include/**/*.hpp",
+    ], allow_empty=True),
+    includes = [
+        "include",
+    ],
+    copts = [
+        "-Ithird-party/boost_regex/include",
+    ],
+    deps = [
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

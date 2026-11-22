@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram akan terus mengunggah kontak Anda ke penyimpanan awan yang dienkripsi penuh, sehingga Anda dapat terhubung dengan teman Anda di semua perangkat Anda.";
+"NSLocationWhenInUseUsageDescription" = "Ketika Anda mengirim lokasi untuk teman, Telegram membutuhkan akses untuk berbagi peta.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Jika Anda memilih untuk membagikan Live Location dengan teman dalam obrolan, Telegram memerlukan akses latar belakang ke lokasi Anda agar lokasi tetap diperbarui selama lokasi langsung dibagikan.";
+"NSLocationAlwaysUsageDescription" = "Jika Anda ingin berbagi Live Location dengan teman dalam chat, Telegram perlu akses latar belakang ke lokasi Anda agar lokasi tetap diperbarui selama lokasi langsung dibagikan. Hal yang sama perlu dilakukan untuk berbagi lokasi dari Apple Watch.";
+"NSCameraUsageDescription" = "Kami membutuhkan hal ini agar Anda dapat mengambil dan membagikan foto dan video.";
+"NSPhotoLibraryUsageDescription" = "Kami membutuhkan hal ini agar Anda dapat berbagi foto dan video dari galeri foto Anda.";
+"NSPhotoLibraryAddUsageDescription" = "Kami membutuhkan hal ini agar Anda dapat menyimpan foto dan video ke galeri foto.";
+"NSMicrophoneUsageDescription" = "Kami butuh hal ini agar Anda dapat merekam dan berbagi pesan audio dan video dengan suara.";
+"NSSiriUsageDescription" = "Anda dapat menggunakan Siri untuk mengirim pesan.";
+"NSFaceIDUsageDescription" = "Anda dapat menggunakan Face ID untuk membuka kunci aplikasi.";

@@ -1,0 +1,54 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--bg2:light-dark(#f1f2f4,#2c2c2e);--acc:#3390ec}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+h3{margin:0 0 2px;font-size:16px}
+.sub{color:var(--mut);font-size:13px}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:14px 0 6px}
+.chips{display:flex;gap:6px}
+.chip{flex:1;padding:8px 0;border:0;border-radius:10px;background:var(--bg2);color:var(--fg);font:inherit;font-weight:500}
+.chip.on{background:var(--acc);color:#fff}
+.step{display:flex;align-items:center;gap:14px}
+.step button{width:36px;height:36px;border-radius:18px;border:0;background:var(--bg2);color:var(--acc);font-size:20px;font-weight:600}
+.step b{min-width:24px;text-align:center;font-size:18px}
+.sum{margin-top:14px;padding:12px;border-radius:12px;background:var(--bg2)}
+.line{display:flex;justify-content:space-between;font-size:14px;color:var(--mut)}
+.big{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+.big b{font-size:26px}
+</style>
+<h3>Dinner at Taberna</h3>
+<div class="sub">Bill €148.60 · tap to adjust</div>
+<div class="lbl">Tip</div>
+<div class="chips" id="tips">
+  <button class="chip" data-p="0">0%</button><button class="chip" data-p="10">10%</button><button class="chip on" data-p="15">15%</button><button class="chip" data-p="20">20%</button>
+</div>
+<div class="lbl">People</div>
+<div class="step"><button id="minus">−</button><b id="n">4</b><button id="plus">+</button></div>
+<div class="sum">
+  <div class="line"><span>Tip</span><span id="tip"></span></div>
+  <div class="line"><span>Total</span><span id="total"></span></div>
+  <div class="big"><span>Each pays</span><b id="each"></b></div>
+</div>
+<script>
+const bill = 148.6;
+let pct = 15, n = 4;
+const $ = (id) => document.getElementById(id);
+const fmt = (v) => '€' + v.toFixed(2);
+function update() {
+  const tip = bill * pct / 100, total = bill + tip;
+  $('tip').textContent = fmt(tip);
+  $('total').textContent = fmt(total);
+  $('each').textContent = fmt(total / n);
+  $('n').textContent = n;
+}
+$('tips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  pct = Number(chip.dataset.p);
+  for (const c of $('tips').children) c.classList.toggle('on', c === chip);
+  update();
+});
+$('minus').onclick = () => { if (n > 1) { n--; update(); } };
+$('plus').onclick = () => { if (n < 20) { n++; update(); } };
+update();
+</script>

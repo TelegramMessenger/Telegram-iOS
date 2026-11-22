@@ -1,0 +1,802 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="row between"><span class="bold" style="font-size: 16px">Ops overview</span><span class="btn" role="button" id="refresh" style="padding: 4px 10px; font-size: 12px">Refresh</span></div>
+  <div class="tiny muted" id="note">snapshot 1 · 8 tiles, 72 bars, 8 services, 20 rows</div>
+  <div id="body"><div class="tiles"><div class="kt"><div class="l">Requests</div><div class="v">1262k</div><div class="d down">-1.6%</div></div><div class="kt"><div class="l">Errors</div><div class="v">0.50%</div><div class="d down">-5.5%</div></div><div class="kt"><div class="l">p50</div><div class="v">72ms</div><div class="d up">+3.3%</div></div><div class="kt"><div class="l">p95</div><div class="v">172ms</div><div class="d down">-4.4%</div></div><div class="kt"><div class="l">CPU</div><div class="v">48%</div><div class="d up">+5.9%</div></div><div class="kt"><div class="l">Memory</div><div class="v">14GB</div><div class="d up">+3.3%</div></div><div class="kt"><div class="l">Queue</div><div class="v">171</div><div class="d up">+3.0%</div></div><div class="kt"><div class="l">Uptime</div><div class="v">99.91%</div><div class="d up">+4.8%</div></div></div><div class="caps">Last 24 h · requests / errors / latency</div><div class="charts"><div class="ch"><div class="bars"><i style="height: 40%; background-color: #007aff"></i><i style="height: 36%; background-color: #007aff"></i><i style="height: 69%; background-color: #007aff"></i><i style="height: 34%; background-color: #007aff"></i><i style="height: 67%; background-color: #007aff"></i><i style="height: 56%; background-color: #007aff"></i><i style="height: 41%; background-color: #007aff"></i><i style="height: 98%; background-color: #007aff"></i><i style="height: 72%; background-color: #007aff"></i><i style="height: 88%; background-color: #007aff"></i><i style="height: 41%; background-color: #007aff"></i><i style="height: 25%; background-color: #007aff"></i><i style="height: 43%; background-color: #007aff"></i><i style="height: 82%; background-color: #007aff"></i><i style="height: 90%; background-color: #007aff"></i><i style="height: 31%; background-color: #007aff"></i><i style="height: 72%; background-color: #007aff"></i><i style="height: 97%; background-color: #007aff"></i><i style="height: 49%; background-color: #007aff"></i><i style="height: 48%; background-color: #007aff"></i><i style="height: 56%; background-color: #007aff"></i><i style="height: 50%; background-color: #007aff"></i><i style="height: 68%; background-color: #007aff"></i><i style="height: 56%; background-color: #007aff"></i></div><div class="t">req/s</div></div><div class="ch"><div class="bars"><i style="height: 33%; background-color: #34c759"></i><i style="height: 83%; background-color: #34c759"></i><i style="height: 86%; background-color: #34c759"></i><i style="height: 49%; background-color: #34c759"></i><i style="height: 74%; background-color: #34c759"></i><i style="height: 82%; background-color: #34c759"></i><i style="height: 93%; background-color: #34c759"></i><i style="height: 23%; background-color: #34c759"></i><i style="height: 97%; background-color: #34c759"></i><i style="height: 90%; background-color: #34c759"></i><i style="height: 65%; background-color: #34c759"></i><i style="height: 75%; background-color: #34c759"></i><i style="height: 31%; background-color: #34c759"></i><i style="height: 32%; background-color: #34c759"></i><i style="height: 56%; background-color: #34c759"></i><i style="height: 44%; background-color: #34c759"></i><i style="height: 84%; background-color: #34c759"></i><i style="height: 70%; background-color: #34c759"></i><i style="height: 48%; background-color: #34c759"></i><i style="height: 94%; background-color: #34c759"></i><i style="height: 82%; background-color: #34c759"></i><i style="height: 88%; background-color: #34c759"></i><i style="height: 73%; background-color: #34c759"></i><i style="height: 86%; background-color: #34c759"></i></div><div class="t">err %</div></div><div class="ch"><div class="bars"><i style="height: 66%; background-color: #ff9500"></i><i style="height: 28%; background-color: #ff9500"></i><i style="height: 59%; background-color: #ff9500"></i><i style="height: 88%; background-color: #ff9500"></i><i style="height: 21%; background-color: #ff9500"></i><i style="height: 25%; background-color: #ff9500"></i><i style="height: 60%; background-color: #ff9500"></i><i style="height: 61%; background-color: #ff9500"></i><i style="height: 27%; background-color: #ff9500"></i><i style="height: 83%; background-color: #ff9500"></i><i style="height: 60%; background-color: #ff9500"></i><i style="height: 90%; background-color: #ff9500"></i><i style="height: 15%; background-color: #ff9500"></i><i style="height: 16%; background-color: #ff9500"></i><i style="height: 21%; background-color: #ff9500"></i><i style="height: 21%; background-color: #ff9500"></i><i style="height: 26%; background-color: #ff9500"></i><i style="height: 88%; background-color: #ff9500"></i><i style="height: 82%; background-color: #ff9500"></i><i style="height: 84%; background-color: #ff9500"></i><i style="height: 39%; background-color: #ff9500"></i><i style="height: 20%; background-color: #ff9500"></i><i style="height: 40%; background-color: #ff9500"></i><i style="height: 99%; background-color: #ff9500"></i></div><div class="t">p95 ms</div></div></div><div class="caps">Services</div><div class="sv"><i style="background-color: #ff9500"></i>api<div class="tr"><div class="fl" style="width: 82%; background-color: #ff9500"></div></div><span class="v">82%</span></div><div class="sv"><i style="background-color: #34c759"></i>auth<div class="tr"><div class="fl" style="width: 55%; background-color: #34c759"></div></div><span class="v">55%</span></div><div class="sv"><i style="background-color: #34c759"></i>feed<div class="tr"><div class="fl" style="width: 38%; background-color: #34c759"></div></div><span class="v">38%</span></div><div class="sv"><i style="background-color: #34c759"></i>media<div class="tr"><div class="fl" style="width: 40%; background-color: #34c759"></div></div><span class="v">40%</span></div><div class="sv"><i style="background-color: #34c759"></i>search<div class="tr"><div class="fl" style="width: 28%; background-color: #34c759"></div></div><span class="v">28%</span></div><div class="sv"><i style="background-color: #ff9500"></i>push<div class="tr"><div class="fl" style="width: 83%; background-color: #ff9500"></div></div><span class="v">83%</span></div><div class="sv"><i style="background-color: #ff9500"></i>billing<div class="tr"><div class="fl" style="width: 75%; background-color: #ff9500"></div></div><span class="v">75%</span></div><div class="sv"><i style="background-color: #34c759"></i>export<div class="tr"><div class="fl" style="width: 53%; background-color: #34c759"></div></div><span class="v">53%</span></div><div class="caps">Deployments</div><table><tbody><tr><th>Service</th><th>Region</th><th>Ver</th><th class="r">p95</th><th>State</th></tr><tr><td>api</td><td>eu-west-1</td><td>2.14.0</td><td class="r">75</td><td><span class="pill ok">healthy</span></td></tr><tr><td>auth</td><td>eu-central-1</td><td>2.13.1</td><td class="r">230</td><td><span class="pill warn">slow</span></td></tr><tr><td>feed</td><td>us-east-1</td><td>2.12.2</td><td class="r">215</td><td><span class="pill warn">slow</span></td></tr><tr><td>media</td><td>us-west-2</td><td>2.14.3</td><td class="r">72</td><td><span class="pill ok">healthy</span></td></tr><tr><td>search</td><td>ap-northeast-1</td><td>2.13.4</td><td class="r">314</td><td><span class="pill bad">degraded</span></td></tr><tr><td>push</td><td>eu-west-1</td><td>2.12.5</td><td class="r">226</td><td><span class="pill warn">slow</span></td></tr><tr><td>billing</td><td>eu-central-1</td><td>2.14.6</td><td class="r">111</td><td><span class="pill ok">healthy</span></td></tr><tr><td>export</td><td>us-east-1</td><td>2.13.7</td><td class="r">67</td><td><span class="pill ok">healthy</span></td></tr><tr><td>api</td><td>us-west-2</td><td>2.12.8</td><td class="r">350</td><td><span class="pill bad">degraded</span></td></tr><tr><td>auth</td><td>ap-northeast-1</td><td>2.14.0</td><td class="r">173</td><td><span class="pill ok">healthy</span></td></tr><tr><td>feed</td><td>eu-west-1</td><td>2.13.1</td><td class="r">133</td><td><span class="pill ok">healthy</span></td></tr><tr><td>media</td><td>eu-central-1</td><td>2.12.2</td><td class="r">259</td><td><span class="pill warn">slow</span></td></tr><tr><td>search</td><td>us-east-1</td><td>2.14.3</td><td class="r">311</td><td><span class="pill bad">degraded</span></td></tr><tr><td>push</td><td>us-west-2</td><td>2.13.4</td><td class="r">175</td><td><span class="pill ok">healthy</span></td></tr><tr><td>billing</td><td>ap-northeast-1</td><td>2.12.5</td><td class="r">304</td><td><span class="pill bad">degraded</span></td></tr><tr><td>export</td><td>eu-west-1</td><td>2.14.6</td><td class="r">67</td><td><span class="pill ok">healthy</span></td></tr><tr><td>api</td><td>eu-central-1</td><td>2.13.7</td><td class="r">322</td><td><span class="pill bad">degraded</span></td></tr><tr><td>auth</td><td>us-east-1</td><td>2.12.8</td><td class="r">259</td><td><span class="pill warn">slow</span></td></tr><tr><td>feed</td><td>us-west-2</td><td>2.14.0</td><td class="r">140</td><td><span class="pill ok">healthy</span></td></tr><tr><td>media</td><td>ap-northeast-1</td><td>2.13.1</td><td class="r">278</td><td><span class="pill warn">slow</span></td></tr></tbody></table></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 1063.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 1063.8
+    div 15 13 330 1037.8
+      div 15 13 330 23.6
+        span 15 14.4 96 20.8
+        span 279 17 56 15.6
+      div 15 36.6 330 28.6
+      div 15 73.2 330 971
+        div 15 73.2 330 196.5
+          div 23 80.2 70 45.5
+            div 23 80.2 70 11.7
+            div 23 91.9 70 20.8
+            div 23 112.7 70 13
+          div 145 80.2 70 45.5
+            div 145 80.2 70 11.7
+            div 145 91.9 70 20.8
+            div 145 112.7 70 13
+          div 267 80.2 70 45.5
+            div 267 80.2 70 11.7
+            div 267 91.9 70 20.8
+            div 267 112.7 70 13
+          div 23 145.7 70 45.5
+            div 23 145.7 70 11.7
+            div 23 157.4 70 20.8
+            div 23 178.2 70 13
+          div 145 145.7 70 45.5
+            div 145 145.7 70 11.7
+            div 145 157.4 70 20.8
+            div 145 178.2 70 13
+          div 267 145.7 70 45.5
+            div 267 145.7 70 11.7
+            div 267 157.4 70 20.8
+            div 267 178.2 70 13
+          div 23 211.2 70 45.5
+            div 23 211.2 70 11.7
+            div 23 222.9 70 20.8
+            div 23 243.7 70 13
+          div 267 211.2 70 45.5
+            div 267 211.2 70 11.7
+            div 267 222.9 70 20.8
+            div 267 243.7 70 13
+        div 15 277.7 330 13
+        div 15 290.7 330 66
+          div 15 290.7 104.667 66
+            div 15 290.7 104.667 50
+              i 16 320.7 2.36111 20
+              i 20.3611 322.7 2.36111 18
+              i 24.7222 306.2 2.36111 34.5
+              i 29.0833 323.7 2.36111 17
+              i 33.4444 307.2 2.36111 33.5
+              i 37.8056 312.7 2.36111 28
+              i 42.1667 320.2 2.36111 20.5
+              i 46.5278 291.7 2.36111 49
+              i 50.8889 304.7 2.36111 36
+              i 55.25 296.7 2.36111 44
+              i 59.6111 320.2 2.36111 20.5
+              i 63.9722 328.2 2.36111 12.5
+              i 68.3333 319.2 2.36111 21.5
+              i 72.6944 299.7 2.36111 41
+              i 77.0555 295.7 2.36111 45
+              i 81.4167 325.2 2.36111 15.5
+              i 85.7778 304.7 2.36111 36
+              i 90.1389 292.2 2.36111 48.5
+              i 94.5 316.2 2.36111 24.5
+              i 98.8611 316.7 2.36111 24
+              i 103.222 312.7 2.36111 28
+              i 107.583 315.7 2.36111 25
+              i 111.944 306.7 2.36111 34
+              i 116.306 312.7 2.36111 28
+            div 15 343.7 104.667 13
+          div 127.667 290.7 104.667 66
+            div 127.667 290.7 104.667 50
+              i 128.667 324.2 2.36111 16.5
+              i 133.028 299.2 2.36111 41.5
+              i 137.389 297.7 2.36111 43
+              i 141.75 316.2 2.36111 24.5
+              i 146.111 303.7 2.36111 37
+              i 150.472 299.7 2.36111 41
+              i 154.833 294.2 2.36111 46.5
+              i 159.194 329.2 2.36111 11.5
+              i 163.556 292.2 2.36111 48.5
+              i 167.917 295.7 2.36111 45
+              i 172.278 308.2 2.36111 32.5
+              i 176.639 303.2 2.36111 37.5
+              i 181 325.2 2.36111 15.5
+              i 185.361 324.7 2.36111 16
+              i 189.722 312.7 2.36111 28
+              i 194.083 318.7 2.36111 22
+              i 198.444 298.7 2.36111 42
+              i 202.806 305.7 2.36111 35
+              i 207.167 316.7 2.36111 24
+              i 211.528 293.7 2.36111 47
+              i 215.889 299.7 2.36111 41
+              i 220.25 296.7 2.36111 44
+              i 224.611 304.2 2.36111 36.5
+              i 228.972 297.7 2.36111 43
+            div 127.667 343.7 104.667 13
+          div 240.333 290.7 104.667 66
+            div 240.333 290.7 104.667 50
+              i 241.333 307.7 2.36111 33
+              i 245.694 326.7 2.36111 14
+              i 250.056 311.2 2.36111 29.5
+              i 254.417 296.7 2.36111 44
+              i 258.778 330.2 2.36111 10.5
+              i 263.139 328.2 2.36111 12.5
+              i 267.5 310.7 2.36111 30
+              i 271.861 310.2 2.36111 30.5
+              i 276.222 327.2 2.36111 13.5
+              i 280.583 299.2 2.36111 41.5
+              i 284.944 310.7 2.36111 30
+              i 289.306 295.7 2.36111 45
+              i 293.667 333.2 2.36111 7.5
+              i 298.028 332.7 2.36111 8
+              i 302.389 330.2 2.36111 10.5
+              i 306.75 330.2 2.36111 10.5
+              i 311.111 327.7 2.36111 13
+              i 315.472 296.7 2.36111 44
+              i 319.833 299.7 2.36111 41
+              i 324.194 298.7 2.36111 42
+              i 328.556 321.2 2.36111 19.5
+              i 332.917 330.7 2.36111 10
+              i 337.278 320.7 2.36111 20
+              i 341.639 291.2 2.36111 49.5
+            div 240.333 343.7 104.667 13
+        div 15 364.7 330 13
+        div 15 381.7 330 15.6
+          i 15 385.5 8 8
+          div 63 387 234 5
+            div 63 387 191.88 5
+          span 305 381.7 40 15.6
+        div 15 406.3 330 15.6
+          i 15 410.1 8 8
+          div 71 411.6 226 5
+            div 71 411.6 124.3 5
+          span 305 406.3 40 15.6
+        div 15 430.9 330 15.6
+          i 15 434.7 8 8
+          div 71 436.2 226 5
+            div 71 436.2 85.88 5
+          span 305 430.9 40 15.6
+        div 15 455.5 330 15.6
+          i 15 459.3 8 8
+          div 79 460.8 218 5
+            div 79 460.8 87.2 5
+          span 305 455.5 40 15.6
+        div 15 480.1 330 15.6
+          i 15 483.9 8 8
+          div 87 485.4 210 5
+            div 87 485.4 58.8 5
+          span 305 480.1 40 15.6
+        div 15 504.7 330 15.6
+          i 15 508.5 8 8
+          div 71 510 226 5
+            div 71 510 187.58 5
+          span 305 504.7 40 15.6
+        div 15 529.3 330 15.6
+          i 15 533.1 8 8
+          div 95 534.6 202 5
+            div 95 534.6 151.5 5
+          span 305 529.3 40 15.6
+        div 15 553.9 330 15.6
+          i 15 557.7 8 8
+          div 87 559.2 210 5
+            div 87 559.2 111.3 5
+          span 305 553.9 40 15.6
+        div 15 582.5 330 13
+        table 15 599.5 346 444.7
+          tbody 0 0 0 0
+            tr 0 0 0 0
+              th 18 602.5 56 11.7
+              th 80 602.5 112 11.7
+              th 198 602.5 48 11.7
+              th 252 602.5 24 11.7
+              th 282 602.5 76 11.7
+            tr 0 0 0 0
+              td 18 621.2 56 14.3
+              td 80 621.2 112 14.3
+              td 198 621.2 48 14.3
+              td 252 621.2 24 14.3
+              td 282 621.2 76 14.3
+                span 288 621.2 56 11.7
+            tr 0 0 0 0
+              td 18 642.5 56 14.3
+              td 80 642.5 112 14.3
+              td 198 642.5 48 14.3
+              td 252 642.5 24 14.3
+              td 282 642.5 76 14.3
+                span 288 642.5 32 11.7
+            tr 0 0 0 0
+              td 18 663.8 56 14.3
+              td 80 663.8 112 14.3
+              td 198 663.8 48 14.3
+              td 252 663.8 24 14.3
+              td 282 663.8 76 14.3
+                span 288 663.8 32 11.7
+            tr 0 0 0 0
+              td 18 685.1 56 14.3
+              td 80 685.1 112 14.3
+              td 198 685.1 48 14.3
+              td 252 685.1 24 14.3
+              td 282 685.1 76 14.3
+                span 288 685.1 56 11.7
+            tr 0 0 0 0
+              td 18 706.4 56 14.3
+              td 80 706.4 112 14.3
+              td 198 706.4 48 14.3
+              td 252 706.4 24 14.3
+              td 282 706.4 76 14.3
+                span 288 706.4 64 11.7
+            tr 0 0 0 0
+              td 18 727.7 56 14.3
+              td 80 727.7 112 14.3
+              td 198 727.7 48 14.3
+              td 252 727.7 24 14.3
+              td 282 727.7 76 14.3
+                span 288 727.7 32 11.7
+            tr 0 0 0 0
+              td 18 749 56 14.3
+              td 80 749 112 14.3
+              td 198 749 48 14.3
+              td 252 749 24 14.3
+              td 282 749 76 14.3
+                span 288 749 56 11.7
+            tr 0 0 0 0
+              td 18 770.3 56 14.3
+              td 80 770.3 112 14.3
+              td 198 770.3 48 14.3
+              td 252 770.3 24 14.3
+              td 282 770.3 76 14.3
+                span 288 770.3 56 11.7
+            tr 0 0 0 0
+              td 18 791.6 56 14.3
+              td 80 791.6 112 14.3
+              td 198 791.6 48 14.3
+              td 252 791.6 24 14.3
+              td 282 791.6 76 14.3
+                span 288 791.6 64 11.7
+            tr 0 0 0 0
+              td 18 812.9 56 14.3
+              td 80 812.9 112 14.3
+              td 198 812.9 48 14.3
+              td 252 812.9 24 14.3
+              td 282 812.9 76 14.3
+                span 288 812.9 56 11.7
+            tr 0 0 0 0
+              td 18 834.2 56 14.3
+              td 80 834.2 112 14.3
+              td 198 834.2 48 14.3
+              td 252 834.2 24 14.3
+              td 282 834.2 76 14.3
+                span 288 834.2 56 11.7
+            tr 0 0 0 0
+              td 18 855.5 56 14.3
+              td 80 855.5 112 14.3
+              td 198 855.5 48 14.3
+              td 252 855.5 24 14.3
+              td 282 855.5 76 14.3
+                span 288 855.5 32 11.7
+            tr 0 0 0 0
+              td 18 876.8 56 14.3
+              td 80 876.8 112 14.3
+              td 198 876.8 48 14.3
+              td 252 876.8 24 14.3
+              td 282 876.8 76 14.3
+                span 288 876.8 64 11.7
+            tr 0 0 0 0
+              td 18 898.1 56 14.3
+              td 80 898.1 112 14.3
+              td 198 898.1 48 14.3
+              td 252 898.1 24 14.3
+              td 282 898.1 76 14.3
+                span 288 898.1 56 11.7
+            tr 0 0 0 0
+              td 18 919.4 56 14.3
+              td 80 919.4 112 14.3
+              td 198 919.4 48 14.3
+              td 252 919.4 24 14.3
+              td 282 919.4 76 14.3
+                span 288 919.4 64 11.7
+            tr 0 0 0 0
+              td 18 940.7 56 14.3
+              td 80 940.7 112 14.3
+              td 198 940.7 48 14.3
+              td 252 940.7 24 14.3
+              td 282 940.7 76 14.3
+                span 288 940.7 56 11.7
+            tr 0 0 0 0
+              td 18 962 56 14.3
+              td 80 962 112 14.3
+              td 198 962 48 14.3
+              td 252 962 24 14.3
+              td 282 962 76 14.3
+                span 288 962 64 11.7
+            tr 0 0 0 0
+              td 18 983.3 56 14.3
+              td 80 983.3 112 14.3
+              td 198 983.3 48 14.3
+              td 252 983.3 24 14.3
+              td 282 983.3 76 14.3
+                span 288 983.3 32 11.7
+            tr 0 0 0 0
+              td 18 1004.6 56 14.3
+              td 80 1004.6 112 14.3
+              td 198 1004.6 48 14.3
+              td 252 1004.6 24 14.3
+              td 282 1004.6 76 14.3
+                span 288 1004.6 56 11.7
+            tr 0 0 0 0
+              td 18 1025.9 56 14.3
+              td 80 1025.9 112 14.3
+              td 198 1025.9 48 14.3
+              td 252 1025.9 24 14.3
+              td 282 1025.9 76 14.3
+                span 288 1025.9 32 11.7
+
+== paint
+root 361x1063.8 items=454
+  solid-fill bounds=(0,0,360,1064) layer=(border=(0,0,360,1064),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,1064),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,1064) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,1064) root=0
+  solid-fill bounds=(269,13,76,24) layer=(border=(269,13,76,24),radius=(9,9,9,9,9,9,9,9),clip=(269,13,76,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,73,86,60) layer=(border=(15,73,86,60),radius=(10,10,10,10,10,10,10,10),clip=(15,73,86,60),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(137,73,86,60) layer=(border=(137,73,86,60),radius=(10,10,10,10,10,10,10,10),clip=(137,73,86,60),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(259,73,86,60) layer=(border=(259,73,86,60),radius=(10,10,10,10,10,10,10,10),clip=(259,73,86,60),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,139,86,59) layer=(border=(15,139,86,59),radius=(10,10,10,10,10,10,10,10),clip=(15,139,86,59),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(137,139,86,59) layer=(border=(137,139,86,59),radius=(10,10,10,10,10,10,10,10),clip=(137,139,86,59),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(259,139,86,59) layer=(border=(259,139,86,59),radius=(10,10,10,10,10,10,10,10),clip=(259,139,86,59),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,204,86,60) layer=(border=(15,204,86,60),radius=(10,10,10,10,10,10,10,10),clip=(15,204,86,60),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(259,204,86,60) layer=(border=(259,204,86,60),radius=(10,10,10,10,10,10,10,10),clip=(259,204,86,60),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  borders bounds=(15,291,105,51) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,291,105,51) root=0
+  solid-fill bounds=(16,321,2,20) layer=(border=(16,321,2,20),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(16,321,2,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(20,323,3,18) layer=(border=(20,323,3,18),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(20,323,3,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(25,306,2,35) layer=(border=(25,306,2,35),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(25,306,2,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(29,324,2,17) layer=(border=(29,324,2,17),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(29,324,2,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(33,307,3,34) layer=(border=(33,307,3,34),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(33,307,3,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(38,313,2,28) layer=(border=(38,313,2,28),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(38,313,2,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(42,320,3,21) layer=(border=(42,320,3,21),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(42,320,3,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(47,292,2,49) layer=(border=(47,292,2,49),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(47,292,2,49),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(51,305,2,36) layer=(border=(51,305,2,36),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(51,305,2,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(55,297,3,44) layer=(border=(55,297,3,44),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(55,297,3,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(60,320,2,21) layer=(border=(60,320,2,21),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(60,320,2,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(64,328,2,13) layer=(border=(64,328,2,13),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(64,328,2,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(68,319,3,22) layer=(border=(68,319,3,22),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(68,319,3,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(73,300,2,41) layer=(border=(73,300,2,41),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(73,300,2,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(77,296,2,45) layer=(border=(77,296,2,45),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(77,296,2,45),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(81,325,3,16) layer=(border=(81,325,3,16),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(81,325,3,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(86,305,2,36) layer=(border=(86,305,2,36),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(86,305,2,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(90,292,3,49) layer=(border=(90,292,3,49),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(90,292,3,49),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(95,316,2,25) layer=(border=(95,316,2,25),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(95,316,2,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(99,317,2,24) layer=(border=(99,317,2,24),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(99,317,2,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(103,313,3,28) layer=(border=(103,313,3,28),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(103,313,3,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(108,316,2,25) layer=(border=(108,316,2,25),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(108,316,2,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(112,307,2,34) layer=(border=(112,307,2,34),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(112,307,2,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  solid-fill bounds=(116,313,3,28) layer=(border=(116,313,3,28),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(116,313,3,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  borders bounds=(128,291,104,51) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(128,291,104,51) root=0
+  solid-fill bounds=(129,324,2,17) layer=(border=(129,324,2,17),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(129,324,2,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(133,299,2,42) layer=(border=(133,299,2,42),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(133,299,2,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(137,298,3,43) layer=(border=(137,298,3,43),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(137,298,3,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(142,316,2,25) layer=(border=(142,316,2,25),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(142,316,2,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(146,304,2,37) layer=(border=(146,304,2,37),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(146,304,2,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(150,300,3,41) layer=(border=(150,300,3,41),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(150,300,3,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(155,294,2,47) layer=(border=(155,294,2,47),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(155,294,2,47),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(159,329,3,12) layer=(border=(159,329,3,12),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(159,329,3,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(164,292,2,49) layer=(border=(164,292,2,49),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(164,292,2,49),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(168,296,2,45) layer=(border=(168,296,2,45),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(168,296,2,45),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(172,308,3,33) layer=(border=(172,308,3,33),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(172,308,3,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(177,303,2,38) layer=(border=(177,303,2,38),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(177,303,2,38),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(181,325,2,16) layer=(border=(181,325,2,16),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(181,325,2,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(185,325,3,16) layer=(border=(185,325,3,16),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(185,325,3,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(190,313,2,28) layer=(border=(190,313,2,28),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(190,313,2,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(194,319,2,22) layer=(border=(194,319,2,22),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(194,319,2,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(198,299,3,42) layer=(border=(198,299,3,42),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(198,299,3,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(203,306,2,35) layer=(border=(203,306,2,35),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(203,306,2,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(207,317,3,24) layer=(border=(207,317,3,24),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(207,317,3,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(212,294,2,47) layer=(border=(212,294,2,47),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(212,294,2,47),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(216,300,2,41) layer=(border=(216,300,2,41),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(216,300,2,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(220,297,3,44) layer=(border=(220,297,3,44),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(220,297,3,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(225,304,2,37) layer=(border=(225,304,2,37),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(225,304,2,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(229,298,2,43) layer=(border=(229,298,2,43),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(229,298,2,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  borders bounds=(240,291,105,51) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(240,291,105,51) root=0
+  solid-fill bounds=(241,308,3,33) layer=(border=(241,308,3,33),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(241,308,3,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(246,327,2,14) layer=(border=(246,327,2,14),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(246,327,2,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(250,311,2,30) layer=(border=(250,311,2,30),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(250,311,2,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(254,297,3,44) layer=(border=(254,297,3,44),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(254,297,3,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(259,330,2,11) layer=(border=(259,330,2,11),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(259,330,2,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(263,328,3,13) layer=(border=(263,328,3,13),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(263,328,3,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(268,311,2,30) layer=(border=(268,311,2,30),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(268,311,2,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(272,310,2,31) layer=(border=(272,310,2,31),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(272,310,2,31),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(276,327,3,14) layer=(border=(276,327,3,14),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(276,327,3,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(281,299,2,42) layer=(border=(281,299,2,42),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(281,299,2,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(285,311,2,30) layer=(border=(285,311,2,30),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(285,311,2,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(289,296,3,45) layer=(border=(289,296,3,45),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(289,296,3,45),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(294,333,2,8) layer=(border=(294,333,2,8),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(294,333,2,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(298,333,2,8) layer=(border=(298,333,2,8),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(298,333,2,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(302,330,3,11) layer=(border=(302,330,3,11),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(302,330,3,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(307,330,2,11) layer=(border=(307,330,2,11),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(307,330,2,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(311,328,2,13) layer=(border=(311,328,2,13),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(311,328,2,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(315,297,3,44) layer=(border=(315,297,3,44),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(315,297,3,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(320,300,2,41) layer=(border=(320,300,2,41),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(320,300,2,41),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(324,299,3,42) layer=(border=(324,299,3,42),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(324,299,3,42),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(329,321,2,20) layer=(border=(329,321,2,20),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(329,321,2,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(333,331,2,10) layer=(border=(333,331,2,10),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(333,331,2,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(337,321,3,20) layer=(border=(337,321,3,20),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(337,321,3,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(342,291,2,50) layer=(border=(342,291,2,50),radius=(1.18056,1.18056,1.18056,1.18056,0,0,0,0),clip=(342,291,2,50),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  borders bounds=(15,378,330,24) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,378,330,24) root=0
+  solid-fill bounds=(15,386,8,8) layer=(border=(15,386,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,386,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(63,387,234,5) layer=(border=(63,387,234,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(63,387,234,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(63,387,234,5) pos=(63,387,234,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(63,387,192,5) layer=(border=(63,387,192,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(63,387,192,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,402,330,25) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,402,330,25) root=0
+  solid-fill bounds=(15,410,8,8) layer=(border=(15,410,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,410,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(71,412,226,5) layer=(border=(71,412,226,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(71,412,226,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(71,411.6,226,5) pos=(71,411.6,226,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(71,412,124,5) layer=(border=(71,412,124,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(71,412,124,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,427,330,25) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,427,330,25) root=0
+  solid-fill bounds=(15,435,8,8) layer=(border=(15,435,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,435,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(71,436,226,5) layer=(border=(71,436,226,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(71,436,226,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(71,436.2,226,5) pos=(71,436.2,226,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(71,436,86,5) layer=(border=(71,436,86,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(71,436,86,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,452,330,24) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,452,330,24) root=0
+  solid-fill bounds=(15,459,8,8) layer=(border=(15,459,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,459,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(79,461,218,5) layer=(border=(79,461,218,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(79,461,218,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(79,460.8,218,5) pos=(79,460.8,218,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(79,461,87,5) layer=(border=(79,461,87,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(79,461,87,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,476,330,25) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,476,330,25) root=0
+  solid-fill bounds=(15,484,8,8) layer=(border=(15,484,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,484,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(87,485,210,5) layer=(border=(87,485,210,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(87,485,210,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(87,485.4,210,5) pos=(87,485.4,210,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(87,485,59,5) layer=(border=(87,485,59,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(87,485,59,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,501,330,24) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,501,330,24) root=0
+  solid-fill bounds=(15,509,8,8) layer=(border=(15,509,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,509,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(71,510,226,5) layer=(border=(71,510,226,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(71,510,226,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(71,510,226,5) pos=(71,510,226,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(71,510,188,5) layer=(border=(71,510,188,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(71,510,188,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,525,330,25) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,525,330,25) root=0
+  solid-fill bounds=(15,533,8,8) layer=(border=(15,533,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,533,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  solid-fill bounds=(95,535,202,5) layer=(border=(95,535,202,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(95,535,202,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(95,534.6,202,5) pos=(95,534.6,202,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(95,535,152,5) layer=(border=(95,535,152,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(95,535,152,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,550,330,25) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,550,330,25) root=0
+  solid-fill bounds=(15,558,8,8) layer=(border=(15,558,8,8),radius=(4,4,4,4,4,4,4,4),clip=(15,558,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(87,559,210,5) layer=(border=(87,559,210,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(87,559,210,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(87,559.2,210,5) pos=(87,559.2,210,5) radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5)
+  solid-fill bounds=(87,559,111,5) layer=(border=(87,559,111,5),radius=(2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5),clip=(87,559,111,5),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,600,62,18) borders=(left=(0,0,#6e6e73ff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,600,62,18) root=0
+  borders bounds=(77,600,118,18) borders=(left=(0,0,#6e6e73ff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,600,118,18) root=0
+  borders bounds=(195,600,54,18) borders=(left=(0,0,#6e6e73ff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,600,54,18) root=0
+  borders bounds=(249,600,30,18) borders=(left=(0,0,#6e6e73ff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,600,30,18) root=0
+  borders bounds=(279,600,82,18) borders=(left=(0,0,#6e6e73ff),top=(0,0,#6e6e73ff),right=(0,0,#6e6e73ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,600,82,18) root=0
+  borders bounds=(15,618,62,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,618,62,22) root=0
+  borders bounds=(77,618,118,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,618,118,22) root=0
+  borders bounds=(195,618,54,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,618,54,22) root=0
+  borders bounds=(249,618,30,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,618,30,22) root=0
+  borders bounds=(279,618,82,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,618,82,22) root=0
+  borders bounds=(15,640,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,640,62,21) root=0
+  borders bounds=(77,640,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,640,118,21) root=0
+  borders bounds=(195,640,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,640,54,21) root=0
+  borders bounds=(249,640,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,640,30,21) root=0
+  borders bounds=(279,640,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,640,82,21) root=0
+  borders bounds=(15,661,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,661,62,21) root=0
+  borders bounds=(77,661,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,661,118,21) root=0
+  borders bounds=(195,661,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,661,54,21) root=0
+  borders bounds=(249,661,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,661,30,21) root=0
+  borders bounds=(279,661,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,661,82,21) root=0
+  borders bounds=(15,682,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,682,62,21) root=0
+  borders bounds=(77,682,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,682,118,21) root=0
+  borders bounds=(195,682,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,682,54,21) root=0
+  borders bounds=(249,682,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,682,30,21) root=0
+  borders bounds=(279,682,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,682,82,21) root=0
+  borders bounds=(15,703,62,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,703,62,22) root=0
+  borders bounds=(77,703,118,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,703,118,22) root=0
+  borders bounds=(195,703,54,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,703,54,22) root=0
+  borders bounds=(249,703,30,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,703,30,22) root=0
+  borders bounds=(279,703,82,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,703,82,22) root=0
+  borders bounds=(15,725,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,725,62,21) root=0
+  borders bounds=(77,725,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,725,118,21) root=0
+  borders bounds=(195,725,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,725,54,21) root=0
+  borders bounds=(249,725,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,725,30,21) root=0
+  borders bounds=(279,725,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,725,82,21) root=0
+  borders bounds=(15,746,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,746,62,21) root=0
+  borders bounds=(77,746,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,746,118,21) root=0
+  borders bounds=(195,746,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,746,54,21) root=0
+  borders bounds=(249,746,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,746,30,21) root=0
+  borders bounds=(279,746,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,746,82,21) root=0
+  borders bounds=(15,767,62,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,767,62,22) root=0
+  borders bounds=(77,767,118,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,767,118,22) root=0
+  borders bounds=(195,767,54,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,767,54,22) root=0
+  borders bounds=(249,767,30,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,767,30,22) root=0
+  borders bounds=(279,767,82,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,767,82,22) root=0
+  borders bounds=(15,789,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,789,62,21) root=0
+  borders bounds=(77,789,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,789,118,21) root=0
+  borders bounds=(195,789,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,789,54,21) root=0
+  borders bounds=(249,789,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,789,30,21) root=0
+  borders bounds=(279,789,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,789,82,21) root=0
+  borders bounds=(15,810,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,810,62,21) root=0
+  borders bounds=(77,810,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,810,118,21) root=0
+  borders bounds=(195,810,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,810,54,21) root=0
+  borders bounds=(249,810,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,810,30,21) root=0
+  borders bounds=(279,810,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,810,82,21) root=0
+  borders bounds=(15,831,62,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,831,62,22) root=0
+  borders bounds=(77,831,118,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,831,118,22) root=0
+  borders bounds=(195,831,54,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,831,54,22) root=0
+  borders bounds=(249,831,30,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,831,30,22) root=0
+  borders bounds=(279,831,82,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,831,82,22) root=0
+  borders bounds=(15,853,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,853,62,21) root=0
+  borders bounds=(77,853,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,853,118,21) root=0
+  borders bounds=(195,853,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,853,54,21) root=0
+  borders bounds=(249,853,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,853,30,21) root=0
+  borders bounds=(279,853,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,853,82,21) root=0
+  borders bounds=(15,874,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,874,62,21) root=0
+  borders bounds=(77,874,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,874,118,21) root=0
+  borders bounds=(195,874,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,874,54,21) root=0
+  borders bounds=(249,874,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,874,30,21) root=0
+  borders bounds=(279,874,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,874,82,21) root=0
+  borders bounds=(15,895,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,895,62,21) root=0
+  borders bounds=(77,895,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,895,118,21) root=0
+  borders bounds=(195,895,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,895,54,21) root=0
+  borders bounds=(249,895,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,895,30,21) root=0
+  borders bounds=(279,895,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,895,82,21) root=0
+  borders bounds=(15,916,62,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,916,62,22) root=0
+  borders bounds=(77,916,118,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,916,118,22) root=0
+  borders bounds=(195,916,54,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,916,54,22) root=0
+  borders bounds=(249,916,30,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,916,30,22) root=0
+  borders bounds=(279,916,82,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,916,82,22) root=0
+  borders bounds=(15,938,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,938,62,21) root=0
+  borders bounds=(77,938,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,938,118,21) root=0
+  borders bounds=(195,938,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,938,54,21) root=0
+  borders bounds=(249,938,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,938,30,21) root=0
+  borders bounds=(279,938,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,938,82,21) root=0
+  borders bounds=(15,959,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,959,62,21) root=0
+  borders bounds=(77,959,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,959,118,21) root=0
+  borders bounds=(195,959,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,959,54,21) root=0
+  borders bounds=(249,959,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,959,30,21) root=0
+  borders bounds=(279,959,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,959,82,21) root=0
+  borders bounds=(15,980,62,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,980,62,22) root=0
+  borders bounds=(77,980,118,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,980,118,22) root=0
+  borders bounds=(195,980,54,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,980,54,22) root=0
+  borders bounds=(249,980,30,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,980,30,22) root=0
+  borders bounds=(279,980,82,22) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,980,82,22) root=0
+  borders bounds=(15,1002,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,1002,62,21) root=0
+  borders bounds=(77,1002,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,1002,118,21) root=0
+  borders bounds=(195,1002,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,1002,54,21) root=0
+  borders bounds=(249,1002,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,1002,30,21) root=0
+  borders bounds=(279,1002,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,1002,82,21) root=0
+  borders bounds=(15,1023,62,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(15,1023,62,21) root=0
+  borders bounds=(77,1023,118,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(77,1023,118,21) root=0
+  borders bounds=(195,1023,54,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(195,1023,54,21) root=0
+  borders bounds=(249,1023,30,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(249,1023,30,21) root=0
+  borders bounds=(279,1023,82,21) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#0000001a),radius=(0,0,0,0,0,0,0,0)) pos=(279,1023,82,21) root=0
+  text bounds=(7,8,40,32) pos=(15,16,24,16) color=#000000ff text="Ops" font=f1 glyphs=3 advance=24
+  text bounds=(39,8,80,32) pos=(47,16,64,16) color=#000000ff text="overview" font=f1 glyphs=8 advance=64
+  text bounds=(271,9,72,32) pos=(279,17,56,16) color=#000000ff text="Refresh" font=f2 glyphs=7 advance=56
+  text bounds=(7,29,80,32) pos=(15,37,64,16) color=#6e6e73ff text="snapshot" font=f3 glyphs=8 advance=64
+  text bounds=(79,29,24,32) pos=(87,37,8,16) color=#6e6e73ff text="1" font=f3 glyphs=1 advance=8
+  text bounds=(95,29,32,32) pos=(103,37,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(119,29,24,32) pos=(127,37,8,16) color=#6e6e73ff text="8" font=f3 glyphs=1 advance=8
+  text bounds=(135,29,64,32) pos=(143,37,48,16) color=#6e6e73ff text="tiles," font=f3 glyphs=6 advance=48
+  text bounds=(191,29,32,32) pos=(199,37,16,16) color=#6e6e73ff text="72" font=f3 glyphs=2 advance=16
+  text bounds=(215,29,56,32) pos=(223,37,40,16) color=#6e6e73ff text="bars," font=f3 glyphs=5 advance=40
+  text bounds=(263,29,24,32) pos=(271,37,8,16) color=#6e6e73ff text="8" font=f3 glyphs=1 advance=8
+  text bounds=(7,43,88,32) pos=(15,51,72,16) color=#6e6e73ff text="services," font=f3 glyphs=9 advance=72
+  text bounds=(87,43,32,32) pos=(95,51,16,16) color=#6e6e73ff text="20" font=f3 glyphs=2 advance=16
+  text bounds=(111,43,48,32) pos=(119,51,32,16) color=#6e6e73ff text="rows" font=f3 glyphs=4 advance=32
+  text bounds=(15,70,80,32) pos=(23,78,64,16) color=#6e6e73ff text="REQUESTS" font=f4 glyphs=8 advance=64
+  text bounds=(15,86,56,32) pos=(23,94,40,16) color=#000000ff text="1262k" font=f5 glyphs=5 advance=40
+  text bounds=(15,104,56,32) pos=(23,112,40,16) color=#ff3b30ff text="-1.6%" font=f6 glyphs=5 advance=40
+  text bounds=(137,70,64,32) pos=(145,78,48,16) color=#6e6e73ff text="ERRORS" font=f4 glyphs=6 advance=48
+  text bounds=(137,86,56,32) pos=(145,94,40,16) color=#000000ff text="0.50%" font=f5 glyphs=5 advance=40
+  text bounds=(137,104,56,32) pos=(145,112,40,16) color=#ff3b30ff text="-5.5%" font=f6 glyphs=5 advance=40
+  text bounds=(259,70,40,32) pos=(267,78,24,16) color=#6e6e73ff text="P50" font=f4 glyphs=3 advance=24
+  text bounds=(259,86,48,32) pos=(267,94,32,16) color=#000000ff text="72ms" font=f5 glyphs=4 advance=32
+  text bounds=(259,104,56,32) pos=(267,112,40,16) color=#34c759ff text="+3.3%" font=f6 glyphs=5 advance=40
+  text bounds=(15,136,40,32) pos=(23,144,24,16) color=#6e6e73ff text="P95" font=f4 glyphs=3 advance=24
+  text bounds=(15,151,56,32) pos=(23,159,40,16) color=#000000ff text="172ms" font=f5 glyphs=5 advance=40
+  text bounds=(15,169,56,32) pos=(23,177,40,16) color=#ff3b30ff text="-4.4%" font=f6 glyphs=5 advance=40
+  text bounds=(137,136,40,32) pos=(145,144,24,16) color=#6e6e73ff text="CPU" font=f4 glyphs=3 advance=24
+  text bounds=(137,151,40,32) pos=(145,159,24,16) color=#000000ff text="48%" font=f5 glyphs=3 advance=24
+  text bounds=(137,169,56,32) pos=(145,177,40,16) color=#34c759ff text="+5.9%" font=f6 glyphs=5 advance=40
+  text bounds=(259,136,64,32) pos=(267,144,48,16) color=#6e6e73ff text="MEMORY" font=f4 glyphs=6 advance=48
+  text bounds=(259,151,48,32) pos=(267,159,32,16) color=#000000ff text="14GB" font=f5 glyphs=4 advance=32
+  text bounds=(259,169,56,32) pos=(267,177,40,16) color=#34c759ff text="+3.3%" font=f6 glyphs=5 advance=40
+  text bounds=(15,201,56,32) pos=(23,209,40,16) color=#6e6e73ff text="QUEUE" font=f4 glyphs=5 advance=40
+  text bounds=(15,217,40,32) pos=(23,225,24,16) color=#000000ff text="171" font=f5 glyphs=3 advance=24
+  text bounds=(15,235,56,32) pos=(23,243,40,16) color=#34c759ff text="+3.0%" font=f6 glyphs=5 advance=40
+  text bounds=(259,201,64,32) pos=(267,209,48,16) color=#6e6e73ff text="UPTIME" font=f4 glyphs=6 advance=48
+  text bounds=(259,217,64,32) pos=(267,225,48,16) color=#000000ff text="99.91%" font=f5 glyphs=6 advance=48
+  text bounds=(259,235,56,32) pos=(267,243,40,16) color=#34c759ff text="+4.8%" font=f6 glyphs=5 advance=40
+  text bounds=(7,269,48,32) pos=(15,277,32,16) color=#6e6e73ff text="LAST" font=f6 glyphs=4 advance=32
+  text bounds=(47,269,32,32) pos=(55,277,16,16) color=#6e6e73ff text="24" font=f6 glyphs=2 advance=16
+  text bounds=(71,269,24,32) pos=(79,277,8,16) color=#6e6e73ff text="H" font=f6 glyphs=1 advance=8
+  text bounds=(87,269,32,32) pos=(95,277,16,16) color=#6e6e73ff text="·" font=f6 glyphs=2 advance=16
+  text bounds=(111,269,80,32) pos=(119,277,64,16) color=#6e6e73ff text="REQUESTS" font=f6 glyphs=8 advance=64
+  text bounds=(183,269,24,32) pos=(191,277,8,16) color=#6e6e73ff text="/" font=f6 glyphs=1 advance=8
+  text bounds=(199,269,64,32) pos=(207,277,48,16) color=#6e6e73ff text="ERRORS" font=f6 glyphs=6 advance=48
+  text bounds=(255,269,24,32) pos=(263,277,8,16) color=#6e6e73ff text="/" font=f6 glyphs=1 advance=8
+  text bounds=(271,269,72,32) pos=(279,277,56,16) color=#6e6e73ff text="LATENCY" font=f6 glyphs=7 advance=56
+  text bounds=(7,335,56,32) pos=(15,343,40,16) color=#6e6e73ff text="req/s" font=f7 glyphs=5 advance=40
+  text bounds=(119.667,335,40,32) pos=(127.667,343,24,16) color=#6e6e73ff text="err" font=f7 glyphs=3 advance=24
+  text bounds=(151.667,335,24,32) pos=(159.667,343,8,16) color=#6e6e73ff text="%" font=f7 glyphs=1 advance=8
+  text bounds=(232.333,335,40,32) pos=(240.333,343,24,16) color=#6e6e73ff text="p95" font=f7 glyphs=3 advance=24
+  text bounds=(264.333,335,32,32) pos=(272.333,343,16,16) color=#6e6e73ff text="ms" font=f7 glyphs=2 advance=16
+  text bounds=(7,356,80,32) pos=(15,364,64,16) color=#6e6e73ff text="SERVICES" font=f6 glyphs=8 advance=64
+  text bounds=(23,374,40,32) pos=(31,382,24,16) color=#000000ff text="api" font=f8 glyphs=3 advance=24
+  text bounds=(313,374,40,32) pos=(321,382,24,16) color=#000000ff text="82%" font=f9 glyphs=3 advance=24
+  text bounds=(23,398,48,32) pos=(31,406,32,16) color=#000000ff text="auth" font=f8 glyphs=4 advance=32
+  text bounds=(313,398,40,32) pos=(321,406,24,16) color=#000000ff text="55%" font=f9 glyphs=3 advance=24
+  text bounds=(23,423,48,32) pos=(31,431,32,16) color=#000000ff text="feed" font=f8 glyphs=4 advance=32
+  text bounds=(313,423,40,32) pos=(321,431,24,16) color=#000000ff text="38%" font=f9 glyphs=3 advance=24
+  text bounds=(23,448,56,32) pos=(31,456,40,16) color=#000000ff text="media" font=f8 glyphs=5 advance=40
+  text bounds=(313,448,40,32) pos=(321,456,24,16) color=#000000ff text="40%" font=f9 glyphs=3 advance=24
+  text bounds=(23,472,64,32) pos=(31,480,48,16) color=#000000ff text="search" font=f8 glyphs=6 advance=48
+  text bounds=(313,472,40,32) pos=(321,480,24,16) color=#000000ff text="28%" font=f9 glyphs=3 advance=24
+  text bounds=(23,497,48,32) pos=(31,505,32,16) color=#000000ff text="push" font=f8 glyphs=4 advance=32
+  text bounds=(313,497,40,32) pos=(321,505,24,16) color=#000000ff text="83%" font=f9 glyphs=3 advance=24
+  text bounds=(23,521,72,32) pos=(31,529,56,16) color=#000000ff text="billing" font=f8 glyphs=7 advance=56
+  text bounds=(313,521,40,32) pos=(321,529,24,16) color=#000000ff text="75%" font=f9 glyphs=3 advance=24
+  text bounds=(23,546,64,32) pos=(31,554,48,16) color=#000000ff text="export" font=f8 glyphs=6 advance=48
+  text bounds=(313,546,40,32) pos=(321,554,24,16) color=#000000ff text="53%" font=f9 glyphs=3 advance=24
+  text bounds=(7,574,104,32) pos=(15,582,88,16) color=#6e6e73ff text="DEPLOYMENTS" font=f6 glyphs=11 advance=88
+  text bounds=(10,593,72,32) pos=(18,601,56,16) color=#6e6e73ff text="SERVICE" font=f10 glyphs=7 advance=56
+  text bounds=(72,593,64,32) pos=(80,601,48,16) color=#6e6e73ff text="REGION" font=f10 glyphs=6 advance=48
+  text bounds=(190,593,40,32) pos=(198,601,24,16) color=#6e6e73ff text="VER" font=f10 glyphs=3 advance=24
+  text bounds=(244,593,40,32) pos=(252,601,24,16) color=#6e6e73ff text="P95" font=f11 glyphs=3 advance=24
+  text bounds=(274,593,56,32) pos=(282,601,40,16) color=#6e6e73ff text="STATE" font=f10 glyphs=5 advance=40
+  text bounds=(10,613,40,32) pos=(18,621,24,16) color=#000000ff text="api" font=f3 glyphs=3 advance=24
+  text bounds=(72,613,40,32) pos=(80,621,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,613,64,32) pos=(104,621,48,16) color=#000000ff text="west-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,613,64,32) pos=(198,621,48,16) color=#000000ff text="2.14.0" font=f3 glyphs=6 advance=48
+  text bounds=(252,613,32,32) pos=(260,621,16,16) color=#000000ff text="75" font=f12 glyphs=2 advance=16
+  solid-fill bounds=(282,621,68,12) layer=(border=(282,621,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,621,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,611,72,32) pos=(288,619,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,635,48,32) pos=(18,643,32,16) color=#000000ff text="auth" font=f3 glyphs=4 advance=32
+  text bounds=(72,635,40,32) pos=(80,643,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,635,88,32) pos=(104,643,72,16) color=#000000ff text="central-1" font=f3 glyphs=9 advance=72
+  text bounds=(190,635,64,32) pos=(198,643,48,16) color=#000000ff text="2.13.1" font=f3 glyphs=6 advance=48
+  text bounds=(244,635,40,32) pos=(252,643,24,16) color=#000000ff text="230" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,643,44,11) layer=(border=(282,643,44,11),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,643,44,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950033
+  text bounds=(280,633,48,32) pos=(288,641,32,16) color=#ff9500ff text="slow" font=f4 glyphs=4 advance=32
+  text bounds=(10,656,48,32) pos=(18,664,32,16) color=#000000ff text="feed" font=f3 glyphs=4 advance=32
+  text bounds=(72,656,40,32) pos=(80,664,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,656,64,32) pos=(104,664,48,16) color=#000000ff text="east-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,656,64,32) pos=(198,664,48,16) color=#000000ff text="2.12.2" font=f3 glyphs=6 advance=48
+  text bounds=(244,656,40,32) pos=(252,664,24,16) color=#000000ff text="215" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,664,44,12) layer=(border=(282,664,44,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,664,44,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950033
+  text bounds=(280,654,48,32) pos=(288,662,32,16) color=#ff9500ff text="slow" font=f4 glyphs=4 advance=32
+  text bounds=(10,677,56,32) pos=(18,685,40,16) color=#000000ff text="media" font=f3 glyphs=5 advance=40
+  text bounds=(72,677,40,32) pos=(80,685,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,677,64,32) pos=(104,685,48,16) color=#000000ff text="west-2" font=f3 glyphs=6 advance=48
+  text bounds=(190,677,64,32) pos=(198,685,48,16) color=#000000ff text="2.14.3" font=f3 glyphs=6 advance=48
+  text bounds=(252,677,32,32) pos=(260,685,16,16) color=#000000ff text="72" font=f12 glyphs=2 advance=16
+  solid-fill bounds=(282,685,68,12) layer=(border=(282,685,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,685,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,675,72,32) pos=(288,683,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,698,64,32) pos=(18,706,48,16) color=#000000ff text="search" font=f3 glyphs=6 advance=48
+  text bounds=(72,698,40,32) pos=(80,706,24,16) color=#000000ff text="ap-" font=f3 glyphs=3 advance=24
+  text bounds=(96,698,104,32) pos=(104,706,88,16) color=#000000ff text="northeast-1" font=f3 glyphs=11 advance=88
+  text bounds=(190,698,64,32) pos=(198,706,48,16) color=#000000ff text="2.13.4" font=f3 glyphs=6 advance=48
+  text bounds=(244,698,40,32) pos=(252,706,24,16) color=#000000ff text="314" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,706,76,12) layer=(border=(282,706,76,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,706,76,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3024
+  text bounds=(280,696,80,32) pos=(288,704,64,16) color=#ff3b30ff text="degraded" font=f4 glyphs=8 advance=64
+  text bounds=(10,720,48,32) pos=(18,728,32,16) color=#000000ff text="push" font=f3 glyphs=4 advance=32
+  text bounds=(72,720,40,32) pos=(80,728,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,720,64,32) pos=(104,728,48,16) color=#000000ff text="west-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,720,64,32) pos=(198,728,48,16) color=#000000ff text="2.12.5" font=f3 glyphs=6 advance=48
+  text bounds=(244,720,40,32) pos=(252,728,24,16) color=#000000ff text="226" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,728,44,11) layer=(border=(282,728,44,11),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,728,44,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950033
+  text bounds=(280,718,48,32) pos=(288,726,32,16) color=#ff9500ff text="slow" font=f4 glyphs=4 advance=32
+  text bounds=(10,741,72,32) pos=(18,749,56,16) color=#000000ff text="billing" font=f3 glyphs=7 advance=56
+  text bounds=(72,741,40,32) pos=(80,749,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,741,88,32) pos=(104,749,72,16) color=#000000ff text="central-1" font=f3 glyphs=9 advance=72
+  text bounds=(190,741,64,32) pos=(198,749,48,16) color=#000000ff text="2.14.6" font=f3 glyphs=6 advance=48
+  text bounds=(244,741,40,32) pos=(252,749,24,16) color=#000000ff text="111" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,749,68,12) layer=(border=(282,749,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,749,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,739,72,32) pos=(288,747,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,762,64,32) pos=(18,770,48,16) color=#000000ff text="export" font=f3 glyphs=6 advance=48
+  text bounds=(72,762,40,32) pos=(80,770,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,762,64,32) pos=(104,770,48,16) color=#000000ff text="east-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,762,64,32) pos=(198,770,48,16) color=#000000ff text="2.13.7" font=f3 glyphs=6 advance=48
+  text bounds=(252,762,32,32) pos=(260,770,16,16) color=#000000ff text="67" font=f12 glyphs=2 advance=16
+  solid-fill bounds=(282,770,68,12) layer=(border=(282,770,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,770,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,760,72,32) pos=(288,768,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,784,40,32) pos=(18,792,24,16) color=#000000ff text="api" font=f3 glyphs=3 advance=24
+  text bounds=(72,784,40,32) pos=(80,792,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,784,64,32) pos=(104,792,48,16) color=#000000ff text="west-2" font=f3 glyphs=6 advance=48
+  text bounds=(190,784,64,32) pos=(198,792,48,16) color=#000000ff text="2.12.8" font=f3 glyphs=6 advance=48
+  text bounds=(244,784,40,32) pos=(252,792,24,16) color=#000000ff text="350" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,792,76,11) layer=(border=(282,792,76,11),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,792,76,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3024
+  text bounds=(280,782,80,32) pos=(288,790,64,16) color=#ff3b30ff text="degraded" font=f4 glyphs=8 advance=64
+  text bounds=(10,805,48,32) pos=(18,813,32,16) color=#000000ff text="auth" font=f3 glyphs=4 advance=32
+  text bounds=(72,805,40,32) pos=(80,813,24,16) color=#000000ff text="ap-" font=f3 glyphs=3 advance=24
+  text bounds=(96,805,104,32) pos=(104,813,88,16) color=#000000ff text="northeast-1" font=f3 glyphs=11 advance=88
+  text bounds=(190,805,64,32) pos=(198,813,48,16) color=#000000ff text="2.14.0" font=f3 glyphs=6 advance=48
+  text bounds=(244,805,40,32) pos=(252,813,24,16) color=#000000ff text="173" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,813,68,12) layer=(border=(282,813,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,813,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,803,72,32) pos=(288,811,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,826,48,32) pos=(18,834,32,16) color=#000000ff text="feed" font=f3 glyphs=4 advance=32
+  text bounds=(72,826,40,32) pos=(80,834,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,826,64,32) pos=(104,834,48,16) color=#000000ff text="west-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,826,64,32) pos=(198,834,48,16) color=#000000ff text="2.13.1" font=f3 glyphs=6 advance=48
+  text bounds=(244,826,40,32) pos=(252,834,24,16) color=#000000ff text="133" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,834,68,12) layer=(border=(282,834,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,834,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,824,72,32) pos=(288,832,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,848,56,32) pos=(18,856,40,16) color=#000000ff text="media" font=f3 glyphs=5 advance=40
+  text bounds=(72,848,40,32) pos=(80,856,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,848,88,32) pos=(104,856,72,16) color=#000000ff text="central-1" font=f3 glyphs=9 advance=72
+  text bounds=(190,848,64,32) pos=(198,856,48,16) color=#000000ff text="2.12.2" font=f3 glyphs=6 advance=48
+  text bounds=(244,848,40,32) pos=(252,856,24,16) color=#000000ff text="259" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,856,44,11) layer=(border=(282,856,44,11),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,856,44,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950033
+  text bounds=(280,846,48,32) pos=(288,854,32,16) color=#ff9500ff text="slow" font=f4 glyphs=4 advance=32
+  text bounds=(10,869,64,32) pos=(18,877,48,16) color=#000000ff text="search" font=f3 glyphs=6 advance=48
+  text bounds=(72,869,40,32) pos=(80,877,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,869,64,32) pos=(104,877,48,16) color=#000000ff text="east-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,869,64,32) pos=(198,877,48,16) color=#000000ff text="2.14.3" font=f3 glyphs=6 advance=48
+  text bounds=(244,869,40,32) pos=(252,877,24,16) color=#000000ff text="311" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,877,76,12) layer=(border=(282,877,76,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,877,76,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3024
+  text bounds=(280,867,80,32) pos=(288,875,64,16) color=#ff3b30ff text="degraded" font=f4 glyphs=8 advance=64
+  text bounds=(10,890,48,32) pos=(18,898,32,16) color=#000000ff text="push" font=f3 glyphs=4 advance=32
+  text bounds=(72,890,40,32) pos=(80,898,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,890,64,32) pos=(104,898,48,16) color=#000000ff text="west-2" font=f3 glyphs=6 advance=48
+  text bounds=(190,890,64,32) pos=(198,898,48,16) color=#000000ff text="2.13.4" font=f3 glyphs=6 advance=48
+  text bounds=(244,890,40,32) pos=(252,898,24,16) color=#000000ff text="175" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,898,68,12) layer=(border=(282,898,68,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,898,68,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,888,72,32) pos=(288,896,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,911,72,32) pos=(18,919,56,16) color=#000000ff text="billing" font=f3 glyphs=7 advance=56
+  text bounds=(72,911,40,32) pos=(80,919,24,16) color=#000000ff text="ap-" font=f3 glyphs=3 advance=24
+  text bounds=(96,911,104,32) pos=(104,919,88,16) color=#000000ff text="northeast-1" font=f3 glyphs=11 advance=88
+  text bounds=(190,911,64,32) pos=(198,919,48,16) color=#000000ff text="2.12.5" font=f3 glyphs=6 advance=48
+  text bounds=(244,911,40,32) pos=(252,919,24,16) color=#000000ff text="304" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,919,76,12) layer=(border=(282,919,76,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,919,76,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3024
+  text bounds=(280,909,80,32) pos=(288,917,64,16) color=#ff3b30ff text="degraded" font=f4 glyphs=8 advance=64
+  text bounds=(10,933,64,32) pos=(18,941,48,16) color=#000000ff text="export" font=f3 glyphs=6 advance=48
+  text bounds=(72,933,40,32) pos=(80,941,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,933,64,32) pos=(104,941,48,16) color=#000000ff text="west-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,933,64,32) pos=(198,941,48,16) color=#000000ff text="2.14.6" font=f3 glyphs=6 advance=48
+  text bounds=(252,933,32,32) pos=(260,941,16,16) color=#000000ff text="67" font=f12 glyphs=2 advance=16
+  solid-fill bounds=(282,941,68,11) layer=(border=(282,941,68,11),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,941,68,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,931,72,32) pos=(288,939,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,954,40,32) pos=(18,962,24,16) color=#000000ff text="api" font=f3 glyphs=3 advance=24
+  text bounds=(72,954,40,32) pos=(80,962,24,16) color=#000000ff text="eu-" font=f3 glyphs=3 advance=24
+  text bounds=(96,954,88,32) pos=(104,962,72,16) color=#000000ff text="central-1" font=f3 glyphs=9 advance=72
+  text bounds=(190,954,64,32) pos=(198,962,48,16) color=#000000ff text="2.13.7" font=f3 glyphs=6 advance=48
+  text bounds=(244,954,40,32) pos=(252,962,24,16) color=#000000ff text="322" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,962,76,12) layer=(border=(282,962,76,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,962,76,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3024
+  text bounds=(280,952,80,32) pos=(288,960,64,16) color=#ff3b30ff text="degraded" font=f4 glyphs=8 advance=64
+  text bounds=(10,975,48,32) pos=(18,983,32,16) color=#000000ff text="auth" font=f3 glyphs=4 advance=32
+  text bounds=(72,975,40,32) pos=(80,983,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,975,64,32) pos=(104,983,48,16) color=#000000ff text="east-1" font=f3 glyphs=6 advance=48
+  text bounds=(190,975,64,32) pos=(198,983,48,16) color=#000000ff text="2.12.8" font=f3 glyphs=6 advance=48
+  text bounds=(244,975,40,32) pos=(252,983,24,16) color=#000000ff text="259" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,983,44,12) layer=(border=(282,983,44,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,983,44,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950033
+  text bounds=(280,973,48,32) pos=(288,981,32,16) color=#ff9500ff text="slow" font=f4 glyphs=4 advance=32
+  text bounds=(10,997,48,32) pos=(18,1005,32,16) color=#000000ff text="feed" font=f3 glyphs=4 advance=32
+  text bounds=(72,997,40,32) pos=(80,1005,24,16) color=#000000ff text="us-" font=f3 glyphs=3 advance=24
+  text bounds=(96,997,64,32) pos=(104,1005,48,16) color=#000000ff text="west-2" font=f3 glyphs=6 advance=48
+  text bounds=(190,997,64,32) pos=(198,1005,48,16) color=#000000ff text="2.14.0" font=f3 glyphs=6 advance=48
+  text bounds=(244,997,40,32) pos=(252,1005,24,16) color=#000000ff text="140" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,1005,68,11) layer=(border=(282,1005,68,11),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,1005,68,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  text bounds=(280,995,72,32) pos=(288,1003,56,16) color=#34c759ff text="healthy" font=f4 glyphs=7 advance=56
+  text bounds=(10,1018,56,32) pos=(18,1026,40,16) color=#000000ff text="media" font=f3 glyphs=5 advance=40
+  text bounds=(72,1018,40,32) pos=(80,1026,24,16) color=#000000ff text="ap-" font=f3 glyphs=3 advance=24
+  text bounds=(96,1018,104,32) pos=(104,1026,88,16) color=#000000ff text="northeast-1" font=f3 glyphs=11 advance=88
+  text bounds=(190,1018,64,32) pos=(198,1026,48,16) color=#000000ff text="2.13.1" font=f3 glyphs=6 advance=48
+  text bounds=(244,1018,40,32) pos=(252,1026,24,16) color=#000000ff text="278" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(282,1026,44,12) layer=(border=(282,1026,44,12),radius=(5.85,5.85,5.85,5.85,5.85,5.85,5.85,5.85),clip=(282,1026,44,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff950033
+  text bounds=(280,1016,48,32) pos=(288,1024,32,16) color=#ff9500ff text="slow" font=f4 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=9,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=16,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=9,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="ui-monospace,monospace",size=9,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="ui-monospace,monospace",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
