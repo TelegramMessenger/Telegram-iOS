@@ -1410,6 +1410,7 @@ extension ChatControllerImpl {
                             case let .result(messageId):
                                 if let messageId = messageId {
                                     strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)))
+                                    strongSelf.chatDisplayNode.historyNode.supportMarkJumpedMentionSeen(messageId: messageId)
                                 }
                             case .loading:
                                 break
@@ -1474,6 +1475,7 @@ extension ChatControllerImpl {
                                         // The history node plays it and marks the message seen, so it does not play again when
                                         // the message is reported on screen.
                                         strongSelf.chatDisplayNode.historyNode.displayUnseenReactionAnimationsAndMarkSeen(messageIds: [messageId])
+                                        strongSelf.chatDisplayNode.historyNode.supportMarkJumpedReactionsAndVotesSeen(messageId: messageId)
                                         
                                         strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = false
                                     })
@@ -1536,6 +1538,7 @@ extension ChatControllerImpl {
                                     strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = true
                                     strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), scrollPosition: .center(.top), completion: {
                                         strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = false
+                                        strongSelf.chatDisplayNode.historyNode.supportMarkJumpedReactionsAndVotesSeen(messageId: messageId)
                                     })
                                 }
                             case .loading:

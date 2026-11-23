@@ -1601,7 +1601,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             if !lowestAboveTop.isEmpty {
                 Logger.shared.log("State", "chat list hole fill: stored messages above the top of \(lowestAboveTop.keys.sorted()) left under a hole for their next history fill")
             }
-            transaction.resetIncomingReadStates(fetchedChats.readStates)
+            transaction.resetIncomingReadStates(supportReadStatesToStore(transaction: transaction, accountPeerId: accountPeerId, readStates: fetchedChats.readStates))
             
             for (peerId, autoremoveValue) in fetchedChats.ttlPeriods {
                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in

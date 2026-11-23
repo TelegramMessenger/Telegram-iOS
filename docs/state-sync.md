@@ -345,7 +345,9 @@ the latter. `replayFinalState` runs, in order:
    `.UpdateChannelSynchronizedUntilMessage` end no batch and go into `StateAdvance`, last value per kind and channel
    (`ReplayBatchingTests`).
 5. `applyContentOperations`: 89 labels, no default. `walletTonConnectEvents(operation:)` runs first for each operation;
-   then a read-state operation for a stored non-member channel (not a monoforum) is skipped (invariant 30);
+   then a read-state operation for a stored non-member channel (not a monoforum) is skipped (invariant 30), and on a
+   support account (`isSupportAccount`: the stored account user's phone starts with 424) one for a stored deleted user
+   (`readStateOperationTargetsDeletedUser`, `SupportReadStateTests`);
    `.UpdateAttachMenuBots` and `.UpdateWalletTonConnectEvent` do nothing; the four state labels are unreachable; the
    other 83 call one family method: Messages 19, Settings 11, Payments 9, ReadStates 8, Calls 7, Peers 7, ChatList 6,
    Threads 6, Stories 4, SecretChats 3, Typing 3.

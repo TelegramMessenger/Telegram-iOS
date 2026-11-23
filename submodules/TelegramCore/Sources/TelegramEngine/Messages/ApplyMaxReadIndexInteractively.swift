@@ -178,7 +178,7 @@ func _internal_togglePeerUnreadMarkInteractively(postbox: Postbox, network: Netw
     }
 }
 
-func _internal_toggleForumThreadUnreadMarkInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, threadId: Int64, setToValue: Bool?) {
+func _internal_toggleForumThreadUnreadMarkInteractively(transaction: Transaction, network: Network, peerId: PeerId, threadId: Int64, setToValue: Bool?) {
     guard let peer = transaction.getPeer(peerId) else {
         return
     }
@@ -337,7 +337,7 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, netwo
                 viewTracker.updateMarkAllMentionsSeen(peerId: peerId, threadId: nil)
             }
         } else {
-            if setToValue == nil || setToValue! {
+            if (setToValue == nil || setToValue!) && !supportClearsUnread(isSupportAccount: viewTracker.account?.isSupportUser ?? false, peer: peer) {
                 transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: true, interactive: true)
             }
         }

@@ -969,7 +969,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                         
                         // A channel the account is not a member of keeps no read state (NonMemberChannelReadState.swift).
                         if dialogReadStateIsKept(peerId: peerId, responseChats: chats, storedPeer: transaction.getPeer(peerId)) {
-                            transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: false)]])
+                            transaction.resetIncomingReadStates(supportReadStatesToStore(transaction: transaction, accountPeerId: accountPeerId, readStates: [peerId: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: false)]]))
                         }
                         
                         transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadMentionsCount, maxId: topMessage)

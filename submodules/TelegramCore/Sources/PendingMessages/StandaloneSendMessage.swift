@@ -127,6 +127,9 @@ public func standaloneSendEnqueueMessages(
     messages: [StandaloneSendEnqueueMessage]
 ) -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> {
     return postbox.transaction { transaction -> Bool in
+        if isSupportAccount(transaction: transaction, accountPeerId: accountPeerId) {
+            supportApplyReadOnSend(transaction: transaction, network: network, stateManager: stateManager, peerId: peerId, sends: [SupportSendReadInfo(isDeferred: false, threadId: threadId, replyThreadId: nil)])
+        }
         return supportSendsAllSilently(transaction: transaction, accountPeerId: accountPeerId)
     }
     |> castError(StandaloneSendMessagesError.self)
@@ -743,6 +746,9 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             flags |= (1 << 7)
             if account.isSupportUser && supportSettings(transaction: transaction).sendAllSilently {
                 flags |= Int32(1 << 5)
+            }
+            if account.isSupportUser {
+                supportApplyReadOnSend(transaction: transaction, network: account.network, stateManager: account.stateManager, peerId: peerId, sends: [SupportSendReadInfo(isDeferred: supportSendIsDeferred(attributes: attributes), threadId: threadId.flatMap(Int64.init), replyThreadId: nil)])
             }
             
             for attribute in attributes {

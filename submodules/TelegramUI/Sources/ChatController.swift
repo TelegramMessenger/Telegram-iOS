@@ -7824,7 +7824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.willAppear = true
             
             // Limit this to reply threads just to be safe now
-            if case .replyThread = self.chatLocation {
+            if case .replyThread = self.chatLocation, !self.context.account.isSupportUser {
                 self.chatDisplayNode.historyNode.refocusOnUnreadMessagesIfNeeded()
             }
         }
