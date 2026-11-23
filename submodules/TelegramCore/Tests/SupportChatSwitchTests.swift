@@ -219,6 +219,20 @@ final class SupportChatSwitchTests: XCTestCase {
         XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: groupId, accountPeerId: accountPeerId, isPinned: false, readCounters: neverReceived))
     }
 
+    func testTheChatListExclusionHidesOnlyChatsThatNeverReceivedAMessage() {
+        let accountPeerId = self.peerId(100)
+        let exclusion = supportChatListExclusion(accountPeerId: accountPeerId)
+        let neverReceived = CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 5, maxKnownId: 5, count: 0, markedUnread: false))])
+        let received = CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 3, maxOutgoingReadId: 5, maxKnownId: 5, count: 0, markedUnread: false))])
+        XCTAssertTrue(exclusion.excludes(self.peerId(1), neverReceived))
+        XCTAssertFalse(exclusion.excludes(self.peerId(1), received))
+        XCTAssertFalse(exclusion.excludes(self.peerId(1), nil))
+        XCTAssertFalse(exclusion.excludes(self.peerId(1), CombinedPeerReadState(states: [])))
+        XCTAssertFalse(exclusion.excludes(accountPeerId, neverReceived))
+        let groupId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(1))
+        XCTAssertFalse(exclusion.excludes(groupId, neverReceived))
+    }
+
     func testDeferredSendsAreRecognised() {
         XCTAssertTrue(supportSendIsDeferred(attributes: [OutgoingScheduleInfoMessageAttribute(scheduleTime: 100, repeatPeriod: nil)]))
         XCTAssertFalse(supportSendIsDeferred(attributes: []))

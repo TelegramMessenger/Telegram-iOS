@@ -212,6 +212,12 @@ public func supportHidesChatWithoutIncomingMessages(peerId: EnginePeer.Id, accou
     return readCounters.hasNoIncomingMessages
 }
 
+func supportChatListExclusion(accountPeerId: PeerId) -> ChatListEntryExclusion {
+    return ChatListEntryExclusion(excludes: { peerId, readState in
+        return supportHidesChatWithoutIncomingMessages(peerId: peerId, accountPeerId: accountPeerId, isPinned: false, readCounters: readState.map { EnginePeerReadCounters(state: $0, isMuted: false) })
+    })
+}
+
 func supportChatListNeighbourIsTarget(targetPeerId: PeerId, currentPeerId: PeerId, peer: Peer?, isHiddenWithoutIncomingMessages: Bool = false) -> Bool {
     guard targetPeerId != currentPeerId, let peer, !isHiddenWithoutIncomingMessages else {
         return false

@@ -2667,11 +2667,12 @@ public final class AccountViewTracker {
         })
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int, shouldLoadCanMessagePeer: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, hidesChatsWithoutIncomingMessages: Bool = false, count: Int, shouldLoadCanMessagePeer: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
             return self.wrappedChatListView(signal: account.postbox.tailChatListView(
                 groupId: groupId,
                 filterPredicate: filterPredicate,
+                exclusion: hidesChatsWithoutIncomingMessages ? supportChatListExclusion(accountPeerId: account.peerId) : nil,
                 count: count,
                 summaryComponents: ChatListEntrySummaryComponents(
                     components: [
@@ -2706,11 +2707,12 @@ public final class AccountViewTracker {
         }
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, shouldLoadCanMessagePeer: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, hidesChatsWithoutIncomingMessages: Bool = false, index: ChatListIndex, count: Int, shouldLoadCanMessagePeer: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
             return self.wrappedChatListView(signal: account.postbox.aroundChatListView(
                 groupId: groupId,
                 filterPredicate: filterPredicate,
+                exclusion: hidesChatsWithoutIncomingMessages ? supportChatListExclusion(accountPeerId: account.peerId) : nil,
                 index: index,
                 count: count,
                 summaryComponents: ChatListEntrySummaryComponents(

@@ -4026,13 +4026,13 @@ final class PostboxImpl {
         |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, count: Int, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, exclusion: ChatListEntryExclusion?, count: Int, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, exclusion: exclusion, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, exclusion: ChatListEntryExclusion? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal(userInteractive: userInteractive, { [self] subscriber, transaction in
-            let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
+            let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, exclusion: exclusion, aroundIndex: index, count: count, summaryComponents: summaryComponents, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
             mutableView.render(postbox: self)
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
@@ -5177,6 +5177,7 @@ public class Postbox {
     public func tailChatListView(
         groupId: PeerGroupId,
         filterPredicate: ChatListFilterPredicate? = nil,
+        exclusion: ChatListEntryExclusion? = nil,
         count: Int,
         summaryComponents: ChatListEntrySummaryComponents,
         extractCachedData: ((CachedPeerData) -> AnyHashable?)? = nil,
@@ -5189,6 +5190,7 @@ public class Postbox {
                 disposable.set(impl.tailChatListView(
                     groupId: groupId,
                     filterPredicate: filterPredicate,
+                    exclusion: exclusion,
                     count: count,
                     summaryComponents: summaryComponents,
                     extractCachedData: extractCachedData,
@@ -5203,6 +5205,7 @@ public class Postbox {
     public func aroundChatListView(
         groupId: PeerGroupId,
         filterPredicate: ChatListFilterPredicate? = nil,
+        exclusion: ChatListEntryExclusion? = nil,
         index: ChatListIndex,
         count: Int,
         summaryComponents: ChatListEntrySummaryComponents,
@@ -5217,6 +5220,7 @@ public class Postbox {
                 disposable.set(impl.aroundChatListView(
                     groupId: groupId,
                     filterPredicate: filterPredicate,
+                    exclusion: exclusion,
                     index: index,
                     count: count,
                     summaryComponents: summaryComponents,

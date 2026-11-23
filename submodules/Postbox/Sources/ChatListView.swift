@@ -443,6 +443,18 @@ private enum ChatListEntryType {
     case groupReference
 }
 
+public struct ChatListEntryExclusion {
+    public let excludes: (PeerId, CombinedPeerReadState?) -> Bool
+
+    public init(excludes: @escaping (PeerId, CombinedPeerReadState?) -> Bool) {
+        self.excludes = excludes
+    }
+
+    func flips(peerId: PeerId, initialState: CombinedPeerReadState, currentState: CombinedPeerReadState?) -> Bool {
+        return self.excludes(peerId, initialState) != self.excludes(peerId, currentState)
+    }
+}
+
 public struct ChatListFilterPredicate {
     public var includePeerIds: Set<PeerId>
     public var excludePeerIds: Set<PeerId>
@@ -596,6 +608,7 @@ public struct ChatListViewReadState: Equatable {
 final class MutableChatListView {
     let groupId: PeerGroupId
     let filterPredicate: ChatListFilterPredicate?
+    private let exclusion: ChatListEntryExclusion?
     private let aroundIndex: ChatListIndex
     private let summaryComponents: ChatListEntrySummaryComponents
     private let extractCachedData: ((CachedPeerData) -> AnyHashable?)?
@@ -618,9 +631,10 @@ final class MutableChatListView {
     private let accountPeerId: PeerId?
     private(set) var accountPeer: Peer?
     
-    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, exclusion: ChatListEntryExclusion? = nil, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
+        self.exclusion = exclusion
         self.aroundIndex = aroundIndex
         self.summaryComponents = summaryComponents
         self.extractCachedData = extractCachedData
@@ -646,7 +660,7 @@ final class MutableChatListView {
             spaces.append(.group(groupId: self.groupId, pinned: .includePinned, predicate: filterPredicate))
         }
         self.spaces = spaces
-        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, halfLimit: count)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, exclusion: self.exclusion, halfLimit: count)
         self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         
         self.count = count
@@ -758,7 +772,7 @@ final class MutableChatListView {
     func refreshDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction) -> Bool {
         var updated = false
         
-        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, halfLimit: self.count)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, exclusion: self.exclusion, halfLimit: self.count)
         self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         updated = true
         
@@ -790,13 +804,21 @@ final class MutableChatListView {
             self.currentHiddenPeerIds = hiddenChatIds
             hasFilterChanges = true
         }
+        if !hasFilterChanges, let exclusion = self.exclusion {
+            for (peerId, initialState) in transaction.alteredInitialPeerCombinedReadStates {
+                if exclusion.flips(peerId: peerId, initialState: initialState, currentState: postbox.readStateTable.getCombinedState(peerId)) {
+                    hasFilterChanges = true
+                    break
+                }
+            }
+        }
         
         if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
-            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, halfLimit: self.count)
+            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, exclusion: self.exclusion, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
             hasChanges = true
         } else if hasFilterChanges {
-            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, halfLimit: self.count)
+            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, extractCachedData: self.extractCachedData, exclusion: self.exclusion, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
             hasChanges = true
         } else {

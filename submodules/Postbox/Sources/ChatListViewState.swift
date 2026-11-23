@@ -177,20 +177,30 @@ private final class ChatListViewSpaceState {
     private let anchorIndex: MutableChatListEntryIndex
     private let summaryComponents: ChatListEntrySummaryComponents
     private let extractCachedData: ((CachedPeerData) -> AnyHashable?)?
+    private let exclusion: ChatListEntryExclusion?
     private let halfLimit: Int
     
     var orderedEntries: OrderedChatListViewEntries
     
-    init(postbox: PostboxImpl, currentTransaction: Transaction, space: ChatListViewSpace, anchorIndex: MutableChatListEntryIndex, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, halfLimit: Int) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, space: ChatListViewSpace, anchorIndex: MutableChatListEntryIndex, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, exclusion: ChatListEntryExclusion?, halfLimit: Int) {
         self.space = space
         self.anchorIndex = anchorIndex
         self.summaryComponents = summaryComponents
         self.extractCachedData = extractCachedData
+        self.exclusion = exclusion
         self.halfLimit = halfLimit
         self.orderedEntries = OrderedChatListViewEntries(anchorIndex: anchorIndex.index, lowerOrAtAnchor: [], higherThanAnchor: [])
         self.fillSpace(postbox: postbox, currentTransaction: currentTransaction)
         
         self.checkEntries(postbox: postbox)
+    }
+    
+    private func isExcluded(postbox: PostboxImpl, spaceIndex: ChatListIndex) -> Bool {
+        guard let exclusion = self.exclusion, spaceIndex.pinningIndex == nil else {
+            return false
+        }
+        let peerId = spaceIndex.messageIndex.id.peerId
+        return exclusion.excludes(peerId, postbox.readStateTable.getCombinedState(peerId))
     }
     
     private func fillSpace(postbox: PostboxImpl, currentTransaction: Transaction) {
@@ -219,7 +229,7 @@ private final class ChatListViewSpaceState {
                 }
             }
             
-            let predicate: ((ChatListIntermediateEntry) -> Bool)?
+            var predicate: ((ChatListIntermediateEntry) -> Bool)?
             if let filterPredicate = filterPredicate {
                 predicate = mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: filterPredicate)
             } else if postbox.hasHiddenChatIds {
@@ -232,6 +242,15 @@ private final class ChatListViewSpaceState {
                 }
             } else {
                 predicate = nil
+            }
+            if self.exclusion != nil {
+                let basePredicate = predicate
+                predicate = { entry in
+                    if case let .message(index, _) = entry, self.isExcluded(postbox: postbox, spaceIndex: pinned.spaceIndex(for: index)) {
+                        return false
+                    }
+                    return basePredicate?(entry) ?? true
+                }
             }
             
             if case .includePinnedAsUnpinned = pinned {
@@ -448,6 +467,9 @@ private final class ChatListViewSpaceState {
                         }
                         
                         let updatedIndex = pinned.spaceIndex(for: index)
+                        if self.isExcluded(postbox: postbox, spaceIndex: updatedIndex) {
+                            continue inner
+                        }
                         if let filterPredicate = filterPredicate {
                             if let peer = postbox.peerTable.get(updatedIndex.messageIndex.id.peerId) {
                                 let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
@@ -1167,6 +1189,9 @@ private final class ChatListViewSpaceState {
         guard case let .message(index, messageIndex) = entry else {
             return
         }
+        guard !self.isExcluded(postbox: postbox, spaceIndex: pinned.spaceIndex(for: index)) else {
+            return
+        }
         hasUpdates = true
         if !self.add(entry: .IntermediateMessageEntry(index: pinned.spaceIndex(for: index), messageIndex: messageIndex)) {
             hadRemovals = true
@@ -1510,14 +1535,14 @@ struct ChatListViewState {
     private let halfLimit: Int
     private var stateBySpace: [ChatListViewSpace: ChatListViewSpaceState] = [:]
     
-    init(postbox: PostboxImpl, currentTransaction: Transaction, spaces: [ChatListViewSpace], anchorIndex: ChatListIndex, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, halfLimit: Int) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, spaces: [ChatListViewSpace], anchorIndex: ChatListIndex, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, exclusion: ChatListEntryExclusion?, halfLimit: Int) {
         self.anchorIndex = MutableChatListEntryIndex(index: anchorIndex, isMessage: true)
         self.summaryComponents = summaryComponents
         self.extractCachedData = extractCachedData
         self.halfLimit = halfLimit
         
         for space in spaces {
-            self.stateBySpace[space] = ChatListViewSpaceState(postbox: postbox, currentTransaction: currentTransaction, space: space, anchorIndex: self.anchorIndex, summaryComponents: summaryComponents, extractCachedData: extractCachedData, halfLimit: halfLimit)
+            self.stateBySpace[space] = ChatListViewSpaceState(postbox: postbox, currentTransaction: currentTransaction, space: space, anchorIndex: self.anchorIndex, summaryComponents: summaryComponents, extractCachedData: extractCachedData, exclusion: exclusion, halfLimit: halfLimit)
         }
     }
     
