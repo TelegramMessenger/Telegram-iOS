@@ -19,6 +19,7 @@ public struct SupportSettings: Codable, Equatable {
     public var fixChatsOrder: Bool
     public var chatLoadPeriod: Int32
     public var sendAllSilently: Bool
+    public var hideKeyboardOnSwitch: Bool = true
 
     public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, chatLoadPeriod: Int32, sendAllSilently: Bool) {
         self.switchBehavior = switchBehavior
@@ -35,6 +36,7 @@ public struct SupportSettings: Codable, Equatable {
         self.fixChatsOrder = try container.decodeIfPresent(Bool.self, forKey: "fixChatsOrder") ?? defaults.fixChatsOrder
         self.chatLoadPeriod = try container.decodeIfPresent(Int32.self, forKey: "chatLoadPeriod") ?? defaults.chatLoadPeriod
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
+        self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -44,6 +46,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.fixChatsOrder, forKey: "fixChatsOrder")
         try container.encode(self.chatLoadPeriod, forKey: "chatLoadPeriod")
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
+        try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
     }
 }
 

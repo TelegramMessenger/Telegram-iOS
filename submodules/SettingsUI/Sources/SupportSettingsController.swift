@@ -71,6 +71,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case switchHeader
         case switchBehavior(Int32)
         case sendSilently
+        case hideKeyboardOnSwitch
+        case hideKeyboardOnSwitchInfo
         case fixChatsOrder
         case fixChatsOrderInfo
         case periodHeader
@@ -83,6 +85,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case switchHeader(String)
     case switchBehavior(index: Int32, behavior: SupportSwitchBehavior, title: String, isSelected: Bool)
     case sendSilently(String, Bool)
+    case hideKeyboardOnSwitch(String, Bool)
+    case hideKeyboardOnSwitchInfo(String)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
     case periodHeader(String)
@@ -95,7 +99,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         switch self {
         case .switchHeader, .switchBehavior:
             return SupportSettingsSection.switching.rawValue
-        case .sendSilently:
+        case .sendSilently, .hideKeyboardOnSwitch, .hideKeyboardOnSwitchInfo:
             return SupportSettingsSection.sending.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
@@ -114,6 +118,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .switchBehavior(behavior.rawValue)
         case .sendSilently:
             return .sendSilently
+        case .hideKeyboardOnSwitch:
+            return .hideKeyboardOnSwitch
+        case .hideKeyboardOnSwitchInfo:
+            return .hideKeyboardOnSwitchInfo
         case .fixChatsOrder:
             return .fixChatsOrder
         case .fixChatsOrderInfo:
@@ -139,6 +147,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 1 + index
         case .sendSilently:
             return 4
+        case .hideKeyboardOnSwitch:
+            return 5
+        case .hideKeyboardOnSwitchInfo:
+            return 6
         case .fixChatsOrder:
             return 9
         case .fixChatsOrderInfo:
@@ -181,6 +193,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             }, tag: SupportSettingsEntryTag.sendSilently)
+        case let .hideKeyboardOnSwitch(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.hideKeyboardOnSwitch = value
+                    return settings
+                }
+            })
         case let .fixChatsOrder(title, value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateSettings { settings in
@@ -197,7 +217,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .fixChatsOrderInfo(text), let .periodInfo(text), let .loadMoreInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .fixChatsOrderInfo(text), let .periodInfo(text), let .loadMoreInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .loadMore(title, holeTimestamp):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: holeTimestamp != nil ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -219,6 +239,8 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     }
 
     entries.append(.sendSilently(strings.Support_Settings_SendSilently, settings.sendAllSilently))
+    entries.append(.hideKeyboardOnSwitch(strings.Support_HideKeyboard_Title, settings.hideKeyboardOnSwitch))
+    entries.append(.hideKeyboardOnSwitchInfo(strings.Support_HideKeyboard_Info))
 
     entries.append(.fixChatsOrder(strings.Support_FixOrder_Title, settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo(strings.Support_FixOrder_Info))

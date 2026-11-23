@@ -24,6 +24,35 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertEqual(PreferencesEntry(SupportSettings.default)?.get(SupportSettings.self), .default)
     }
 
+    func testKeyboardHidesOnSwitchByDefaultAndFollowsTheSettings() {
+        XCTAssertTrue(SupportSettings.default.hideKeyboardOnSwitch)
+        XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.hideKeyboardOnSwitch, true)
+
+        var settings = SupportSettings.default
+        settings.hideKeyboardOnSwitch = false
+        XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self)?.hideKeyboardOnSwitch, false)
+
+        let promise = ValuePromise<SupportSettings>(.default)
+        let context = SupportContext(settings: promise.get())
+        XCTAssertTrue(context.currentHideKeyboardOnSwitch)
+        promise.set(settings)
+        XCTAssertFalse(context.currentHideKeyboardOnSwitch)
+    }
+
+    func testComposerFocusSkipIsForOneChatOnceAndExpires() {
+        let context = SupportContext(settings: .single(.default))
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+        let otherPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2))
+
+        context.skipComposerFocus(peerId: peerId, now: 100.0)
+        XCTAssertFalse(context.takeComposerFocusSkip(peerId: otherPeerId, now: 100.5))
+        XCTAssertTrue(context.takeComposerFocusSkip(peerId: peerId, now: 100.5))
+        XCTAssertFalse(context.takeComposerFocusSkip(peerId: peerId, now: 100.6))
+
+        context.skipComposerFocus(peerId: peerId, now: 200.0)
+        XCTAssertFalse(context.takeComposerFocusSkip(peerId: peerId, now: 203.0))
+    }
+
     func testMissingValuesTakeTheirDefaults() {
         var expected = SupportSettings.default
         expected.sendAllSilently = true
