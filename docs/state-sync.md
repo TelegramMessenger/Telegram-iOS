@@ -738,6 +738,9 @@ gone but written again since, which stays stored (`testClearedHistoryIsConfirmed
 `testAnswerMessageDeletedOrEditedDuringTheConfirmationKeepsTheNewerWrite`,
 `testCandidateWrittenDuringTheConfirmationIsLeftAloneUnderAHole`).
 
+On a support account `managedChatListHoles` follows `SupportContext.chatListLoadTill`, the date the chat list loads back
+to (one load period before launch at first, moved back by Load More), and leaves unfilled every chat-list hole whose
+timestamp is at or before it (`supportChatListHoleIsHeld`; 0, all chats, holds none; `SupportChatListLoadingTests`).
 ### Container order
 
 The push path's merge order comes from containers: `pollChannelSignals` follows `channelRecovery.channelIds` (a `Set`

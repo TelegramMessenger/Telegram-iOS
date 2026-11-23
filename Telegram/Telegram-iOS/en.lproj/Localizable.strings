@@ -17347,6 +17347,27 @@ Error: %8$@";
 "Support.Settings.SendSilently" = "Send all messages without sound";
 "Support.Settings.SendSilentlySynonyms" = "silent\nsound\nmute";
 
+"Support.ChatLoading.Header" = "LOAD CHATS FOR A PERIOD";
+"Support.ChatLoading.All" = "All of them";
+"Support.ChatLoading.Info" = "A longer period makes the database larger. A shorter one removes older one-to-one chats from this device at the next launch, and Load more brings them back.";
+"Support.ChatLoading.Loading" = "Loading chats...";
+"Support.ChatLoading.LoadMore" = "Load more";
+"Support.ChatLoading.LoadedBackTo" = "Chats are loaded back to {date}.";
+"Support.ChatLoading.AllTitle" = "Load All Chats?";
+"Support.ChatLoading.AllText" = "This loads every chat this account has ever had, with no time limit. On a support account that can be a very large number of chats: loading can take a long time, use a lot of data and make the database on this device much larger.\n\nChoose a shorter period unless you really need all of them. Switching back later removes older one-to-one chats from this device at the next launch.";
+"Support.ChatLoading.AllAction" = "Load All";
+"Support.ChatLoading.MonthTitle" = "Load Chats for 1 Month?";
+"Support.ChatLoading.MonthText" = "This loads every chat with activity in the last month. On a busy support account that can be many chats: loading takes a while, uses data and makes the database on this device larger.";
+"Support.ChatLoading.YearTitle" = "Load Chats for 1 Year?";
+"Support.ChatLoading.YearText" = "This loads every chat with activity in the last year. On a busy support account that can be many chats: loading takes a while, uses data and makes the database on this device larger.";
+"Support.ChatLoading.LoadAction" = "Load";
+"Support.ChatLoading.SearchPeriod" = "Load chats for a period";
+"Support.ChatLoading.SearchPeriodSynonyms" = "period\ndays\nweek\nmonth\nyear";
+"Support.ChatLoading.SearchLoadMore" = "Load more chats";
+"Support.ChatLoading.SearchLoadMoreSynonyms" = "load\nmore\nolder";
+"Support.ChatLoading.LoadingMore" = "Loading...";
+"Support.ChatLoading.FolderLimit" = "Older chats are not loaded, so this folder may be missing some.";
+
 "Support.Mode.LostTitle" = "Support Mode Lost";
 "Support.Mode.LostText" = "This account should have support mode, but it seems it was lost. Restart?";
 "Support.Mode.LostRestart" = "Restart";
