@@ -230,8 +230,11 @@ extension NavigationBarComponent {
         public let badge: String?
         /// A long press on the back button (the chat's navigation stack); nil leaves it a plain button.
         public let backContextAction: ((UIView, ContextGesture) -> Void)?
+        /// A new badge updates the back button a transition draws instead of replacing its items (the support account,
+        /// whose chat list count changes several times a second).
+        public let badgeChangesInPlace: Bool
 
-        public init(title: Title, back: Back?, leftButton: Button?, rightButtons: [Button], backPressed: @escaping () -> Void, badge: String? = nil, backContextAction: ((UIView, ContextGesture) -> Void)? = nil) {
+        public init(title: Title, back: Back?, leftButton: Button?, rightButtons: [Button], backPressed: @escaping () -> Void, badge: String? = nil, backContextAction: ((UIView, ContextGesture) -> Void)? = nil, badgeChangesInPlace: Bool = false) {
             self.title = title
             self.back = back
             self.leftButton = leftButton
@@ -239,6 +242,7 @@ extension NavigationBarComponent {
             self.backPressed = backPressed
             self.badge = badge
             self.backContextAction = backContextAction
+            self.badgeChangesInPlace = badgeChangesInPlace
         }
 
         public static func ==(lhs: Content, rhs: Content) -> Bool {
@@ -261,6 +265,9 @@ extension NavigationBarComponent {
                 return false
             }
             if (lhs.backContextAction == nil) != (rhs.backContextAction == nil) {
+                return false
+            }
+            if lhs.badgeChangesInPlace != rhs.badgeChangesInPlace {
                 return false
             }
             return true
