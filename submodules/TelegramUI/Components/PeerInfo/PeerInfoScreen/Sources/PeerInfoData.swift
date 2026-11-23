@@ -1644,13 +1644,16 @@ func peerInfoScreenData(
                 let (businessConnectedBot, walletBalance, agentState, supportUserInfo) = businessConnectedBotAndWalletBalanceAndAgentState
                 var availablePanes = availablePanes
                 if isMyProfile {
-                    availablePanes?.insert(.stories, at: 0)
-                    if availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
+                    let showsOwnStories = context.supportContext == nil
+                    if showsOwnStories {
+                        availablePanes?.insert(.stories, at: 0)
+                    }
+                    if showsOwnStories, availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
                         if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
                             availablePanes?.insert(.gifts, at: 1)
                         }
                     }
-                    if let hasStoryArchive, hasStoryArchive {
+                    if showsOwnStories, let hasStoryArchive, hasStoryArchive {
                         availablePanes?.append(.storyArchive)
                     }
                 } else if let hasStories {

@@ -405,76 +405,78 @@ private func profileSearchableItems(
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context)
-                present(.push, controller)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/profile",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/profile",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/profile/add-icons",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileAddIcons)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/profile/add-icons",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileAddIcons)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/profile/use-gift",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileUseGift)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/profile/use-gift",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileUseGift)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/name",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .name)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/name",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .name)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/name/add-icons",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameAddIcons)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/name/add-icons",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameAddIcons)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/name/use-gift",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameUseGift)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/name/use-gift",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameUseGift)
+                    present(.push, controller)
+                }
+            )
         )
-    )
+    }
     
     return items
 }
@@ -768,156 +770,158 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
             }
         )
     )
-    items.append(
-        SettingsSearchableItem(
-            id: "business/do-not-hide-ads",
-            title: strings.Business_DontHideAds,
-            alternate: [],
-            icon: .business,
-            breadcrumbs: [strings.Settings_Business],
-            present: { context, _, present in
-                present(.push, PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, focusOnItemTag: .doNotHideAds))
-            }
-        )
-    )
-    
-    items.append(
-        SettingsSearchableItem(
-            id: "stars",
-            title: strings.Settings_Stars,
-            alternate: [],
-            icon: .stars,
-            breadcrumbs: [],
-            present: { context, _, present in
-                guard let starsContext = context.starsContext else {
-                    return
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "business/do-not-hide-ads",
+                title: strings.Business_DontHideAds,
+                alternate: [],
+                icon: .business,
+                breadcrumbs: [strings.Settings_Business],
+                present: { context, _, present in
+                    present(.push, PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, focusOnItemTag: .doNotHideAds))
                 }
-                let controller = context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext)
-                present(.push, controller)
-            }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "stars/top-up",
-            icon: .stars,
-            isVisible: false,
-            present: { context, navigationController, present in
-                openResolvedUrl(.starsTopup(amount: nil, purpose: nil), navigationController, present)
-            }
-        )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "stars/stats",
-            icon: .stars,
-            isVisible: false,
-            present: { context, navigationController, present in
-                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: context.account.peerId, ton: false)
-                let controller = context.sharedContext.makeStarsStatisticsScreen(context: context, peerId: context.account.peerId, revenueContext: starsRevenueStatsContext)
-                present(.push, controller)
-            }
-        )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "stars/gift",
-            icon: .stars,
-            isVisible: false,
-            present: { context, navigationController, present in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                
-                let _ = combineLatest(queue: Queue.mainQueue(),
-                    context.engine.payments.starsTopUpOptions(),
-                    context.account.stateManager.contactBirthdays |> take(1)
-                ).start(next: { [weak navigationController] options, birthdays in
+        items.append(
+            SettingsSearchableItem(
+                id: "stars",
+                title: strings.Settings_Stars,
+                alternate: [],
+                icon: .stars,
+                breadcrumbs: [],
+                present: { context, _, present in
                     guard let starsContext = context.starsContext else {
                         return
                     }
-                    let controller = context.sharedContext.makeStarsGiftController(context: context, birthdays: birthdays, completion: { [weak navigationController] peerIds in
-                        guard let peerId = peerIds.first else {
-                            return
-                        }
-                        let purchaseController = context.sharedContext.makeStarsPurchaseScreen(
-                            context: context,
-                            starsContext: starsContext,
-                            options: options,
-                            purpose: .gift(peerId: peerId),
-                            targetPeerId: nil,
-                            customTheme: nil,
-                            completion: { [weak navigationController] stars in
-                                if let navigationController {
-                                    var controllers = navigationController.viewControllers
-                                    controllers = controllers.filter { !($0 is ContactSelectionController) }
-                                    navigationController.setViewControllers(controllers, animated: true)
-                                }
-                                
-                                Queue.mainQueue().after(2.0) {
-                                    let resultController = UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .universal(
-                                            animation: "star_reaction_appear",
-                                            scale: 0.066,
-                                            colors: [:],
-                                            title: nil,
-                                            text: presentationData.strings.Stars_Intro_StarsSent(Int32(stars)),
-                                            customUndoText: presentationData.strings.Stars_Intro_StarsSent_ViewChat,
-                                            timeout: nil
-                                        ),
-                                        elevatedLayout: false,
-                                        action: { [weak navigationController] action in
-                                            if case .undo = action, let navigationController {
-                                                let _ = (context.engine.data.get(
-                                                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-                                                )
-                                                |> deliverOnMainQueue).start(next: { peer in
-                                                    guard let peer else {
-                                                        return
-                                                    }
-                                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
-                                                })
-                                            }
-                                            return true
-                                        }
-                                    )
-                                    present(.immediate, resultController)
-                                }
-                            }
-                        )
-                        present(.push, purchaseController)
-                    })
+                    let controller = context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext)
                     present(.push, controller)
-                })
-            }
+                }
+            )
         )
-    )
     
-    var canJoinRefProgram = false
-    if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
-        if let value = value as? Double {
-            canJoinRefProgram = value != 0.0
-        } else if let value = value as? Bool {
-            canJoinRefProgram = value
-        }
-    }
-    if canJoinRefProgram {
         items.append(
             SettingsSearchableItem(
-                id: "stars/earn",
-                title: strings.Monetization_EarnStarsInfo_Title,
-                alternate: [],
+                id: "stars/top-up",
                 icon: .stars,
-                breadcrumbs: [strings.Settings_Stars],
+                isVisible: false,
                 present: { context, navigationController, present in
-                    let _ = (context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: context, peerId: context.account.peerId, mode: .connectedPrograms)
-                    |> deliverOnMainQueue).startStandalone(next: { initialData in
-                        let controller = context.sharedContext.makeAffiliateProgramSetupScreen(context: context, initialData: initialData)
+                    openResolvedUrl(.starsTopup(amount: nil, purpose: nil), navigationController, present)
+                }
+            )
+        )
+        items.append(
+            SettingsSearchableItem(
+                id: "stars/stats",
+                icon: .stars,
+                isVisible: false,
+                present: { context, navigationController, present in
+                    let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: context.account.peerId, ton: false)
+                    let controller = context.sharedContext.makeStarsStatisticsScreen(context: context, peerId: context.account.peerId, revenueContext: starsRevenueStatsContext)
+                    present(.push, controller)
+                }
+            )
+        )
+        items.append(
+            SettingsSearchableItem(
+                id: "stars/gift",
+                icon: .stars,
+                isVisible: false,
+                present: { context, navigationController, present in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                    let _ = combineLatest(queue: Queue.mainQueue(),
+                        context.engine.payments.starsTopUpOptions(),
+                        context.account.stateManager.contactBirthdays |> take(1)
+                    ).start(next: { [weak navigationController] options, birthdays in
+                        guard let starsContext = context.starsContext else {
+                            return
+                        }
+                        let controller = context.sharedContext.makeStarsGiftController(context: context, birthdays: birthdays, completion: { [weak navigationController] peerIds in
+                            guard let peerId = peerIds.first else {
+                                return
+                            }
+                            let purchaseController = context.sharedContext.makeStarsPurchaseScreen(
+                                context: context,
+                                starsContext: starsContext,
+                                options: options,
+                                purpose: .gift(peerId: peerId),
+                                targetPeerId: nil,
+                                customTheme: nil,
+                                completion: { [weak navigationController] stars in
+                                    if let navigationController {
+                                        var controllers = navigationController.viewControllers
+                                        controllers = controllers.filter { !($0 is ContactSelectionController) }
+                                        navigationController.setViewControllers(controllers, animated: true)
+                                    }
+                                
+                                    Queue.mainQueue().after(2.0) {
+                                        let resultController = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .universal(
+                                                animation: "star_reaction_appear",
+                                                scale: 0.066,
+                                                colors: [:],
+                                                title: nil,
+                                                text: presentationData.strings.Stars_Intro_StarsSent(Int32(stars)),
+                                                customUndoText: presentationData.strings.Stars_Intro_StarsSent_ViewChat,
+                                                timeout: nil
+                                            ),
+                                            elevatedLayout: false,
+                                            action: { [weak navigationController] action in
+                                                if case .undo = action, let navigationController {
+                                                    let _ = (context.engine.data.get(
+                                                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                                                    )
+                                                    |> deliverOnMainQueue).start(next: { peer in
+                                                        guard let peer else {
+                                                            return
+                                                        }
+                                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                                                    })
+                                                }
+                                                return true
+                                            }
+                                        )
+                                        present(.immediate, resultController)
+                                    }
+                                }
+                            )
+                            present(.push, purchaseController)
+                        })
                         present(.push, controller)
                     })
                 }
             )
         )
+    
+        var canJoinRefProgram = false
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
+            if let value = value as? Double {
+                canJoinRefProgram = value != 0.0
+            } else if let value = value as? Bool {
+                canJoinRefProgram = value
+            }
+        }
+        if canJoinRefProgram {
+            items.append(
+                SettingsSearchableItem(
+                    id: "stars/earn",
+                    title: strings.Monetization_EarnStarsInfo_Title,
+                    alternate: [],
+                    icon: .stars,
+                    breadcrumbs: [strings.Settings_Stars],
+                    present: { context, navigationController, present in
+                        let _ = (context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: context, peerId: context.account.peerId, mode: .connectedPrograms)
+                        |> deliverOnMainQueue).startStandalone(next: { initialData in
+                            let controller = context.sharedContext.makeAffiliateProgramSetupScreen(context: context, initialData: initialData)
+                            present(.push, controller)
+                        })
+                    }
+                )
+            )
+        }
     }
     
     items.append(
@@ -937,32 +941,34 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "send-gift",
-            title: strings.Settings_SendGift,
-            alternate: [],
-            icon: .gift,
-            breadcrumbs: [],
-            present: { context, navigationController, present in
-                openResolvedUrl(.sendGift(peerId: nil), navigationController, present)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "send-gift",
+                title: strings.Settings_SendGift,
+                alternate: [],
+                icon: .gift,
+                breadcrumbs: [],
+                present: { context, navigationController, present in
+                    openResolvedUrl(.sendGift(peerId: nil), navigationController, present)
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "send-gift/self",
-            title: strings.Settings_SendGift,
-            alternate: [],
-            icon: .gift,
-            breadcrumbs: [],
-            isVisible: false,
-            present: { context, navigationController, present in
-                openResolvedUrl(.sendGift(peerId: context.account.peerId), navigationController, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "send-gift/self",
+                title: strings.Settings_SendGift,
+                alternate: [],
+                icon: .gift,
+                breadcrumbs: [],
+                isVisible: false,
+                present: { context, navigationController, present in
+                    openResolvedUrl(.sendGift(peerId: context.account.peerId), navigationController, present)
+                }
+            )
         )
-    )
+    }
    
     return items
 }
@@ -2632,62 +2638,64 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts",
-            title: strings.Privacy_Gifts,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings],
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, nil, present)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts",
+                title: strings.Privacy_Gifts,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings],
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, nil, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/show-icon",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsShowButton, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/show-icon",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsShowButton, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/never",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .neverAllow, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/never",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .neverAllow, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/always",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .alwaysAllow, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/always",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .alwaysAllow, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/accepted-types",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsAcceptedTypes, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/accepted-types",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsAcceptedTypes, present)
+                }
+            )
         )
-    )
+    }
     
     items.append(
         SettingsSearchableItem(
