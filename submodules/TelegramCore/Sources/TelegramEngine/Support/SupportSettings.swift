@@ -20,6 +20,7 @@ public struct SupportSettings: Codable, Equatable {
     public var templatesAutocomplete: Bool
     public var chatLoadPeriod: Int32
     public var sendAllSilently: Bool
+    public var shortcutOverrides: [SupportShortcutOverride] = []
     public var hideKeyboardOnSwitch: Bool = true
 
     public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, sendAllSilently: Bool) {
@@ -39,6 +40,7 @@ public struct SupportSettings: Codable, Equatable {
         self.templatesAutocomplete = try container.decodeIfPresent(Bool.self, forKey: "templatesAutocomplete") ?? defaults.templatesAutocomplete
         self.chatLoadPeriod = try container.decodeIfPresent(Int32.self, forKey: "chatLoadPeriod") ?? defaults.chatLoadPeriod
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
+        self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
         self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
     }
 
@@ -50,6 +52,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.templatesAutocomplete, forKey: "templatesAutocomplete")
         try container.encode(self.chatLoadPeriod, forKey: "chatLoadPeriod")
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
+        try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
         try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
     }
 }

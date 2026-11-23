@@ -2048,6 +2048,17 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 }
             )
         )
+        if self.context.supportContext != nil {
+            keyShortcuts.append(
+                KeyShortcut(
+                    input: UIKeyCommand.inputEscape,
+                    modifiers: [],
+                    action: { [weak self] in
+                        self?.dismiss(forceAway: false)
+                    }
+                )
+            )
+        }
         keyShortcuts.append(
             KeyShortcut(
                 title: self.galleryNode.areControlsHidden ? self.presentationData.strings.KeyCommand_ExitFullscreen : self.presentationData.strings.KeyCommand_EnterFullscreen,

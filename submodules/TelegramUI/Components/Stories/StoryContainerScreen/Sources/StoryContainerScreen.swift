@@ -2344,6 +2344,17 @@ public class StoryContainerScreen: ViewControllerComponentContainer, KeyShortcut
                 }
             )
         )
+        if self.context.supportContext != nil {
+            keyShortcuts.append(
+                KeyShortcut(
+                    input: UIKeyCommand.inputEscape,
+                    modifiers: [],
+                    action: { [weak self] in
+                        self?.dismiss()
+                    }
+                )
+            )
+        }
         keyShortcuts.append(
             KeyShortcut(
                 input: UIKeyCommand.inputLeftArrow,

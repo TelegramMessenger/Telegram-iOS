@@ -4,6 +4,10 @@ public protocol KeyShortcutResponder {
     var keyShortcuts: [KeyShortcut] { get };
 }
 
+public protocol UnclaimedKeyPressResponder {
+    func handleUnclaimedKeyPress(_ key: UIKey) -> Bool
+}
+
 public class KeyShortcutsController: UIResponder {
     private var effectiveShortcuts: [KeyShortcut]?
     private var viewControllerEnumerator: (@escaping (ContainableController) -> Bool) -> Void
@@ -12,12 +16,17 @@ public class KeyShortcutsController: UIResponder {
         return true
     }
     
+    public static var isSuspended: Bool = false
+    
     public init(enumerator: @escaping (@escaping (ContainableController) -> Bool) -> Void) {
         self.viewControllerEnumerator = enumerator
         super.init()
     }
     
     public override var keyCommands: [UIKeyCommand]? {
+        if KeyShortcutsController.isSuspended {
+            return []
+        }
         var convertedCommands: [UIKeyCommand] = []
         var shortcuts: [KeyShortcut] = []
         
@@ -43,6 +52,35 @@ public class KeyShortcutsController: UIResponder {
         return convertedCommands
     }
     
+    public func handleUnclaimedPresses(_ presses: Set<UIPress>) -> Bool {
+        guard !KeyShortcutsController.isSuspended, presses.count == 1, let press = presses.first, let key = press.key, !(press.responder is UITextInput) else {
+            return false
+        }
+        let modifiers = key.modifierFlags.intersection([.shift, .control, .alternate, .command])
+        let input = key.charactersIgnoringModifiers.lowercased()
+        if let shortcuts = self.effectiveShortcuts, shortcuts.contains(where: { $0.modifiers == modifiers && $0.input.lowercased() == input }) {
+            return false
+        }
+        var handled = false
+        self.viewControllerEnumerator({ viewController -> Bool in
+            if handled {
+                return false
+            }
+            if let viewController = viewController as? UnclaimedKeyPressResponder, viewController.handleUnclaimedKeyPress(key) {
+                handled = true
+                return false
+            }
+            return true
+        })
+        return handled
+    }
+
+    public override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if !self.handleUnclaimedPresses(presses) {
+            super.pressesBegan(presses, with: event)
+        }
+    }
+
     @objc func handleKeyCommand(_ command: UIKeyCommand) {
         if let shortcut = findShortcut(for: command) {
             shortcut.action()

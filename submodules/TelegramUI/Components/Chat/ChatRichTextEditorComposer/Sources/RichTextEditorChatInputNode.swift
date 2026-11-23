@@ -124,6 +124,12 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     ///
     /// The flag is read ONCE, here. Re-reading it per update would let the editor change identity
     /// mid-session with a live document and first responder in it.
+    public var formatKeysNeedSelection: Bool = false {
+        didSet {
+            (self.editorView as? RichTextEditorView)?.formatKeysNeedSelection = self.formatKeysNeedSelection
+        }
+    }
+    
     public init(strings: PresentationStrings,
                 inputBackend: RichTextEditorInputBackendPreference = .legacy,
                 useInputDecEngine: Bool = false) {

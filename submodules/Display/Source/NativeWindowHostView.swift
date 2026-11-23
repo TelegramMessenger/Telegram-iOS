@@ -345,6 +345,24 @@ private final class NativeWindow: UIWindow, WindowHost {
     override func sendEvent(_ event: UIEvent) {
         self.touchRelease.update(with: event)
         super.sendEvent(event)
+        if let event = event as? UIPressesEvent {
+            self.forwardUnclaimedPresses(event)
+        }
+    }
+
+    private func forwardUnclaimedPresses(_ event: UIPressesEvent) {
+        let presses = event.allPresses.filter { $0.phase == .began }
+        guard !presses.isEmpty, self.isKeyWindow, self.findFirstResponder() == nil else {
+            return
+        }
+        var responder = self.next
+        while let current = responder {
+            if let controller = current as? KeyShortcutsController {
+                let _ = controller.handleUnclaimedPresses(presses)
+                return
+            }
+            responder = current.next
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {

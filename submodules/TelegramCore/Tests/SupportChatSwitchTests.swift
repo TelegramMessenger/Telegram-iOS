@@ -164,6 +164,13 @@ final class SupportChatSwitchTests: XCTestCase {
         }
     }
 
+    func testChatListWalkReachesReadChatsAndSkipsOnlyItself() {
+        let user = TelegramUser(id: self.peerId(1), accessHash: nil, firstName: "A", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
+        XCTAssertTrue(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: user))
+        XCTAssertFalse(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(1), peer: user))
+        XCTAssertFalse(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: nil))
+    }
+
     func testDeferredSendsAreRecognised() {
         XCTAssertTrue(supportSendIsDeferred(attributes: [OutgoingScheduleInfoMessageAttribute(scheduleTime: 100, repeatPeriod: nil)]))
         XCTAssertFalse(supportSendIsDeferred(attributes: []))

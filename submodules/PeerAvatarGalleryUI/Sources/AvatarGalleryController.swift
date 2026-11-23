@@ -506,7 +506,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
     )
 }
 
-public class AvatarGalleryController: ViewController, StandalonePresentableController {
+public class AvatarGalleryController: ViewController, StandalonePresentableController, KeyShortcutResponder {
     public enum SourceCorners {
         case none
         case round
@@ -709,6 +709,17 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     @objc func donePressed() {
         self.dismiss(forceAway: false)
+    }
+
+    public var keyShortcuts: [KeyShortcut] {
+        guard self.context.supportContext != nil else {
+            return []
+        }
+        return [
+            KeyShortcut(input: UIKeyCommand.inputEscape, modifiers: [], action: { [weak self] in
+                self?.dismiss(forceAway: false)
+            })
+        ]
     }
     
     private func dismissImmediately() {

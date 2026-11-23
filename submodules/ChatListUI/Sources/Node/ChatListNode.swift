@@ -3846,6 +3846,47 @@ public final class ChatListNode: ListViewImpl {
         }
     }
     
+    public func scrollToHighlightedChat() {
+        guard case let .peer(peerId)? = self.interaction?.highlightedChatLocation?.location else {
+            return
+        }
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ChatListIndex(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] index in
+            guard let self, let index else {
+                return
+            }
+            self.setChatListLocation(.scroll(index: index, sourceIndex: self.currentlyVisibleLatestChatListIndex() ?? .chatList(.absoluteLowerBound), scrollPosition: .center(.top), animated: true, filter: self.chatListFilter))
+        })
+    }
+
+    
+    public func scrollToChatIfOutsideSafeZone(peerId: EnginePeer.Id) {
+        var rowFrame: CGRect?
+        self.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatListItemNode, case .peer(id: peerId) = itemNode.item?.content.chatLocation {
+                rowFrame = itemNode.apparentFrame
+            }
+        }
+        let position: ListViewScrollPosition
+        if let rowFrame {
+            let safeMargin: CGFloat = 16.0
+            let safeTop = self.insets.top + safeMargin
+            let safeBottom = self.visibleSize.height - self.insets.bottom - safeMargin
+            if rowFrame.minY >= safeTop && rowFrame.maxY <= safeBottom {
+                return
+            }
+            position = rowFrame.midY < (safeTop + safeBottom) * 0.5 ? .top(safeMargin) : .bottom(-safeMargin)
+        } else {
+            position = .visible
+        }
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ChatListIndex(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] index in
+            guard let self, let index else {
+                return
+            }
+            self.setChatListLocation(.scroll(index: index, sourceIndex: self.currentlyVisibleLatestChatListIndex() ?? .chatList(.absoluteLowerBound), scrollPosition: position, animated: true, filter: self.chatListFilter))
+        })
+    }
     private func setChatListLocation(_ location: ChatListNodeLocation) {
         self.currentLocation = location
         self.chatListLocation.set(location)

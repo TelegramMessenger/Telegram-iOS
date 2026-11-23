@@ -1971,6 +1971,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         item.interaction.activateChatPreview?(item, nil, self.contextContainer, nil, point)
     }
     
+    func supportActivatePreview() {
+        guard let item = self.item else {
+            return
+        }
+        item.interaction.activateChatPreview?(item, nil, self.contextContainer, nil, nil)
+    }
+    
     func setupItem(item: ChatListItem, synchronousLoads: Bool) {
         let previousItem = self.item
         self.item = item

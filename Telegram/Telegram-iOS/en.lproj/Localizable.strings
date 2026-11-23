@@ -17477,6 +17477,38 @@ Error: %8$@";
 "Support.Templates.VoiceOverOpen" = "Templates";
 "Support.Templates.VoiceOverClose" = "Close Templates";
 
+"Support.Shortcuts.Title" = "Keyboard Shortcuts";
+"Support.Shortcuts.PreviousChat" = "Previous Chat in List";
+"Support.Shortcuts.NextChat" = "Next Chat in List";
+"Support.Shortcuts.PreviousOpenedChat" = "Previous Opened Chat";
+"Support.Shortcuts.NextOpenedChat" = "Next Opened Chat";
+"Support.Shortcuts.MuteChat" = "Mute or Unmute Chat";
+"Support.Shortcuts.SendAndStay" = "Send and Stay";
+"Support.Shortcuts.CloseChat" = "Close Chat";
+"Support.Shortcuts.ShowCurrentChat" = "Show Current Chat in List";
+"Support.Shortcuts.OpenAbuseBot" = "Open Abuse Bot";
+"Support.Shortcuts.KeyEscape" = "Esc";
+"Support.Shortcuts.KeySpace" = "Space";
+"Support.Shortcuts.NeedsModifier" = "{keys} would get in the way of typing. Hold Control, Option or Command with it.";
+"Support.Shortcuts.ReservedByApp" = "The app already uses {keys} for something else. Choose another combination.";
+"Support.Shortcuts.MoveText" = "{keys} is used by \"{other}\". Move it to \"{action}\"?";
+"Support.Shortcuts.MoveAction" = "Move";
+"Support.Shortcuts.RemoveAction" = "Remove";
+"Support.Shortcuts.PressKeys" = "Press the new keys on your keyboard.";
+"Support.Shortcuts.FirstKey" = "First Key";
+"Support.Shortcuts.SecondKey" = "Second Key";
+"Support.Shortcuts.NotSet" = "Not Set";
+"Support.Shortcuts.SlotsInfo" = "Tap a key to press a new combination, or to remove it.";
+"Support.Shortcuts.None" = "None";
+"Support.Shortcuts.FixedHeader" = "FIXED";
+"Support.Shortcuts.DoneNext" = "Done, Next in Empty Composer";
+"Support.Shortcuts.OpenFromPreview" = "Open Chat from Preview";
+"Support.Shortcuts.OpenTemplates" = "Open Templates";
+"Support.Shortcuts.FixedInfo" = "With text selected, ⇧⌘X and ⇧⌘M format it, whatever they are set to here.";
+"Support.Shortcuts.ResetToDefaults" = "Reset to Defaults";
+"Support.Shortcuts.ResetText" = "Reset all support shortcuts to their defaults?";
+"Support.Shortcuts.ResetAction" = "Reset";
+
 "Support.Claims.Taken" = "✋️ chat taken";
 "Support.Claims.Here" = "✋️ {name} is here";
 

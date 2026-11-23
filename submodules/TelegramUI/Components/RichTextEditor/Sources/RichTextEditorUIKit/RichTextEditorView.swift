@@ -219,6 +219,7 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
 
     /// A hardware Tab outside a table and a quote, where the canvas has no use for it.
     public var onHardwareTab: (() -> Void)? { didSet { canvas.onHardwareTab = onHardwareTab } }
+    public var formatKeysNeedSelection: Bool = false { didSet { canvas.formatKeysNeedSelection = formatKeysNeedSelection } }
 
     /// Configure each selection-handle ("knob") view. The closure is invoked once per handle view (start and
     /// end), passing it as a bare `UIView`. Use it to set host-framework properties the editor package can't

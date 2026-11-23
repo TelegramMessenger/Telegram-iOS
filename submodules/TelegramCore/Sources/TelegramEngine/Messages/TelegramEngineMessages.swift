@@ -600,6 +600,10 @@ public extension TelegramEngine {
             return _internal_supportSwitchTarget(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
         }
 
+        public func supportChatListNeighbour(peerId: EnginePeer.Id, chatListFilterId: Int32?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+            return _internal_supportChatListNeighbour(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, getFilterPredicate: getFilterPredicate)
+        }
+
         public func supportMarkDone(peerId: EnginePeer.Id, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
             return _internal_supportMarkDone(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
         }

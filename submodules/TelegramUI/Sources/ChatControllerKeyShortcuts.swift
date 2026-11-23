@@ -12,6 +12,8 @@ import Display
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 import ChatTextInputPanelNode
+import ChatListUI
+import ContextUI
 
 extension ChatControllerImpl {    
     var keyShortcutsInternal: [KeyShortcut] {
@@ -60,6 +62,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "M", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.supportPerformsShortcut(insteadOfFormatKey: "M") {
+                            return
+                        }
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.monospace) == true {
                             return
                         }
@@ -86,6 +91,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.supportPerformsShortcut(insteadOfFormatKey: "X") {
+                            return
+                        }
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.strikethrough) == true {
                             return
                         }
@@ -345,6 +353,39 @@ extension ChatControllerImpl {
             })
         ]
         
-        return inputShortcuts + otherShortcuts
+        var supportShortcuts: [KeyShortcut] = []
+        if let supportContext = self.context.supportContext {
+            let inputIsFocused = self.chatDisplayNode.isInputViewFocused
+            for action in self.supportShortcutActions {
+                var combos = supportContext.shortcutCombos(action)
+                if inputIsFocused {
+                    combos = combos.filter { !supportKeyComboIsFormatKey($0) }
+                }
+                let isListWalk = action == .previousChat || action == .nextChat
+                supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: combos, title: (isListWalk || action == .closeChat) ? nil : supportShortcutTitle(action, strings: strings), wantsPriorityOverText: isListWalk, perform: { [weak self] in
+                    self?.supportPerformShortcut(action)
+                }))
+            }
+        }
+
+        return inputShortcuts + otherShortcuts + supportShortcuts
+    }
+}
+
+extension ChatControllerImpl: UnclaimedKeyPressResponder {
+    public func handleUnclaimedKeyPress(_ key: UIKey) -> Bool {
+        guard self.context.supportContext != nil, let navigationController = self.navigationController as? NavigationController, let textInputPanelNode = self.chatDisplayNode.textInputPanelNode, self.chatDisplayNode.inputPanelNode === textInputPanelNode else {
+            return false
+        }
+        let interfaceState = self.presentationInterfaceState.interfaceState
+        guard let text = supportTypedText(key, appending: interfaceState.effectiveInputState.inputText.length != 0) else {
+            return false
+        }
+        guard isTopmostChatController(self), self.attachmentController == nil, interfaceState.selectionState == nil, navigationController.viewControllers.last === self, !navigationController.displayNode.accessibilityElementsHidden, !self.displayNode.accessibilityElementsHidden, !navigationController.globalOverlayControllers.contains(where: { $0 is ContextController }) else {
+            return false
+        }
+        textInputPanelNode.ensureFocused()
+        textInputPanelNode.supportInsertTemplateValue(text, replacing: nil)
+        return true
     }
 }
