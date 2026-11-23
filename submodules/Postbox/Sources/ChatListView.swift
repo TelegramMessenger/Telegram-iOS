@@ -450,6 +450,7 @@ public struct ChatListFilterPredicate {
     public var messageTagSummary: ChatListMessageTagSummaryResultCalculation?
     public var includeAdditionalPeerGroupIds: [PeerGroupId]
     public var include: (Peer, Bool, Bool, Bool, Bool?) -> Bool
+    public var keepsIncludedPeersBelowHoles: Bool = false
     
     public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, pinnedPeerIds: [PeerId], messageTagSummary: ChatListMessageTagSummaryResultCalculation?, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, Bool, Bool, Bool, Bool?) -> Bool) {
         self.includePeerIds = includePeerIds
@@ -482,6 +483,19 @@ public struct ChatListFilterPredicate {
             }
         }
         return self.include(peer, isRemovedFromTotalUnreadCount, isUnread, isContact, messageTagSummaryResult)
+    }
+    
+    func namesPeer(_ peer: Peer) -> Bool {
+        if self.pinnedPeerIds.contains(peer.id) {
+            return true
+        }
+        let includePeerId: PeerId
+        if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+            includePeerId = associatedPeerId
+        } else {
+            includePeerId = peer.id
+        }
+        return self.includePeerIds.contains(includePeerId) && !self.excludePeerIds.contains(includePeerId)
     }
 }
 
@@ -1072,7 +1086,16 @@ public final class ChatListView {
                     extractedCachedData: entryData.extractedCachedData
                 )))
             case let .HoleEntry(hole):
-                entries.removeAll()
+                if let filterPredicate = mutableView.filterPredicate, filterPredicate.keepsIncludedPeersBelowHoles {
+                    entries.removeAll(where: { entry in
+                        guard case let .MessageEntry(entryData) = entry, let peer = entryData.renderedPeer.peer else {
+                            return true
+                        }
+                        return !filterPredicate.namesPeer(peer)
+                    })
+                } else {
+                    entries.removeAll()
+                }
                 entries.append(.HoleEntry(hole))
             case .IntermediateMessageEntry:
                 assertionFailure()

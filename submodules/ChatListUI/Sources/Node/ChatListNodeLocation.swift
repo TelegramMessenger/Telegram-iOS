@@ -205,7 +205,9 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
     case let .chatList(groupId):
         let filterPredicate: ChatListFilterPredicate?
         if let filter = location.filter, case let .filter(_, _, _, data) = filter {
-            filterPredicate = chatListFilterPredicate(filter: data, accountPeerId: account.peerId)
+            var predicate = chatListFilterPredicate(filter: data, accountPeerId: account.peerId)
+            predicate.keepsIncludedPeersBelowHoles = keepsChatsAtHoles
+            filterPredicate = predicate
         } else {
             filterPredicate = nil
         }
