@@ -451,6 +451,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let supportOccupationIsVisible = ValuePromise<Bool>(false, ignoreRepeated: true)
     var supportOccupationDisposable: Disposable?
     let supportOpenChatDisposable = MetaDisposable()
+    let supportSwitchPreloadDisposable = MetaDisposable()
     var supportOccupationPeerId: EnginePeer.Id? {
         guard case let .peer(peerId) = self.chatLocation, case .standard(.default) = self.mode else {
             return nil
@@ -603,7 +604,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
             if let peerId = self.chatLocation.peerId {
-                return ChatControllerNavigationData(peerId: peerId, threadId: self.chatLocation.threadId)
+                return ChatControllerNavigationData(peerId: peerId, threadId: self.chatLocation.threadId, keepsVisitedChats: self.context.supportContext != nil)
             } else {
                 return nil
             }
@@ -7156,8 +7157,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if inForeground && isVisible, let peerId = self.supportOccupationPeerId {
                     self.supportOpenChatDisposable.set(supportContext.openChat(peerId: peerId))
+                    self.supportSwitchPreloadDisposable.set(self.supportSwitchPreload(peerId: peerId))
                 } else {
                     self.supportOpenChatDisposable.set(nil)
+                    self.supportSwitchPreloadDisposable.set(nil)
                 }
             })
         }
@@ -7282,6 +7285,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.applicationInFocusDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.supportOccupationDisposable?.dispose()
+        self.supportSwitchPreloadDisposable.dispose()
         self.supportOpenChatDisposable.dispose()
         self.networkStateDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
@@ -9412,8 +9416,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if commit || !isScheduledMessages {
                 self.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                let supportSwitchTarget = self.supportSwitchTargetBeforeSend(isRequested: !shouldDivert && supportMessagesShareContact(messages), messages: messages, postpone: postpone)
+                let _ = (combineLatest(supportSwitchTarget, enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone)))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] supportSwitchTarget, _ in
+                    if let strongSelf = self, let supportSwitchTarget, strongSelf.supportSwitch(to: supportSwitchTarget) {
+                        return
+                    }
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }

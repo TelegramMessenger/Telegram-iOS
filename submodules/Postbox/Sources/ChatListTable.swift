@@ -959,6 +959,16 @@ final class ChatListTable: Table {
         return result
     }
     
+    func enumerateChatIndices(groupId: PeerGroupId, after index: ChatListIndex, downward: Bool, _ f: (ChatListIndex) -> Bool) {
+        self.valueBox.range(self.table, start: self.key(groupId: groupId, index: index, type: .message), end: downward ? self.lowerBound(groupId: groupId) : self.upperBound(groupId: groupId), keys: { key in
+            let (_, pinningIndex, messageIndex, type) = extractKey(key)
+            if type == ChatListEntryType.message.rawValue {
+                return f(ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex))
+            }
+            return true
+        }, limit: 0)
+    }
+
     func debugList(groupId: PeerGroupId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [ChatListIntermediateEntry] {
         return self.laterEntries(groupId: groupId, index: (ChatListIndex.absoluteLowerBound, true), messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000, predicate: nil)
     }

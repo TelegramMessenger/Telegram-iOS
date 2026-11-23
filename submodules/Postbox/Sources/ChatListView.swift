@@ -485,7 +485,7 @@ public struct ChatListFilterPredicate {
         return self.include(peer, isRemovedFromTotalUnreadCount, isUnread, isContact, messageTagSummaryResult)
     }
     
-    func namesPeer(_ peer: Peer) -> Bool {
+    public func namesPeer(_ peer: Peer) -> Bool {
         if self.pinnedPeerIds.contains(peer.id) {
             return true
         }

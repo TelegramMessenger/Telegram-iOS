@@ -596,6 +596,14 @@ public extension TelegramEngine {
             return _internal_supportChatListLoadState(account: self.account)
         }
 
+        public func supportSwitchTarget(peerId: EnginePeer.Id, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+            return _internal_supportSwitchTarget(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+        }
+
+        public func supportSwitchTargetUpdates(peerId: EnginePeer.Id, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer.Id?, NoError> {
+            return _internal_supportSwitchTargetUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+        }
+
 
         public func chatList(group: EngineChatList.Group, count: Int) -> Signal<EngineChatList, NoError> {
             let accountPeerId = self.account.peerId

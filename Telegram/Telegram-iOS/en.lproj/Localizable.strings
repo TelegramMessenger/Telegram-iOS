@@ -17347,6 +17347,11 @@ Error: %8$@";
 "Support.Settings.SendSilently" = "Send all messages without sound";
 "Support.Settings.SendSilentlySynonyms" = "silent\nsound\nmute";
 
+"Support.Switching.Header" = "AFTER SENDING";
+"Support.Switching.JustSend" = "Just send the reply";
+"Support.Switching.Next" = "Send and switch to next";
+"Support.Switching.Previous" = "Send and switch to previous";
+
 "Support.ChatLoading.Header" = "LOAD CHATS FOR A PERIOD";
 "Support.ChatLoading.All" = "All of them";
 "Support.ChatLoading.Info" = "A longer period makes the database larger. A shorter one removes older one-to-one chats from this device at the next launch, and Load more brings them back.";

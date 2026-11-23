@@ -24,6 +24,14 @@ private func supportChatLoadPeriodTitle(strings: PresentationStrings, period: In
     }
     return timeIntervalString(strings: strings, value: period)
 }
+
+private func supportSwitchBehaviors(strings: PresentationStrings) -> [(behavior: SupportSwitchBehavior, title: String)] {
+    return [
+        (.none, strings.Support_Switching_JustSend),
+        (.next, strings.Support_Switching_Next),
+        (.previous, strings.Support_Switching_Previous)
+    ]
+}
 private final class SupportSettingsControllerArguments {
     let updateSettings: (@escaping (SupportSettings) -> SupportSettings) -> Void
     let selectPeriod: (Int32) -> Void
@@ -51,6 +59,7 @@ public enum SupportSettingsEntryTag: ItemListItemTag, Equatable {
 }
 
 private enum SupportSettingsSection: Int32 {
+    case switching
     case sending
     case period
     case loading
@@ -58,6 +67,8 @@ private enum SupportSettingsSection: Int32 {
 
 private enum SupportSettingsEntry: ItemListNodeEntry {
     enum StableId: Hashable {
+        case switchHeader
+        case switchBehavior(Int32)
         case sendSilently
         case periodHeader
         case period(Int32)
@@ -66,6 +77,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case loadMoreInfo
     }
 
+    case switchHeader(String)
+    case switchBehavior(index: Int32, behavior: SupportSwitchBehavior, title: String, isSelected: Bool)
     case sendSilently(String, Bool)
     case periodHeader(String)
     case period(index: Int32, period: Int32, title: String, isSelected: Bool)
@@ -75,6 +88,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
 
     var section: ItemListSectionId {
         switch self {
+        case .switchHeader, .switchBehavior:
+            return SupportSettingsSection.switching.rawValue
         case .sendSilently:
             return SupportSettingsSection.sending.rawValue
         case .periodHeader, .period, .periodInfo:
@@ -86,6 +101,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
 
     var stableId: StableId {
         switch self {
+        case .switchHeader:
+            return .switchHeader
+        case let .switchBehavior(_, behavior, _, _):
+            return .switchBehavior(behavior.rawValue)
         case .sendSilently:
             return .sendSilently
         case .periodHeader:
@@ -103,6 +122,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
 
     var sortIndex: Int32 {
         switch self {
+        case .switchHeader:
+            return 0
+        case let .switchBehavior(index, _, _, _):
+            return 1 + index
         case .sendSilently:
             return 4
         case .periodHeader:
@@ -125,6 +148,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SupportSettingsControllerArguments
         switch self {
+        case let .switchHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .switchBehavior(_, behavior, title, isSelected):
+            return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: title, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.switchBehavior = behavior
+                    return settings
+                }
+            })
         case let .sendSilently(title, value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateSettings { settings in
@@ -156,6 +189,11 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
 private func supportSettingsEntries(presentationData: PresentationData, settings: SupportSettings, loadState: SupportChatListLoadState) -> [SupportSettingsEntry] {
     let strings = presentationData.strings
     var entries: [SupportSettingsEntry] = []
+
+    entries.append(.switchHeader(strings.Support_Switching_Header))
+    for (index, option) in supportSwitchBehaviors(strings: strings).enumerated() {
+        entries.append(.switchBehavior(index: Int32(index), behavior: option.behavior, title: option.title, isSelected: option.behavior == settings.switchBehavior))
+    }
 
     entries.append(.sendSilently(strings.Support_Settings_SendSilently, settings.sendAllSilently))
 
