@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/WalletContext",
+        "//submodules/TelegramUI/Components/Support/SupportTemplates",
         "//submodules/TelegramCore/FlatBuffers",
         "//submodules/TelegramCore/FlatSerialization",
     ],

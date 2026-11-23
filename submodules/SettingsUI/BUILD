@@ -94,6 +94,7 @@ swift_library(
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
         "//submodules/TranslateUI:TranslateUI",
+        "//submodules/TelegramUI/Components/Support/SupportTemplates",
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",

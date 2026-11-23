@@ -604,6 +604,10 @@ public extension TelegramEngine {
             return _internal_supportMarkDone(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
         }
 
+        public func addSupportLocalNotification(texts: [String]) -> Signal<Never, NoError> {
+            return _internal_addSupportLocalNotification(account: self.account, texts: texts)
+        }
+
         public func supportUnreadDividerBoundary(peerId: EnginePeer.Id) -> Signal<Int32?, NoError> {
             return _internal_supportUnreadDividerBoundary(account: self.account, peerId: peerId)
         }
