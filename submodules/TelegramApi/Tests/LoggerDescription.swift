@@ -26,7 +26,8 @@ private let redactChildrenOfType: [String: Set<String>] = [
     "InputSingleMedia.inputSingleMedia": Set(["message"]),
     "InputContact.inputPhoneContact": Set(["phone"]),
     "User.user": Set(["phone"]),
-    "Update.updateUserPhone": Set(["phone"])
+    "Update.updateUserPhone": Set(["phone"]),
+    "help.UserInfo.userInfo": Set(["*"])
 ]
 
 func loggerDescription(redact: Bool, of value: Any) -> String {

@@ -254,7 +254,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                 }
                 let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
                 
-                transaction.resetIncomingReadStates(readStates)
+                transaction.resetIncomingReadStates(supportReadStatesToStore(transaction: transaction, accountPeerId: accountPeerId, readStates: readStates))
                 
                 for (peerId, pts) in channelStates {
                     if let _ = transaction.getPeerChatState(peerId) as? ChannelState {

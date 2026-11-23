@@ -16,6 +16,7 @@ public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNodeDidBeginEditing()
     func chatInputTextNodeDidFinishEditing()
     func chatInputTextNodeBackspaceWhileEmpty()
+    func chatInputTextNodeHardwareTab()
     
     @available(iOS 13.0, *)
     func chatInputTextNodeMenu(forTextRange textRange: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu
@@ -26,6 +27,11 @@ public protocol ChatInputTextNodeDelegate: AnyObject {
     
     func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool
     func chatInputTextNodeTargetForAction(action: Selector) -> ChatInputTextNode.TargetForAction?
+}
+
+public extension ChatInputTextNodeDelegate {
+    func chatInputTextNodeHardwareTab() {
+    }
 }
 
 @available(iOS 15.0, *)

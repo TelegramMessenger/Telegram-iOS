@@ -87,7 +87,17 @@ func _internal_synchronizeableChatInputState(accountPeerId: PeerId, peerId: Peer
 // strictly newer than the local draft's timestamp. So a fresh login restores everything, and a live-session
 // hole-fill never clobbers a newer local edit. Only non-empty `.draftMessage` drafts are passed in, so a
 // fetch never clears a draft (clearing stays with the real-time updateDraftMessage path).
-func _internal_applyFetchedChatInputStates(transaction: Transaction, accountPeerId: PeerId, inputStates: [(PeerId, Api.DraftMessage)]) {
+@discardableResult
+func _internal_applyFetchedChatInputStates(transaction: Transaction, accountPeerId: PeerId, inputStates: [(PeerId, Api.DraftMessage)]) -> [SupportReceivedDraft] {
+    if supportKeepsDraftLocal(transaction: transaction, accountPeerId: accountPeerId, threadId: nil) {
+        return inputStates.compactMap { peerId, apiDraft -> SupportReceivedDraft? in
+            guard supportTracksOccupation(transaction: transaction, peerId: peerId, accountPeerId: accountPeerId) else {
+                return nil
+            }
+            let inputState = _internal_synchronizeableChatInputState(accountPeerId: accountPeerId, peerId: peerId, apiDraft: apiDraft)
+            return SupportReceivedDraft(peerId: peerId, text: supportReceivedDraftText(inputState))
+        }
+    }
     for (peerId, apiDraft) in inputStates {
         guard let parsed = _internal_synchronizeableChatInputState(accountPeerId: accountPeerId, peerId: peerId, apiDraft: apiDraft) else {
             continue
@@ -101,4 +111,5 @@ func _internal_applyFetchedChatInputStates(transaction: Transaction, accountPeer
         }
         _internal_updateChatInputState(transaction: transaction, peerId: peerId, threadId: nil, inputState: parsed)
     }
+    return []
 }

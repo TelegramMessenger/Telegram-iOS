@@ -385,7 +385,7 @@ public final class GlobalControlPanelsContext {
                         return lhs < rhs
                     }
                     
-                    if dismissedSuggestions.contains(ServerProvidedSuggestion.todayBirthdays.id) {
+                    if dismissedSuggestions.contains(ServerProvidedSuggestion.todayBirthdays.id) || context.supportContext != nil {
                         todayBirthdayPeerIds = []
                     }
                     
@@ -489,7 +489,7 @@ public final class GlobalControlPanelsContext {
                 })
             }
             
-            if let callManager = context.sharedContext.callManager, let peerId = groupCalls {
+            if let callManager = context.sharedContext.callManager, let peerId = groupCalls, context.supportContext == nil {
                 let currentGroupCall: Signal<PresentationGroupCall?, NoError> = callManager.currentGroupCallSignal
                 |> distinctUntilChanged(isEqual: { lhs, rhs in
                     return lhs == rhs

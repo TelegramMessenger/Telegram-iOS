@@ -517,6 +517,10 @@ public extension EnginePeer {
         return self._asPeer().isPremium
     }
     
+    var showsPremiumStar: Bool {
+        return self._asPeer().showsPremiumStar
+    }
+    
     var isSubscription: Bool {
         return self._asPeer().isSubscription
     }

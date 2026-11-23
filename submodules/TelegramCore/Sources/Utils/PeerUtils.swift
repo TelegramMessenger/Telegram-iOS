@@ -251,6 +251,15 @@ public extension Peer {
         }
     }
     
+    var showsPremiumStar: Bool {
+        switch self {
+        case let user as TelegramUser:
+            return user.flags.contains(.isPremium) && !user.flags.contains(.hidesPremiumStar)
+        default:
+            return false
+        }
+    }
+    
     var isSubscription: Bool {
         switch self {
         case let channel as TelegramChannel:

@@ -92,26 +92,28 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
                             self.openPeer(peer: peer, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
                         }))
                     )
-                    items.append(
-                        .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Phone_TelegramVoiceCall, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
-                            f(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            self.controllerInteraction?.callPeer(peer.id, false)
-                        }))
-                    )
-                    items.append(
-                        .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Phone_TelegramVideoCall, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
-                            f(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            self.controllerInteraction?.callPeer(peer.id, true)
-                        }))
-                    )
+                    if self.context.supportContext == nil {
+                        items.append(
+                            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Phone_TelegramVoiceCall, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+                                f(.default)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.controllerInteraction?.callPeer(peer.id, false)
+                            }))
+                        )
+                        items.append(
+                            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Phone_TelegramVideoCall, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+                                f(.default)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.controllerInteraction?.callPeer(peer.id, true)
+                            }))
+                        )
+                    }
                 }
             } else {
                 items.append(

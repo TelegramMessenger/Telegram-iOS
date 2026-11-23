@@ -99,6 +99,7 @@ extension ChatControllerImpl {
             var offerNextChannelToRead: Bool = false
             var nextChannelToRead: NextChannelToRead?
             var nextChannelToReadDisplayName: Bool = false
+            var supportSwipeToNextChat: Bool = false
             var isNotAccessible: Bool = false
             var isManagedBot: Bool = false
             var hasBots: Bool = false
@@ -530,6 +531,17 @@ extension ChatControllerImpl {
                     }
                 }
                 
+                let hasSupportUserInfo: Signal<Bool, NoError>
+                if let supportContext = context.supportContext {
+                    hasSupportUserInfo = supportContext.userInfo(peerId: peerId)
+                    |> map { info -> Bool in
+                        return info != nil
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSupportUserInfo = .single(false)
+                }
+                
                 self.titleDisposable = (combineLatest(
                     queue: Queue.mainQueue(),
                     peerView.get(),
@@ -539,9 +551,10 @@ extension ChatControllerImpl {
                     configuration,
                     hasPeerInfo,
                     messageOptionsTitleInfo,
-                    savedMessagesChatsTip
+                    savedMessagesChatsTip,
+                    hasSupportUserInfo
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, configuration, hasPeerInfo, messageOptionsTitleInfo, savedMessagesChatsTip in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, configuration, hasPeerInfo, messageOptionsTitleInfo, savedMessagesChatsTip, hasSupportUserInfo in
                     guard let strongSelf = self else {
                         return
                     }
@@ -613,6 +626,9 @@ extension ChatControllerImpl {
                             var customSubtitle: String?
                             if savedMessagesChatsTip {
                                 customSubtitle = strings.Chat_SavedMessagesStatusViewAsChats
+                            }
+                            if !isScheduledMessages, supportChatTitleShowsWarning(peerId: peerView.peerId, accountPeerId: context.account.peerId, hasUserInfo: hasSupportUserInfo) {
+                                customSubtitle = strings.Support_Info_CheckWarning
                             }
                             
                             // A suspicious peer's emoji status is not shown, as their links are not.
@@ -1205,6 +1221,36 @@ extension ChatControllerImpl {
                                 }
                             })
                         }
+                    } else if case .standard(.default) = mode, let supportContext = context.supportContext, strongSelf.nextChannelToReadDisposable == nil, let peerId = chatLocation.peerId, chatLocation.threadId == nil, let peer = renderedPeer?.chatMainPeer, !peer.isForumOrMonoForum {
+                        let accountPeerId = context.account.peerId
+                        strongSelf.nextChannelToReadDisposable = (context.engine.messages.supportSwipeToNextChatUpdates(peerId: peerId, chatListFilterId: currentChatListFilter, searchResultPeerIds: { [weak supportContext] in
+                            return supportContext?.searchResultPeerIds
+                        }, getFilterPredicate: { data in
+                            return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+                        })
+                        |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] target in
+                            guard let strongSelf else {
+                                return
+                            }
+                            let previousState = strongSelf.state
+                            switch target {
+                            case .off:
+                                strongSelf.state.supportSwipeToNextChat = false
+                                strongSelf.state.offerNextChannelToRead = false
+                                strongSelf.state.nextChannelToRead = nil
+                            case .noUnreadChat:
+                                strongSelf.state.supportSwipeToNextChat = true
+                                strongSelf.state.offerNextChannelToRead = true
+                                strongSelf.state.nextChannelToRead = nil
+                            case let .chat(peer, unreadCount):
+                                strongSelf.state.supportSwipeToNextChat = true
+                                strongSelf.state.offerNextChannelToRead = true
+                                strongSelf.state.nextChannelToRead = NextChannelToRead(peer: peer, threadData: nil, unreadCount: unreadCount, location: .same)
+                            }
+                            if strongSelf.state.supportSwipeToNextChat != previousState.supportSwipeToNextChat || strongSelf.state.offerNextChannelToRead != previousState.offerNextChannelToRead || strongSelf.state.nextChannelToRead != previousState.nextChannelToRead {
+                                strongSelf.onUpdated?(previousState)
+                            }
+                        })
                     }
                     
                     if let upgradedToPeerId {

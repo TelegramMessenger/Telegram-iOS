@@ -36,7 +36,7 @@ private final class ManagedChatListHolesState {
     }
 }
 
-func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: PeerId, supportContext: SupportContext?) -> Signal<Void, NoError> {
     return Signal { _ in
         let state = Atomic(value: ManagedChatListHolesState())
         
@@ -45,7 +45,15 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
         let filtersKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.chatListFilters]))
         let combinedView = postbox.combinedView(keys: [topRootHoleKey, topArchiveHoleKey, filtersKey])
         
-        let disposable = combineLatest(postbox.chatListHolesView(), combinedView).start(next: { view, combinedView in
+        let chatListLoadTill: Signal<Int32?, NoError>
+        if let supportContext {
+            chatListLoadTill = supportContext.chatListLoadTill
+            |> map(Optional.init)
+        } else {
+            chatListLoadTill = .single(nil)
+        }
+        
+        let disposable = combineLatest(postbox.chatListHolesView(), combinedView, chatListLoadTill).start(next: { view, combinedView, chatListLoadTill in
             var entries = Array(view.entries).sorted(by: { lhs, rhs in
                 return lhs.hole.index > rhs.hole.index
             })
@@ -67,6 +75,12 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
                 }
             }
             
+            if let chatListLoadTill {
+                entries.removeAll(where: { entry in
+                    return supportChatListHoleIsHeld(holeTimestamp: entry.hole.index.timestamp, loadTill: chatListLoadTill)
+                })
+            }
+            
             let (removed, added) = state.with { state in
                 return state.update(entries: entries)
             }
@@ -76,7 +90,7 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
             }
             
             for (entry, disposable) in added {
-                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: entry.groupId, hole: entry.hole).start())
+                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, supportContext: supportContext, groupId: entry.groupId, hole: entry.hole).start())
             }
         })
         

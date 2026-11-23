@@ -506,7 +506,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
     )
 }
 
-public class AvatarGalleryController: ViewController, StandalonePresentableController {
+public class AvatarGalleryController: ViewController, StandalonePresentableController, KeyShortcutResponder {
     public enum SourceCorners {
         case none
         case round
@@ -710,6 +710,17 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     @objc func donePressed() {
         self.dismiss(forceAway: false)
     }
+
+    public var keyShortcuts: [KeyShortcut] {
+        guard self.context.supportContext != nil else {
+            return []
+        }
+        return [
+            KeyShortcut(input: UIKeyCommand.inputEscape, modifiers: [], action: { [weak self] in
+                self?.dismiss(forceAway: false)
+            })
+        ]
+    }
     
     private func dismissImmediately() {
         self._hiddenMedia.set(.single(nil))
@@ -901,7 +912,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private var canDelete: Bool {
         let canDelete: Bool
         if self.peer.id == self.context.account.peerId {
-            canDelete = true
+            canDelete = self.context.supportContext == nil
         } else if case let .legacyGroup(group) = self.peer {
             switch group.role {
                 case .creator, .admin:

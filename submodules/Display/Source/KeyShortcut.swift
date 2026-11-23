@@ -4,12 +4,14 @@ public struct KeyShortcut: Hashable {
     let title: String
     let input: String
     let modifiers: UIKeyModifierFlags
+    let wantsPriorityOverText: Bool
     let action: () -> Void
     
-    public init(title: String = "", input: String = "", modifiers: UIKeyModifierFlags = [], action: @escaping () -> Void = {}) {
+    public init(title: String = "", input: String = "", modifiers: UIKeyModifierFlags = [], wantsPriorityOverText: Bool = false, action: @escaping () -> Void = {}) {
         self.title = title
         self.input = input
         self.modifiers = modifiers
+        self.wantsPriorityOverText = wantsPriorityOverText
         self.action = action
     }
     
@@ -27,7 +29,7 @@ extension KeyShortcut {
     var uiKeyCommand: UIKeyCommand {
         let command = UIKeyCommand(input: self.input, modifierFlags: self.modifiers, action: #selector(KeyShortcutsController.handleKeyCommand(_:)))
         command.discoverabilityTitle = self.title
-        if #available(iOS 15.0, *), ["\t", UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow, UIKeyCommand.inputLeftArrow, UIKeyCommand.inputRightArrow].contains(command.input) && self.modifiers.isEmpty {
+        if #available(iOS 15.0, *), ["\t", UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow, UIKeyCommand.inputLeftArrow, UIKeyCommand.inputRightArrow].contains(command.input) && (self.modifiers.isEmpty || self.wantsPriorityOverText) {
             command.wantsPriorityOverSystemBehavior = true
         }
         return command

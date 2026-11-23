@@ -307,14 +307,13 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     }
                                 }
                                 if peer.id != self.context.account.peerId {
-                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
                                     if peer.isFake {
                                         titleCredibilityIcon = .fake
                                     } else if peer.isScam {
                                         titleCredibilityIcon = .scam
                                     } else if !hidePeerStatus, let emojiStatus = peer.emojiStatus {
                                         titleStatusIcon = .emojiStatus(emojiStatus)
-                                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                                    } else if peer.isPremium && self.context.premiumBadgesShown {
                                         titleCredibilityIcon = .premium
                                     }
                                     

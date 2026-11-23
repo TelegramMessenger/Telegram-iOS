@@ -908,7 +908,7 @@ public func deviceContactInfoController(context: ShareControllerAccountContext, 
         
         let _ = (user
         |> deliverOnMainQueue).start(next: { user in
-            if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
+            if context.supportContext == nil, let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
                 let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()

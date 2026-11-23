@@ -752,6 +752,7 @@ final class OverscrollContentsComponent: Component {
     let peer: EnginePeer?
     let threadData: ChatOverscrollThreadData?
     let isForumThread: Bool
+    let emptyTitle: String?
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let expandOffset: CGFloat
@@ -767,6 +768,7 @@ final class OverscrollContentsComponent: Component {
         peer: EnginePeer?,
         threadData: ChatOverscrollThreadData?,
         isForumThread: Bool,
+        emptyTitle: String?,
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         expandOffset: CGFloat,
@@ -781,6 +783,7 @@ final class OverscrollContentsComponent: Component {
         self.peer = peer
         self.threadData = threadData
         self.isForumThread = isForumThread
+        self.emptyTitle = emptyTitle
         self.unreadCount = unreadCount
         self.location = location
         self.expandOffset = expandOffset
@@ -807,6 +810,9 @@ final class OverscrollContentsComponent: Component {
             return false
         }
         if lhs.isForumThread != rhs.isForumThread {
+            return false
+        }
+        if lhs.emptyTitle != rhs.emptyTitle {
             return false
         }
         if lhs.unreadCount != rhs.unreadCount {
@@ -970,6 +976,8 @@ final class OverscrollContentsComponent: Component {
                 titleText = threadData.data.info.title
             } else if let peer = component.peer {
                 titleText = peer.compactDisplayTitle
+            } else if let emptyTitle = component.emptyTitle {
+                titleText = emptyTitle
             } else if component.isForumThread {
                 titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoTopics
             } else {
@@ -1097,6 +1105,7 @@ public final class ChatOverscrollControl: CombinedComponent {
     let peer: EnginePeer?
     let threadData: ChatOverscrollThreadData?
     let isForumThread: Bool
+    let emptyTitle: String?
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let context: AccountContext
@@ -1112,6 +1121,7 @@ public final class ChatOverscrollControl: CombinedComponent {
         peer: EnginePeer?,
         threadData: ChatOverscrollThreadData?,
         isForumThread: Bool,
+        emptyTitle: String? = nil,
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         context: AccountContext,
@@ -1126,6 +1136,7 @@ public final class ChatOverscrollControl: CombinedComponent {
         self.peer = peer
         self.threadData = threadData
         self.isForumThread = isForumThread
+        self.emptyTitle = emptyTitle
         self.unreadCount = unreadCount
         self.location = location
         self.context = context
@@ -1150,6 +1161,9 @@ public final class ChatOverscrollControl: CombinedComponent {
             return false
         }
         if lhs.isForumThread != rhs.isForumThread {
+            return false
+        }
+        if lhs.emptyTitle != rhs.emptyTitle {
             return false
         }
         if lhs.unreadCount != rhs.unreadCount {
@@ -1191,6 +1205,7 @@ public final class ChatOverscrollControl: CombinedComponent {
                     peer: context.component.peer,
                     threadData: context.component.threadData,
                     isForumThread: context.component.isForumThread,
+                    emptyTitle: context.component.emptyTitle,
                     unreadCount: context.component.unreadCount,
                     location: context.component.location,
                     expandOffset: context.component.expandDistance,

@@ -117,7 +117,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
             })
         })))
         
-        var canStartSecretChat = true
+        var canStartSecretChat = context.supportContext == nil
         if case let .user(user) = peer, user.flags.contains(.isSupport) {
             canStartSecretChat = false
         }
@@ -204,7 +204,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
             })))
         }
         
-        var canCall = true
+        var canCall = context.supportContext == nil
         if case let .user(user) = peer, (user.flags.contains(.isSupport) || !areVoiceCallsAvailable) {
             canCall = false
         }

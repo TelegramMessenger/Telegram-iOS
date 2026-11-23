@@ -21,6 +21,7 @@ import EmojiStatusComponent
 
 extension ChatControllerImpl {
     func updateRightNavigationButtons(presentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition) {
+        self.supportInfoSidebarRecheckAvailability()
         var buttonsAnimated = transition.isAnimated
         let sideListKind = self.currentSideListKind(presentationInterfaceState: presentationInterfaceState)
         self.sideListButtonKind = sideListKind
@@ -50,11 +51,17 @@ extension ChatControllerImpl {
         }
 
         // The sidebar button stays outermost, with Saved Messages' search before it.
-        let rightBarButtons: [UIBarButtonItem]
+        var rightBarButtons: [UIBarButtonItem]
         if self.rightNavigationButton?.action == .toggleSideList {
             rightBarButtons = [self.secondaryRightNavigationButton, self.rightNavigationButton].compactMap { $0?.buttonItem }
         } else {
             rightBarButtons = [self.rightNavigationButton, self.secondaryRightNavigationButton].compactMap { $0?.buttonItem }
+        }
+        if let supportInfoSidebarBarButton = self.supportInfoSidebarBarButton(presentationInterfaceState: presentationInterfaceState) {
+            if self.supportInfoSidebarHidesAvatarButton, let chatInfoItem = self.chatInfoNavigationButton?.buttonItem {
+                rightBarButtons.removeAll(where: { $0 === chatInfoItem })
+            }
+            rightBarButtons.append(supportInfoSidebarBarButton)
         }
         var rightBarButtonsUpdated = false
         let currentRightBarButtons = self.navigationItem.rightBarButtonItems ?? []
@@ -683,6 +690,9 @@ func updateChatPresentationInterfaceStateImpl(
         } else {
             selfController.customNavigationPanelNode = nil
         }
+    }
+    if selfController.context.supportContext != nil && selfController.isNodeLoaded {
+        selfController.supportTemplatesSlashUpdate(updatedChatPresentationInterfaceState)
     }
     selfController.stateUpdated?(transition)
 }

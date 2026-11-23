@@ -292,6 +292,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private(set) var secondaryInputPanelNode: ChatInputPanelNode?
     private(set) var accessoryPanelNode: AccessoryPanelNode?
     private var inputContextPanelNode: ChatInputContextPanelNode?
+    var supportTemplatesPanel: SupportTemplatesChatInputContextPanelNode?
     let inputContextPanelContainer: ChatControllerTitlePanelNodeContainer
     private let inputContextOverTextPanelContainer: ChatControllerTitlePanelNodeContainer
     private var overlayContextPanelNode: ChatInputContextPanelNode?
@@ -310,6 +311,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
+    var supportSendStaysInChat = false
     private var overrideUpdateTextInputHeightTransition: ContainedViewLayoutTransition?
     
     private var animateInAsOverlayCompletion: (() -> Void)?
@@ -347,7 +349,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     var requestUpdateChatInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
-    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Int32?, Bool, Bool) -> Void = { _, _, _, _, _, _ in }
+    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Int32?, Bool, Bool, Bool) -> Void = { _, _, _, _, _, _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
@@ -1019,6 +1021,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if case .scheduledMessages = self.chatPresentationInterfaceState.subject, self.chatPresentationInterfaceState.editMessageState == nil {
                     self.controllerInteraction.scheduleCurrentMessage(nil)
                 } else {
+                    let handleSupportSwitch = !self.supportSendStaysInChat
                     self.maybeSendEphemeralMessage { [weak self] in
                         guard let self else {
                             return
@@ -1034,10 +1037,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 count = Int32(ceil(CGFloat(self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length) / 4096.0))
                             }
                             controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] postpone in
-                                self?.sendCurrentMessage(postpone: postpone)
+                                self?.sendCurrentMessage(postpone: postpone, handleSupportSwitch: handleSupportSwitch)
                             })
                         } else {
-                            self.sendCurrentMessage()
+                            self.sendCurrentMessage(handleSupportSwitch: handleSupportSwitch)
                         }
                     }
                 }
@@ -2400,7 +2403,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         var immediatelyLayoutInputContextPanelAndAnimateAppearance = false
-        if let inputContextPanelNode = inputContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputContextPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, chatPresentationContext: self.controllerInteraction.presentationContext) {
+        if let inputContextPanelNode = self.supportTemplatesPanel ?? inputContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputContextPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, chatPresentationContext: self.controllerInteraction.presentationContext) {
             if inputContextPanelNode !== self.inputContextPanelNode {
                 dismissedInputContextPanelNode = self.inputContextPanelNode
                 self.inputContextPanelNode = inputContextPanelNode
@@ -3335,6 +3338,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let context = self.context
             let chatLocation = self.chatLocation
             
+            var supportGroupsResultsByChat = false
+            if context.supportContext != nil, case let .customChatContents(contents) = self.chatPresentationInterfaceState.subject, case .hashTagSearch(publicPosts: false) = contents.kind {
+                supportGroupsResultsByChat = true
+            }
+            
             let _ = inlineSearchResults.update(
                 transition: inlineSearchResultsTransition,
                 component: AnyComponent(ChatInlineSearchResultsListComponent(
@@ -3352,6 +3360,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     insets: childContentInsets,
                     inputHeight: layout.inputHeight ?? 0.0,
                     showEmptyResults: self.showListEmptyResults,
+                    supportGroupsResultsByChat: supportGroupsResultsByChat,
                     initialScrollingState: self.inlineSearchResultsScrollingState?.state,
                     messageSelected: { [weak self] message in
                         guard let self else {
@@ -3629,6 +3638,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 controller.updateItemNodesSearchTextHighlightStates()
                             })
                         }
+                    },
+                    present: { [weak self] controller in
+                        self?.controller?.presentInGlobalOverlay(controller)
                     }
                 )),
                 environment: {},
@@ -5147,7 +5159,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     if !resolved.entities.isEmpty {
                         attributes.append(TextEntitiesMessageAttribute(entities: resolved.entities))
                     }
-                    self.sendMessages([.message(text: resolved.text, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: self.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])], nil, nil, nil, false, false)
+                    self.sendMessages([.message(text: resolved.text, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: self.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])], nil, nil, nil, false, false, false)
                 } else {
                     sendNormally()
                 }
@@ -5157,7 +5169,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
 
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, sendWithoutFormatting: Bool = false, completion: @escaping () -> Void = {}) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, sendWithoutFormatting: Bool = false, handleSupportSwitch: Bool = false, supportContact: TelegramMediaContact? = nil, completion: @escaping () -> Void = {}) {
         guard let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode else {
             return
         }
@@ -5194,7 +5206,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let composeContent = effectivePresentationInterfaceState.interfaceState.composeInputState.content
             let isNewMessage = effectivePresentationInterfaceState.interfaceState.editMessage == nil
             let requiresPremiumRichContent = isNewMessage
-                && !self.context.isPremium
+                && !self.context.isRichTextUnlocked
                 && !composeContent.isEmpty
                 && !composeContent.isEntityExpressible(options: [])
             let peerSpecificEmojiPack = (self.controller?.contentData?.state.peerView?.cachedData as? CachedChannelData)?.emojiPack
@@ -5211,7 +5223,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.controller?.push(premiumController)
                         }),
                         TextAlertAction(type: .genericAction, title: strings.RichText_SendWithoutFormatting, action: { [weak self] in
-                            self?.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, postpone: postpone, messageEffect: messageEffect, sendWithoutFormatting: true, completion: completion)
+                            self?.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, postpone: postpone, messageEffect: messageEffect, sendWithoutFormatting: true, handleSupportSwitch: handleSupportSwitch, supportContact: supportContact, completion: completion)
                         }),
                         TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {
                         })
@@ -5511,7 +5523,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
             }
             
-            if !messages.isEmpty || postEmptyMessages || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
+            // The text carries the reply, as on TDesktop; a contact sent alone keeps it.
+            let supportContactMessage: EnqueueMessage? = supportContact.flatMap { contact in
+                return .message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: contact), threadId: self.chatLocation.threadId, replyToMessageId: messages.isEmpty ? self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel : nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+            }
+            
+            if !messages.isEmpty || postEmptyMessages || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || supportContactMessage != nil {
                 if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                     var attributes: [MessageAttribute] = []
                     attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
@@ -5559,6 +5576,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         }
                     }
                     
+                    // After the correlation id, so the send animation stays on the text.
+                    if let supportContactMessage {
+                        messages.append(overrideThreadId.flatMap { supportContactMessage.withUpdatedThreadId($0) } ?? supportContactMessage)
+                    }
+                    
                     self.setupSendActionOnViewUpdate({ [weak self] in
                         guard let self, let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode else {
                             return
@@ -5586,7 +5608,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }, usedCorrelationId)
                     completion()
                     
-                    self.sendMessages(messages, silentPosting, scheduleTime, repeatPeriod, messages.count > 1, postpone)
+                    self.sendMessages(messages, silentPosting, scheduleTime, repeatPeriod, messages.count > 1, postpone, handleSupportSwitch)
                 }
                 
                 var targetThreadId: Int64?
@@ -5784,7 +5806,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
 
     var shouldAllowOverscrollActions: Bool {
-        if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 0.0 {
+        if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 0.0, self.context.supportContext == nil {
             return false
         }
         if self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
@@ -5794,7 +5816,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return false
         }
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-            if inputPanelNode.isFocused {
+            // Support chats keep the composer focused, so the swipe to the next chat stays available with it.
+            if inputPanelNode.isFocused && self.context.supportContext == nil {
                 return false
             }
             if !inputPanelNode.text.isEmpty {

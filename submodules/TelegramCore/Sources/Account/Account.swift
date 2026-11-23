@@ -150,10 +150,7 @@ public class UnauthorizedAccount {
                         }
 
                         let user = TelegramUser(user: apiUser)
-                        var isSupportUser = false
-                        if let phone = user.phone, phone.hasPrefix("42"), phone.count <= 5 {
-                            isSupportUser = true
-                        }
+                        let isSupportUser = isSupportAccountPhone(user.phone)
                         let state = AuthorizedAccountState(isTestingEnvironment: testingEnvironment, masterDatacenterId: masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
                         initializedAppSettingsAfterLogin(transaction: transaction, appVersion: networkArguments.appVersion, syncContacts: syncContacts)
                         transaction.setState(state)
@@ -384,7 +381,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: phoneNumber, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isSupportUser: isSupportUser))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isSupportUser: resolvedIsSupportUser(storedPhone: phoneNumber, recordAttribute: isSupportUser)))
                                         }
                                     }
                                 case _:
@@ -1235,6 +1232,7 @@ public class Account {
     public let testingEnvironment: Bool
     public let supplementary: Bool
     public let isSupportUser: Bool
+    public let supportContext: SupportContext?
     public let postbox: Postbox
     public let network: Network
     public let networkArguments: NetworkInitializationArguments
@@ -1336,6 +1334,7 @@ public class Account {
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
         self.isSupportUser = isSupportUser
+        self.supportContext = isSupportUser ? SupportContext(settings: supportSettingsSignal(postbox: postbox)) : nil
         
         self.networkStatsContext = NetworkStatsContext(postbox: postbox)
         
@@ -1393,7 +1392,7 @@ public class Account {
         
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
-        let _ = _internal_failStaleEphemeralOutgoingMessages(postbox: postbox).start()
+        let _ = _internal_failStaleEphemeralOutgoingMessages(postbox: postbox, accountPeerId: peerId).start()
         if !supplementary {
             self.pendingStoryManager = PendingStoryManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext, auxiliaryMethods: self.auxiliaryMethods)
         } else {
@@ -1484,7 +1483,7 @@ public class Account {
             
             if value {
                 Logger.shared.log("Account", "Became master")
-                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager, pendingReferences: strongSelf.viewTracker.pendingMessageReferences)
+                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager, pendingReferences: strongSelf.viewTracker.pendingMessageReferences, supportContext: strongSelf.supportContext, supplementary: strongSelf.supplementary)
                 
                 let resetPeerHoles = data.resetPeerHoles
                 strongSelf.resetPeerHoleManagement = { peerId in
@@ -1522,7 +1521,7 @@ public class Account {
                     pendingStoryCount: 0
                 )
             },
-            managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network, messageMediaPreuploadManager: self.messageMediaPreuploadManager, auxiliaryMethods: self.auxiliaryMethods) |> map { inputStates in
+            managedSynchronizeChatInputStateOperations(postbox: self.postbox, accountPeerId: self.peerId, network: self.network, messageMediaPreuploadManager: self.messageMediaPreuploadManager, auxiliaryMethods: self.auxiliaryMethods) |> map { inputStates in
                 return AccountRunningImportantTasks(
                     taskTypes: inputStates ? .other : [],
                     pendingMessageCount: 0,

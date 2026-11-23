@@ -162,6 +162,7 @@ public enum ChatListItemContent {
         public var displayAsTopicList: Bool
         public var tags: [Tag]
         public var customMessageListData: CustomMessageListData?
+        public var supportOccupation: String?
         /// The chat side list's "All Messages" row: the parent's own chat, previewing its latest message.
         public var isSideListAllThreadsItem: Bool
         
@@ -191,8 +192,10 @@ public enum ChatListItemContent {
             displayAsTopicList: Bool,
             tags: [Tag],
             customMessageListData: CustomMessageListData? = nil,
+            supportOccupation: String? = nil,
             isSideListAllThreadsItem: Bool = false
         ) {
+            self.supportOccupation = supportOccupation
             self.messages = messages
             self.peer = peer
             self.avatarPeer = avatarPeer
@@ -1151,6 +1154,28 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
 private let telegramCodeRegex = try? NSRegularExpression(pattern: "(?<=: )\\b\\d{5,8}\\b(?=\\.)", options: [])
 private let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,8}\\b", options: [])
 
+// A support search lists one chat in several rows; only the selected one is marked.
+private func chatListSupportRowIsSelected(_ item: ChatListItem) -> Bool {
+    if let item = item as? SupportNarrowSearchRecentPeerItem {
+        return item.isMarked
+    }
+    guard let highlight = item.interaction.supportSearchHighlight else {
+        return true
+    }
+    switch highlight {
+    case let .message(messageId):
+        if case let .peer(peerData) = item.content {
+            return peerData.messages.first?.id == messageId
+        }
+        return false
+    case .none:
+        if case let .peer(peerData) = item.content {
+            return peerData.messages.isEmpty
+        }
+        return false
+    }
+}
+
 public class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
         let topicTitleNode: TextNode
@@ -1968,12 +1993,20 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         item.interaction.activateChatPreview?(item, nil, self.contextContainer, nil, point)
     }
     
+    func supportActivatePreview() {
+        guard let item = self.item else {
+            return
+        }
+        item.interaction.activateChatPreview?(item, nil, self.contextContainer, nil, nil)
+    }
+    
     func setupItem(item: ChatListItem, synchronousLoads: Bool) {
         let previousItem = self.item
         self.item = item
         
         var storyState: ChatListItemContent.StoryState?
-        if case let .peer(peerData) = item.content {
+        if item.context.supportContext != nil {
+        } else if case let .peer(peerData) = item.content {
             storyState = peerData.storyState
         } else if case let .groupReference(groupReference) = item.content {
             storyState = groupReference.storyState
@@ -2305,7 +2338,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 reallyHighlighted = true
             }
             if let itemChatLocation = item.content.chatLocation {
-                if itemChatLocation == item.interaction.highlightedChatLocation?.location {
+                if itemChatLocation == item.interaction.highlightedChatLocation?.location, chatListSupportRowIsSelected(item) {
                     reallyHighlighted = true
                 }
             }
@@ -2344,10 +2377,27 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode.isHidden = self.separatorBaseIsHidden || self.reallyHighlighted || nextIsHighlighted
     }
     
+    private var supportRegularHighlightColor: UIColor?
+
+    private func supportUpdateOpenChatHighlightColor(highlightedBackgroundColor: UIColor? = nil) {
+        if let highlightedBackgroundColor {
+            self.supportRegularHighlightColor = highlightedBackgroundColor
+        }
+        guard let item = self.item, item.context.supportContext != nil, item.presentationData.theme.overallDarkAppearance, !item.interaction.isSideListMode, let regularColor = self.supportRegularHighlightColor else {
+            return
+        }
+        var isOpenChat = false
+        if let itemChatLocation = item.content.chatLocation, itemChatLocation == item.interaction.highlightedChatLocation?.location, chatListSupportRowIsSelected(item) {
+            isOpenChat = true
+        }
+        self.highlightedBackgroundNode.backgroundColor = isOpenChat ? item.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.3) : regularColor
+    }
+
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
         defer {
             self.updateSideListSeparatorVisibility()
         }
+        self.supportUpdateOpenChatHighlightColor()
         let highlightProgress: CGFloat = self.item?.interaction.highlightedChatLocation?.progress ?? 1.0
         self.updateSeparatorAlpha(transition: transition)
         
@@ -2449,6 +2499,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         let makeActionButtonTitleNodeLayout = TextNode.asyncLayout(self.actionButtonTitleNode)
         
         let currentItem = self.layoutParams?.0
+        let previousWidth = self.layoutParams?.6.width
         let currentChatListText = self.cachedChatListText
         let currentChatListSearchResult = self.cachedChatListSearchResult
         let currentChatListQuoteSearchResult = self.cachedChatListQuoteSearchResult
@@ -2488,6 +2539,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var topForumTopicItems: [EngineChatList.ForumTopicData] = []
             var autoremoveTimeout: Int32?
             var itemTags: [ChatListItemContent.Tag] = []
+            var supportOccupation: String?
             var isCommunity = false
             var displayCommunityAvatarBadge = false
             
@@ -2535,6 +2587,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let topForumTopicItemsValue = peerData.topForumTopicItems
                     
                     itemTags = peerData.tags
+                    supportOccupation = peerData.supportOccupation
                 
                     autoremoveTimeout = peerData.autoremoveTimeout
                 
@@ -3002,7 +3055,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         foldedRichTextPreview = nil
                     }
                 
-                    if inlineAuthorPrefix == nil, let mediaDraftContentType {
+                    if let supportOccupation {
+                        attributedText = NSAttributedString(string: supportOccupation, font: textFont, textColor: item.presentationData.theme.list.freeTextSuccessColor)
+                    } else if inlineAuthorPrefix == nil, let mediaDraftContentType {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         
@@ -3756,7 +3811,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             var isAccountPeer = false
             if case let .chatList(index) = item.index, index.messageIndex.id.peerId == item.context.account.peerId {
                 isAccountPeer = true
@@ -3787,7 +3841,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 if let color = emojiStatus.color {
                                     currentStatusIconParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                                 }
-                            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                            } else if peer.showsPremiumStar && item.context.premiumBadgesShown {
                                 currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                             }
                             
@@ -3818,7 +3872,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let color = emojiStatus.color {
                             currentStatusIconParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                         }
-                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    } else if peer.showsPremiumStar && item.context.premiumBadgesShown {
                         currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
                     
@@ -4445,7 +4499,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
                     if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
-                        let targetAvatarScale: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 54.0 / 17.0) / avatarFrame.width
+                        var targetAvatarSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 54.0 / 17.0)
+                        if item.context.supportContext != nil {
+                            targetAvatarSize = min(targetAvatarSize, 47.0)
+                        }
+                        let targetAvatarScale: CGFloat = targetAvatarSize / avatarFrame.width
                         avatarScale = targetAvatarScale * inlineNavigationLocation.progress + 1.0 * (1.0 - inlineNavigationLocation.progress)
                         
                         let targetAvatarScaleOffset: CGFloat = -(avatarFrame.width - avatarFrame.width * avatarScale) * 0.5
@@ -4519,7 +4577,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         itemPeerId = index.messageIndex.id.peerId
                     }
                     
-                    if let itemPeerId = itemPeerId, let inlineNavigationLocation = item.interaction.inlineNavigationLocation, inlineNavigationLocation.location.peerId == itemPeerId {
+                    if let itemPeerId = itemPeerId, let inlineNavigationLocation = item.interaction.inlineNavigationLocation, inlineNavigationLocation.location.peerId == itemPeerId, chatListSupportRowIsSelected(item) {
                         let inlineNavigationMarkLayer: SimpleLayer
                         var animateIn = false
                         if let current = strongSelf.inlineNavigationMarkLayer {
@@ -5130,6 +5188,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let currentTextSnapshotView {
                         transition.updatePosition(layer: currentTextSnapshotView.layer, position: textNodeFrame.origin)
                     }
+                    if item.context.supportContext != nil, let previousWidth, previousWidth != params.width {
+                        strongSelf.titleNode.recursivelyEnsureDisplaySynchronously(true)
+                        strongSelf.textNode.textNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
                     
                     if let trailingTextBadgeLayoutAndApply {
                         let badgeSize = CGSize(width: trailingTextBadgeLayoutAndApply.0.size.width + trailingTextBadgeInsets.left + trailingTextBadgeInsets.right, height: trailingTextBadgeLayoutAndApply.0.size.height + trailingTextBadgeInsets.top + trailingTextBadgeInsets.bottom - UIScreenPixel)
@@ -5686,6 +5748,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     // The side list's plate matches its search field.
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.interaction.isSideListMode ? item.presentationData.theme.rootController.navigationSearchBar.inputFillColor : highlightedBackgroundColor
+                    strongSelf.supportUpdateOpenChatHighlightColor(highlightedBackgroundColor: highlightedBackgroundColor)
                     let topNegativeInset: CGFloat = 0.0
                     var highlightedBackgroundFrame = CGRect(origin: CGPoint(x: params.leftInset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     if item.interaction.isSideListMode {

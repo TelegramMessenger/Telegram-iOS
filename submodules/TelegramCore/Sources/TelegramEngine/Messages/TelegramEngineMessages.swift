@@ -159,6 +159,9 @@ public extension TelegramEngine {
         }
 
         public func clearCloudDraftsInteractively() -> Signal<Void, NoError> {
+            if self.account.isSupportUser {
+                return .complete()
+            }
         	return _internal_clearCloudDraftsInteractively(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
         }
 
@@ -588,12 +591,53 @@ public extension TelegramEngine {
                 return (peer.flatMap(EnginePeer.init), messages.map(EngineMessage.init))
             }
         }
+        
+        public func supportChatListLoadState() -> Signal<SupportChatListLoadState, NoError> {
+            return _internal_supportChatListLoadState(account: self.account)
+        }
+
+        public func supportSwitchTarget(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+            return _internal_supportSwitchTarget(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        }
+
+        public func supportChatListNeighbour(peerId: EnginePeer.Id, chatListFilterId: Int32?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+            return _internal_supportChatListNeighbour(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, getFilterPredicate: getFilterPredicate)
+        }
+
+        public func supportMarkDone(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
+            return _internal_supportMarkDone(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        }
+
+        public func supportFetchSearchReadStates(peers: [EnginePeer]) -> Signal<Never, NoError> {
+            return _internal_supportFetchSearchReadStates(account: self.account, peers: peers)
+        }
+
+        public func addSupportLocalNotification(texts: [String]) -> Signal<Never, NoError> {
+            return _internal_addSupportLocalNotification(account: self.account, texts: texts)
+        }
+
+        public func supportUnreadDividerBoundary(peerId: EnginePeer.Id) -> Signal<Int32?, NoError> {
+            return _internal_supportUnreadDividerBoundary(account: self.account, peerId: peerId)
+        }
+
+        public func supportSendSwitchesChat() -> Signal<Bool, NoError> {
+            return _internal_supportSendSwitchesChat(account: self.account)
+        }
+
+        public func supportSwitchTargetUpdates(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: @escaping () -> [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer.Id?, NoError> {
+            return _internal_supportSwitchTargetUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        }
+
+        public func supportSwipeToNextChatUpdates(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: @escaping () -> [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportSwipeToNextChat, NoError> {
+            return _internal_supportSwipeToNextChatUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        }
 
         public func chatList(group: EngineChatList.Group, count: Int) -> Signal<EngineChatList, NoError> {
             let accountPeerId = self.account.peerId
+            let keepsChatsAtHoles = self.account.isSupportUser
             return self.account.postbox.tailChatListView(groupId: group._asGroup(), count: count, summaryComponents: ChatListEntrySummaryComponents())
             |> map { view -> EngineChatList in
-                return EngineChatList(view.0, accountPeerId: accountPeerId)
+                return EngineChatList(view.0, accountPeerId: accountPeerId, keepsChatsAtHoles: keepsChatsAtHoles)
             }
         }
 
@@ -1063,7 +1107,7 @@ public extension TelegramEngine {
         
         public func togglePeerUnreadMarkInteractively(peerId: EnginePeer.Id, threadId: Int64, setToValue: Bool?) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
-                _internal_toggleForumThreadUnreadMarkInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, threadId: threadId, setToValue: setToValue)
+                _internal_toggleForumThreadUnreadMarkInteractively(transaction: transaction, network: self.account.network, peerId: peerId, threadId: threadId, setToValue: setToValue)
             }
             |> ignoreValues
         }

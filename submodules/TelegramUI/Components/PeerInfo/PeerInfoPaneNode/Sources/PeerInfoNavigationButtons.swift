@@ -59,11 +59,15 @@ public struct PeerInfoNavigationButtonSet: Equatable {
 public struct PeerInfoNavigationFlags: Equatable {
     public var isEditing = false
     public var isSettings = false
+    /// A support account, whose Settings have no Edit and search from the tab bar.
+    public var isSupportSettings = false
     public var isMyProfile = false
     /// `peerInfoCanEdit(...)`.
     public var canEdit = false
     /// A channel the account may post stories to (and Premium allows it).
     public var channelCanPostStories = false
+    /// A support account, which posts no stories anywhere.
+    public var isStoryPostingDisabled = false
     /// The shared-media pane shown, if any.
     public var paneKey: PeerInfoPaneKey?
     /// Messages or stories selected, or a pane reordering.
@@ -90,12 +94,14 @@ public func peerInfoNavigationButtonSets(_ flags: PeerInfoNavigationFlags) -> (n
     }
     if flags.isSettings {
         normal.left.append(.qrCode)
-        normal.right.append(.search)
-        normal.right.append(.edit)
+        if !flags.isSupportSettings {
+            normal.right.append(.search)
+            normal.right.append(.edit)
+        }
     } else if flags.isMyProfile || flags.canEdit {
         normal.right.append(.edit)
     }
-    if flags.channelCanPostStories || flags.isMyProfile {
+    if (flags.channelCanPostStories || flags.isMyProfile) && !flags.isStoryPostingDisabled {
         normal.right.insert(.postStory, at: 0)
     }
     if flags.isSelectingOrReordering {

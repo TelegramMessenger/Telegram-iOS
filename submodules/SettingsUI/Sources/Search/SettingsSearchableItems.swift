@@ -153,218 +153,220 @@ private func profileSearchableItems(
             }
         )
     )
-    items.append(
-        SettingsSearchableItem(
-            id: "edit",
-            icon: icon,
-            isVisible: false,
-            present: { context, _, present in
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.openSettings(edit: true)
-                }
-            }
-        )
-    )
-    //TODO:highlight
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/first-name",
-            icon: icon,
-            isVisible: false,
-            present: { context, _, present in
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.openSettings(edit: true)
-                }
-            }
-        )
-    )
-    
-    //TODO:highlight
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/last-name",
-            icon: .profile,
-            isVisible: false,
-            present: { context, _, present in
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.openSettings(edit: true)
-                }
-            }
-        )
-    )
-    
-    //TODO:highlight
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/bio",
-            icon: icon,
-            isVisible: false,
-            present: { context, _, present in
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.openSettings(edit: true)
-                }
-            }
-        )
-    )
-    
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/change-number",
-            title: strings.Settings_PhoneNumber,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_PhoneNumber),
-            icon: icon,
-            breadcrumbs: [strings.EditProfile_Title],
-            present: { context, _, present in
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                |> deliverOnMainQueue).start(next: { peer in
-                    var phoneNumber: String?
-                    if case let .user(user) = peer {
-                        phoneNumber = user.phone
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "edit",
+                icon: icon,
+                isVisible: false,
+                present: { context, _, present in
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openSettings(edit: true)
                     }
-                    present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber ?? ""), proceedAction: {
-                        present(.push, ChangePhoneNumberController(context: context))
-                    }))
-                })
-            }
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/username",
-            title: strings.Settings_Username,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Username),
-            icon: icon,
-            breadcrumbs: [strings.EditProfile_Title],
-            present: { context, _, present in
-                let controller = usernameSetupController(context: context)
-                present(.modal, controller)
-            }
+        //TODO:highlight
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/first-name",
+                icon: icon,
+                isVisible: false,
+                present: { context, _, present in
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openSettings(edit: true)
+                    }
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/your-color",
-            title: strings.Settings_YourColor,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.EditProfile_Title],
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context)
-                present(.push, controller)
-            }
+        //TODO:highlight
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/last-name",
+                icon: .profile,
+                isVisible: false,
+                present: { context, _, present in
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openSettings(edit: true)
+                    }
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/channel",
-            title: strings.Settings_PersonalChannelItem,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.EditProfile_Title],
-            present: { context, _, present in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let _ = (context.engine.peers.adminedPublicChannels(scope: .forPersonalProfile)
-                |> deliverOnMainQueue).start(next: { personalChannels in
-                    let _ = (PeerSelectionScreen.initialData(context: context, channels: personalChannels)
-                    |> deliverOnMainQueue).start(next: { initialData in
-                        present(.push, PeerSelectionScreen(context: context, initialData: initialData, updatedPresentationData: nil, completion: { channel in
-                            if initialData.channelId == channel?.peer.id {
-                                return
-                            }
-                            
-                            let toastText: String
-                            var mappedChannel: TelegramPersonalChannel?
-                            if let channel {
-                                mappedChannel = TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)
-                                if initialData.channelId != nil {
-                                    toastText = presentationData.strings.Settings_PersonalChannelUpdatedToast
-                                } else {
-                                    toastText = presentationData.strings.Settings_PersonalChannelAddedToast
-                                }
-                            } else {
-                                toastText = presentationData.strings.Settings_PersonalChannelRemovedToast
-                            }
-                            let _ = context.engine.accountData.updatePersonalChannel(personalChannel: mappedChannel).startStandalone()
-                            
-                            present(.immediate, UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: toastText, cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+        //TODO:highlight
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/bio",
+                icon: icon,
+                isVisible: false,
+                present: { context, _, present in
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openSettings(edit: true)
+                    }
+                }
+            )
+        )
+    
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/change-number",
+                title: strings.Settings_PhoneNumber,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_PhoneNumber),
+                icon: icon,
+                breadcrumbs: [strings.EditProfile_Title],
+                present: { context, _, present in
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        var phoneNumber: String?
+                        if case let .user(user) = peer {
+                            phoneNumber = user.phone
+                        }
+                        present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber ?? ""), proceedAction: {
+                            present(.push, ChangePhoneNumberController(context: context))
                         }))
                     })
-                })
-            }
+                }
+            )
         )
-    )
-    
-    items.append(
-        SettingsSearchableItem(
-            id: "edit/birthday",
-            title: strings.Settings_Birthday,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.EditProfile_Title],
-            present: { context, _, present in
-                presentSetupBirthday(context: context, present: present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/username",
+                title: strings.Settings_Username,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Username),
+                icon: icon,
+                breadcrumbs: [strings.EditProfile_Title],
+                present: { context, _, present in
+                    let controller = usernameSetupController(context: context)
+                    present(.modal, controller)
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "emoji-status",
-            icon: icon,
-            isVisible: false,
-            present: { context, _, present in
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.openSettings(edit: false)
-                    Queue.mainQueue().justDispatch {
-                        if let settingsScreen = rootController.getSettingsController() as? PeerInfoScreen {
-                            settingsScreen.openEmojiStatusSetup()
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/your-color",
+                title: strings.Settings_YourColor,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.EditProfile_Title],
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context)
+                    present(.push, controller)
+                }
+            )
+        )
+    
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/channel",
+                title: strings.Settings_PersonalChannelItem,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.EditProfile_Title],
+                present: { context, _, present in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let _ = (context.engine.peers.adminedPublicChannels(scope: .forPersonalProfile)
+                    |> deliverOnMainQueue).start(next: { personalChannels in
+                        let _ = (PeerSelectionScreen.initialData(context: context, channels: personalChannels)
+                        |> deliverOnMainQueue).start(next: { initialData in
+                            present(.push, PeerSelectionScreen(context: context, initialData: initialData, updatedPresentationData: nil, completion: { channel in
+                                if initialData.channelId == channel?.peer.id {
+                                    return
+                                }
+                            
+                                let toastText: String
+                                var mappedChannel: TelegramPersonalChannel?
+                                if let channel {
+                                    mappedChannel = TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)
+                                    if initialData.channelId != nil {
+                                        toastText = presentationData.strings.Settings_PersonalChannelUpdatedToast
+                                    } else {
+                                        toastText = presentationData.strings.Settings_PersonalChannelAddedToast
+                                    }
+                                } else {
+                                    toastText = presentationData.strings.Settings_PersonalChannelRemovedToast
+                                }
+                                let _ = context.engine.accountData.updatePersonalChannel(personalChannel: mappedChannel).startStandalone()
+                            
+                                present(.immediate, UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: toastText, cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+                            }))
+                        })
+                    })
+                }
+            )
+        )
+    
+        items.append(
+            SettingsSearchableItem(
+                id: "edit/birthday",
+                title: strings.Settings_Birthday,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.EditProfile_Title],
+                present: { context, _, present in
+                    presentSetupBirthday(context: context, present: present)
+                }
+            )
+        )
+    
+        items.append(
+            SettingsSearchableItem(
+                id: "emoji-status",
+                icon: icon,
+                isVisible: false,
+                present: { context, _, present in
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openSettings(edit: false)
+                        Queue.mainQueue().justDispatch {
+                            if let settingsScreen = rootController.getSettingsController() as? PeerInfoScreen {
+                                settingsScreen.openEmojiStatusSetup()
+                            }
                         }
                     }
                 }
-            }
+            )
         )
-    )
 
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-photo",
-            icon: icon,
-            isVisible: false,
-            present: { context, _, present in
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.openPhotoSetup(completedWithUploadingImage: { [weak rootController] _, _ in
-                        rootController?.openSettings(edit: false)
-                        return nil
-                    })
-                }
-            }
-        )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-photo/use-emoji",
-            icon: icon,
-            isVisible: false,
-            present: { context, _, present in
-                let controller = AvatarEditorScreen(context: context, inputData: AvatarEditorScreen.inputData(context: context, isGroup: false), peerType: .user, markup: nil)
-                controller.imageCompletion = { image, commit in
-                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let settingsController = rootController.getSettingsController() as? PeerInfoScreen {
-                        settingsController.updateProfilePhoto(image)
-                        commit()
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-photo",
+                icon: icon,
+                isVisible: false,
+                present: { context, _, present in
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openPhotoSetup(completedWithUploadingImage: { [weak rootController] _, _ in
+                            rootController?.openSettings(edit: false)
+                            return nil
+                        })
                     }
                 }
-                controller.videoCompletion = { image, url, values, markup, commit in
-                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let settingsController = rootController.getSettingsController() as? PeerInfoScreen {
-                        settingsController.updateProfileVideo(image, video: nil, values: nil, markup: markup)
-                        commit()
-                    }
-                }
-                present(.push, controller)
-            }
+            )
         )
-    )
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-photo/use-emoji",
+                icon: icon,
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = AvatarEditorScreen(context: context, inputData: AvatarEditorScreen.inputData(context: context, isGroup: false), peerType: .user, markup: nil)
+                    controller.imageCompletion = { image, commit in
+                        if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let settingsController = rootController.getSettingsController() as? PeerInfoScreen {
+                            settingsController.updateProfilePhoto(image)
+                            commit()
+                        }
+                    }
+                    controller.videoCompletion = { image, url, values, markup, commit in
+                        if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let settingsController = rootController.getSettingsController() as? PeerInfoScreen {
+                            settingsController.updateProfileVideo(image, video: nil, values: nil, markup: markup)
+                            commit()
+                        }
+                    }
+                    present(.push, controller)
+                }
+            )
+        )
+    }
     
     if canAddAccount {
         items.append(
@@ -403,76 +405,78 @@ private func profileSearchableItems(
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context)
-                present(.push, controller)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/profile",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/profile",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/profile/add-icons",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileAddIcons)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/profile/add-icons",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileAddIcons)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/profile/use-gift",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileUseGift)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/profile/use-gift",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .profileUseGift)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/name",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .name)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/name",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .name)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/name/add-icons",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameAddIcons)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/name/add-icons",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameAddIcons)
+                    present(.push, controller)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "profile-color/name/use-gift",
-            isVisible: false,
-            present: { context, _, present in
-                let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameUseGift)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "profile-color/name/use-gift",
+                isVisible: false,
+                present: { context, _, present in
+                    let controller = UserAppearanceScreen(context: context, focusOnItemTag: .nameUseGift)
+                    present(.push, controller)
+                }
+            )
         )
-    )
+    }
     
     return items
 }
@@ -766,156 +770,158 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
             }
         )
     )
-    items.append(
-        SettingsSearchableItem(
-            id: "business/do-not-hide-ads",
-            title: strings.Business_DontHideAds,
-            alternate: [],
-            icon: .business,
-            breadcrumbs: [strings.Settings_Business],
-            present: { context, _, present in
-                present(.push, PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, focusOnItemTag: .doNotHideAds))
-            }
-        )
-    )
-    
-    items.append(
-        SettingsSearchableItem(
-            id: "stars",
-            title: strings.Settings_Stars,
-            alternate: [],
-            icon: .stars,
-            breadcrumbs: [],
-            present: { context, _, present in
-                guard let starsContext = context.starsContext else {
-                    return
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "business/do-not-hide-ads",
+                title: strings.Business_DontHideAds,
+                alternate: [],
+                icon: .business,
+                breadcrumbs: [strings.Settings_Business],
+                present: { context, _, present in
+                    present(.push, PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, focusOnItemTag: .doNotHideAds))
                 }
-                let controller = context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext)
-                present(.push, controller)
-            }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "stars/top-up",
-            icon: .stars,
-            isVisible: false,
-            present: { context, navigationController, present in
-                openResolvedUrl(.starsTopup(amount: nil, purpose: nil), navigationController, present)
-            }
-        )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "stars/stats",
-            icon: .stars,
-            isVisible: false,
-            present: { context, navigationController, present in
-                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: context.account.peerId, ton: false)
-                let controller = context.sharedContext.makeStarsStatisticsScreen(context: context, peerId: context.account.peerId, revenueContext: starsRevenueStatsContext)
-                present(.push, controller)
-            }
-        )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "stars/gift",
-            icon: .stars,
-            isVisible: false,
-            present: { context, navigationController, present in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                
-                let _ = combineLatest(queue: Queue.mainQueue(),
-                    context.engine.payments.starsTopUpOptions(),
-                    context.account.stateManager.contactBirthdays |> take(1)
-                ).start(next: { [weak navigationController] options, birthdays in
+        items.append(
+            SettingsSearchableItem(
+                id: "stars",
+                title: strings.Settings_Stars,
+                alternate: [],
+                icon: .stars,
+                breadcrumbs: [],
+                present: { context, _, present in
                     guard let starsContext = context.starsContext else {
                         return
                     }
-                    let controller = context.sharedContext.makeStarsGiftController(context: context, birthdays: birthdays, completion: { [weak navigationController] peerIds in
-                        guard let peerId = peerIds.first else {
-                            return
-                        }
-                        let purchaseController = context.sharedContext.makeStarsPurchaseScreen(
-                            context: context,
-                            starsContext: starsContext,
-                            options: options,
-                            purpose: .gift(peerId: peerId),
-                            targetPeerId: nil,
-                            customTheme: nil,
-                            completion: { [weak navigationController] stars in
-                                if let navigationController {
-                                    var controllers = navigationController.viewControllers
-                                    controllers = controllers.filter { !($0 is ContactSelectionController) }
-                                    navigationController.setViewControllers(controllers, animated: true)
-                                }
-                                
-                                Queue.mainQueue().after(2.0) {
-                                    let resultController = UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .universal(
-                                            animation: "star_reaction_appear",
-                                            scale: 0.066,
-                                            colors: [:],
-                                            title: nil,
-                                            text: presentationData.strings.Stars_Intro_StarsSent(Int32(stars)),
-                                            customUndoText: presentationData.strings.Stars_Intro_StarsSent_ViewChat,
-                                            timeout: nil
-                                        ),
-                                        elevatedLayout: false,
-                                        action: { [weak navigationController] action in
-                                            if case .undo = action, let navigationController {
-                                                let _ = (context.engine.data.get(
-                                                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-                                                )
-                                                |> deliverOnMainQueue).start(next: { peer in
-                                                    guard let peer else {
-                                                        return
-                                                    }
-                                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
-                                                })
-                                            }
-                                            return true
-                                        }
-                                    )
-                                    present(.immediate, resultController)
-                                }
-                            }
-                        )
-                        present(.push, purchaseController)
-                    })
+                    let controller = context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext)
                     present(.push, controller)
-                })
-            }
+                }
+            )
         )
-    )
     
-    var canJoinRefProgram = false
-    if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
-        if let value = value as? Double {
-            canJoinRefProgram = value != 0.0
-        } else if let value = value as? Bool {
-            canJoinRefProgram = value
-        }
-    }
-    if canJoinRefProgram {
         items.append(
             SettingsSearchableItem(
-                id: "stars/earn",
-                title: strings.Monetization_EarnStarsInfo_Title,
-                alternate: [],
+                id: "stars/top-up",
                 icon: .stars,
-                breadcrumbs: [strings.Settings_Stars],
+                isVisible: false,
                 present: { context, navigationController, present in
-                    let _ = (context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: context, peerId: context.account.peerId, mode: .connectedPrograms)
-                    |> deliverOnMainQueue).startStandalone(next: { initialData in
-                        let controller = context.sharedContext.makeAffiliateProgramSetupScreen(context: context, initialData: initialData)
+                    openResolvedUrl(.starsTopup(amount: nil, purpose: nil), navigationController, present)
+                }
+            )
+        )
+        items.append(
+            SettingsSearchableItem(
+                id: "stars/stats",
+                icon: .stars,
+                isVisible: false,
+                present: { context, navigationController, present in
+                    let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: context.account.peerId, ton: false)
+                    let controller = context.sharedContext.makeStarsStatisticsScreen(context: context, peerId: context.account.peerId, revenueContext: starsRevenueStatsContext)
+                    present(.push, controller)
+                }
+            )
+        )
+        items.append(
+            SettingsSearchableItem(
+                id: "stars/gift",
+                icon: .stars,
+                isVisible: false,
+                present: { context, navigationController, present in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                    let _ = combineLatest(queue: Queue.mainQueue(),
+                        context.engine.payments.starsTopUpOptions(),
+                        context.account.stateManager.contactBirthdays |> take(1)
+                    ).start(next: { [weak navigationController] options, birthdays in
+                        guard let starsContext = context.starsContext else {
+                            return
+                        }
+                        let controller = context.sharedContext.makeStarsGiftController(context: context, birthdays: birthdays, completion: { [weak navigationController] peerIds in
+                            guard let peerId = peerIds.first else {
+                                return
+                            }
+                            let purchaseController = context.sharedContext.makeStarsPurchaseScreen(
+                                context: context,
+                                starsContext: starsContext,
+                                options: options,
+                                purpose: .gift(peerId: peerId),
+                                targetPeerId: nil,
+                                customTheme: nil,
+                                completion: { [weak navigationController] stars in
+                                    if let navigationController {
+                                        var controllers = navigationController.viewControllers
+                                        controllers = controllers.filter { !($0 is ContactSelectionController) }
+                                        navigationController.setViewControllers(controllers, animated: true)
+                                    }
+                                
+                                    Queue.mainQueue().after(2.0) {
+                                        let resultController = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .universal(
+                                                animation: "star_reaction_appear",
+                                                scale: 0.066,
+                                                colors: [:],
+                                                title: nil,
+                                                text: presentationData.strings.Stars_Intro_StarsSent(Int32(stars)),
+                                                customUndoText: presentationData.strings.Stars_Intro_StarsSent_ViewChat,
+                                                timeout: nil
+                                            ),
+                                            elevatedLayout: false,
+                                            action: { [weak navigationController] action in
+                                                if case .undo = action, let navigationController {
+                                                    let _ = (context.engine.data.get(
+                                                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                                                    )
+                                                    |> deliverOnMainQueue).start(next: { peer in
+                                                        guard let peer else {
+                                                            return
+                                                        }
+                                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                                                    })
+                                                }
+                                                return true
+                                            }
+                                        )
+                                        present(.immediate, resultController)
+                                    }
+                                }
+                            )
+                            present(.push, purchaseController)
+                        })
                         present(.push, controller)
                     })
                 }
             )
         )
+    
+        var canJoinRefProgram = false
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
+            if let value = value as? Double {
+                canJoinRefProgram = value != 0.0
+            } else if let value = value as? Bool {
+                canJoinRefProgram = value
+            }
+        }
+        if canJoinRefProgram {
+            items.append(
+                SettingsSearchableItem(
+                    id: "stars/earn",
+                    title: strings.Monetization_EarnStarsInfo_Title,
+                    alternate: [],
+                    icon: .stars,
+                    breadcrumbs: [strings.Settings_Stars],
+                    present: { context, navigationController, present in
+                        let _ = (context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: context, peerId: context.account.peerId, mode: .connectedPrograms)
+                        |> deliverOnMainQueue).startStandalone(next: { initialData in
+                            let controller = context.sharedContext.makeAffiliateProgramSetupScreen(context: context, initialData: initialData)
+                            present(.push, controller)
+                        })
+                    }
+                )
+            )
+        }
     }
     
     items.append(
@@ -935,32 +941,34 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "send-gift",
-            title: strings.Settings_SendGift,
-            alternate: [],
-            icon: .gift,
-            breadcrumbs: [],
-            present: { context, navigationController, present in
-                openResolvedUrl(.sendGift(peerId: nil), navigationController, present)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "send-gift",
+                title: strings.Settings_SendGift,
+                alternate: [],
+                icon: .gift,
+                breadcrumbs: [],
+                present: { context, navigationController, present in
+                    openResolvedUrl(.sendGift(peerId: nil), navigationController, present)
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "send-gift/self",
-            title: strings.Settings_SendGift,
-            alternate: [],
-            icon: .gift,
-            breadcrumbs: [],
-            isVisible: false,
-            present: { context, navigationController, present in
-                openResolvedUrl(.sendGift(peerId: context.account.peerId), navigationController, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "send-gift/self",
+                title: strings.Settings_SendGift,
+                alternate: [],
+                icon: .gift,
+                breadcrumbs: [],
+                isVisible: false,
+                present: { context, navigationController, present in
+                    openResolvedUrl(.sendGift(peerId: context.account.peerId), navigationController, present)
+                }
+            )
         )
-    )
+    }
    
     return items
 }
@@ -1016,142 +1024,144 @@ private func myProfileSearchableItems(context: AccountContext) -> [SettingsSearc
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile",
-            title: strings.Settings_MyProfile,
-            alternate: [],
-            icon: .myProfile,
-            breadcrumbs: [],
-            present: { context, _, present in
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                |> deliverOnMainQueue).start(next: { peer in
-                    guard let peer = peer else {
-                        return
-                    }
-                    let controller = context.sharedContext.makePeerInfoController(
-                        context: context,
-                        updatedPresentationData: nil,
-                        peer: peer,
-                        mode: .myProfile,
-                        avatarInitiallyExpanded: false,
-                        fromChat: false,
-                        requestsContext: nil
-                    )
-                    present(.push, controller)
-                })
-            }
-        )
-    )
-
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile/edit",
-            icon: .myProfile,
-            isVisible: false,
-            present: { context, _, present in
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                |> deliverOnMainQueue).start(next: { peer in
-                    guard let peer = peer else {
-                        return
-                    }
-                    let controller = context.sharedContext.makePeerInfoController(
-                        context: context,
-                        updatedPresentationData: nil,
-                        peer: peer,
-                        mode: .myProfile,
-                        avatarInitiallyExpanded: false,
-                        fromChat: false,
-                        requestsContext: nil
-                    )
-                    present(.push, controller)
-
-                    Queue.mainQueue().justDispatch {
-                        if let controller = controller as? PeerInfoScreen {
-                            controller.activateEdit()
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile",
+                title: strings.Settings_MyProfile,
+                alternate: [],
+                icon: .myProfile,
+                breadcrumbs: [],
+                present: { context, _, present in
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
                         }
-                    }
-                })
-            }
+                        let controller = context.sharedContext.makePeerInfoController(
+                            context: context,
+                            updatedPresentationData: nil,
+                            peer: peer,
+                            mode: .myProfile,
+                            avatarInitiallyExpanded: false,
+                            fromChat: false,
+                            requestsContext: nil
+                        )
+                        present(.push, controller)
+                    })
+                }
+            )
         )
-    )
+
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile/edit",
+                icon: .myProfile,
+                isVisible: false,
+                present: { context, _, present in
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        let controller = context.sharedContext.makePeerInfoController(
+                            context: context,
+                            updatedPresentationData: nil,
+                            peer: peer,
+                            mode: .myProfile,
+                            avatarInitiallyExpanded: false,
+                            fromChat: false,
+                            requestsContext: nil
+                        )
+                        present(.push, controller)
+
+                        Queue.mainQueue().justDispatch {
+                            if let controller = controller as? PeerInfoScreen {
+                                controller.activateEdit()
+                            }
+                        }
+                    })
+                }
+            )
+        )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile/gifts",
-            title: strings.Gift_Options_Gift_Filter_MyGifts,
-            alternate: [],
-            icon: .myProfile,
-            breadcrumbs: [strings.Settings_MyProfile],
-            present: { context, _, present in
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                |> deliverOnMainQueue).start(next: { peer in
-                    guard let peer = peer else {
-                        return
-                    }
-                    let controller = context.sharedContext.makePeerInfoController(
-                        context: context,
-                        updatedPresentationData: nil,
-                        peer: peer,
-                        mode: .myProfileGifts,
-                        avatarInitiallyExpanded: false,
-                        fromChat: false,
-                        requestsContext: nil
-                    )
-                    present(.push, controller)
-                })
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile/gifts",
+                title: strings.Gift_Options_Gift_Filter_MyGifts,
+                alternate: [],
+                icon: .myProfile,
+                breadcrumbs: [strings.Settings_MyProfile],
+                present: { context, _, present in
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        let controller = context.sharedContext.makePeerInfoController(
+                            context: context,
+                            updatedPresentationData: nil,
+                            peer: peer,
+                            mode: .myProfileGifts,
+                            avatarInitiallyExpanded: false,
+                            fromChat: false,
+                            requestsContext: nil
+                        )
+                        present(.push, controller)
+                    })
+                }
+            )
         )
-    )
         
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile/posts",
-            title: strings.Settings_MyStories,
-            alternate: [],
-            icon: .stories,
-            breadcrumbs: [strings.Settings_MyProfile],
-            present: { context, _, present in
-                present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile/posts",
+                title: strings.Settings_MyStories,
+                alternate: [],
+                icon: .stories,
+                breadcrumbs: [strings.Settings_MyProfile],
+                present: { context, _, present in
+                    present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile/posts/all-stories",
-            icon: .stories,
-            isVisible: false,
-            present: { context, _, present in
-                present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile/posts/all-stories",
+                icon: .stories,
+                isVisible: false,
+                present: { context, _, present in
+                    present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
+                }
+            )
         )
-    )
     
-    //TODO:fix
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile/posts/add-album",
-            icon: .stories,
-            isVisible: false,
-            present: { context, _, present in
-                present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
-            }
+        //TODO:fix
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile/posts/add-album",
+                icon: .stories,
+                isVisible: false,
+                present: { context, _, present in
+                    present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
+                }
+            )
         )
-    )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "my-profile/archived-posts",
-            title: strings.Settings_StoriesArchive,
-            alternate: [],
-            icon: .stories,
-            breadcrumbs: [strings.Settings_MyProfile],
-            present: { context, _, present in
-                present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .archive))
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "my-profile/archived-posts",
+                title: strings.Settings_StoriesArchive,
+                alternate: [],
+                icon: .stories,
+                breadcrumbs: [strings.Settings_MyProfile],
+                present: { context, _, present in
+                    present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .archive))
+                }
+            )
         )
-    )
+    }
    
     return items
 }
@@ -1622,7 +1632,7 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         present(.push, notificationsPeerCategoryController(context: context, category: category, mode: mode, updatedMode: { _ in }, focusOnItemTag: itemTag))
     }
     
-    return [
+    var items: [SettingsSearchableItem] = [
         SettingsSearchableItem(
             id: "notifications",
             title: strings.Settings_NotificationsAndSounds,
@@ -1981,37 +1991,43 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
             present: { context, _, present in
                 present(.push, reactionNotificationSettingsController(context: context, focusOnItemTag: .sound))
             }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/in-app-sounds",
-            title: strings.Notifications_InAppNotificationsSounds,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsSound),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .inAppSounds)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/in-app-vibrate",
-            title: strings.Notifications_InAppNotificationsVibrate,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsVibrate),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .inAppVibrate)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/in-app-preview",
-            title: strings.Notifications_InAppNotificationsPreview,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsPreview),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .inAppPreviews)
-            }
-        ),
+        )
+    ]
+    if context.supportContext == nil {
+        items.append(contentsOf: [
+            SettingsSearchableItem(
+                id: "notifications/in-app-sounds",
+                title: strings.Notifications_InAppNotificationsSounds,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsSound),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .inAppSounds)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "notifications/in-app-vibrate",
+                title: strings.Notifications_InAppNotificationsVibrate,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsVibrate),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .inAppVibrate)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "notifications/in-app-preview",
+                title: strings.Notifications_InAppNotificationsPreview,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsPreview),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .inAppPreviews)
+                }
+            )
+        ])
+    }
+    items.append(contentsOf: [
         SettingsSearchableItem(
             id: "notifications/lock-screen-names",
             title: strings.Notifications_DisplayNamesOnLockScreen,
@@ -2041,17 +2057,23 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
             present: { context, _, present in
                 presentNotificationSettings(context, present, .unreadCountCategory)
             }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/new-contacts",
-            title: strings.NotificationSettings_ContactJoined,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ContactJoined),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .joinedNotifications)
-            }
-        ),
+        )
+    ])
+    if context.supportContext == nil {
+        items.append(contentsOf: [
+            SettingsSearchableItem(
+                id: "notifications/new-contacts",
+                title: strings.NotificationSettings_ContactJoined,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ContactJoined),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .joinedNotifications)
+                }
+            )
+        ])
+    }
+    items.append(contentsOf: [
         SettingsSearchableItem(
             id: "notifications/reset",
             title: strings.Notifications_ResetAllNotifications,
@@ -2062,7 +2084,8 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
                 presentNotificationSettings(context, present, .reset)
             }
         )
-    ]
+    ])
+    return items
 }
 
 private func privacySearchableItems(context: AccountContext, privacySettings: AccountPrivacySettings?, activeSessionsContext: ActiveSessionsContext?, webSessionsContext: WebSessionsContext?) -> [SettingsSearchableItem] {
@@ -2621,62 +2644,64 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts",
-            title: strings.Privacy_Gifts,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings],
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, nil, present)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts",
+                title: strings.Privacy_Gifts,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings],
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, nil, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/show-icon",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsShowButton, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/show-icon",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsShowButton, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/never",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .neverAllow, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/never",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .neverAllow, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/always",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .alwaysAllow, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/always",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .alwaysAllow, present)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/gifts/accepted-types",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
-            isVisible: false,
-            present: { context, _, present in
-                presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsAcceptedTypes, present)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/gifts/accepted-types",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.Privacy_Gifts],
+                isVisible: false,
+                present: { context, _, present in
+                    presentSelectivePrivacySettings(context, .giftsAutoSave, .giftsAcceptedTypes, present)
+                }
+            )
         )
-    )
+    }
     
     items.append(
         SettingsSearchableItem(
@@ -2921,39 +2946,41 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/passkey",
-            title: strings.PrivacySettings_Passkey,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings],
-            present: { context, _, present in
-                Task { @MainActor in
-                    let initialPasskeysData = await (context.engine.auth.passkeysData() |> take(1)).get()
-                    let passkeysScreen = PasskeysScreen(context: context, displaySkip: false, initialPasskeysData: initialPasskeysData, passkeysDataUpdated: { _ in
-                    }, completion: {}, cancel: {})
-                    present(.push, passkeysScreen)
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/passkey",
+                title: strings.PrivacySettings_Passkey,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings],
+                present: { context, _, present in
+                    Task { @MainActor in
+                        let initialPasskeysData = await (context.engine.auth.passkeysData() |> take(1)).get()
+                        let passkeysScreen = PasskeysScreen(context: context, displaySkip: false, initialPasskeysData: initialPasskeysData, passkeysDataUpdated: { _ in
+                        }, completion: {}, cancel: {})
+                        present(.push, passkeysScreen)
+                    }
                 }
-            }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/passkey/create",
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_Passkey],
-            isVisible: false,
-            present: { context, _, present in
-                Task { @MainActor in
-                    let initialPasskeysData = await (context.engine.auth.passkeysData() |> take(1)).get()
-                    let passkeysScreen = PasskeysScreen(context: context, displaySkip: false, initialPasskeysData: initialPasskeysData, forceCreate: true, passkeysDataUpdated: { _ in
-                    }, completion: {}, cancel: {})
-                    present(.push, passkeysScreen)
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/passkey/create",
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_Passkey],
+                isVisible: false,
+                present: { context, _, present in
+                    Task { @MainActor in
+                        let initialPasskeysData = await (context.engine.auth.passkeysData() |> take(1)).get()
+                        let passkeysScreen = PasskeysScreen(context: context, displaySkip: false, initialPasskeysData: initialPasskeysData, forceCreate: true, passkeysDataUpdated: { _ in
+                        }, completion: {}, cancel: {})
+                        present(.push, passkeysScreen)
+                    }
                 }
-            }
+            )
         )
-    )
+    }
     
     items.append(
         SettingsSearchableItem(
@@ -3074,18 +3101,20 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         )
     )
     
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings",
-            title: strings.PrivacySettings_DataSettings,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_Title),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, nil)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings",
+                title: strings.PrivacySettings_DataSettings,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_Title),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, nil)
+                }
+            )
         )
-    )
+    }
     items.append(
         SettingsSearchableItem(
             id: "privacy/open-links",
@@ -3098,91 +3127,93 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             }
         )
     )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/delete-synced",
-            title: strings.Privacy_ContactsReset,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_ContactsReset),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, .deleteSynced)
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/delete-synced",
+                title: strings.Privacy_ContactsReset,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_ContactsReset),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, .deleteSynced)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/sync-contacts",
-            title: strings.Privacy_ContactsSync,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_ContactsSync),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, .syncContacts)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/sync-contacts",
+                title: strings.Privacy_ContactsSync,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_ContactsSync),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, .syncContacts)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/suggest-contacts",
-            title: strings.Privacy_TopPeers,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_TopPeers),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, .suggestContacts)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/suggest-contacts",
+                title: strings.Privacy_TopPeers,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_TopPeers),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, .suggestContacts)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/delete-cloud-drafts",
-            title: strings.Privacy_DeleteDrafts,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_DeleteDrafts),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, .deleteCloudDrafts)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/delete-cloud-drafts",
+                title: strings.Privacy_DeleteDrafts,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_DeleteDrafts),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, .deleteCloudDrafts)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/clear-payment-info",
-            title: strings.Privacy_PaymentsClearInfo,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_ClearPaymentsInfo),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, .clearPaymentInfo)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/clear-payment-info",
+                title: strings.Privacy_PaymentsClearInfo,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_ClearPaymentsInfo),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, .clearPaymentInfo)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/link-previews",
-            title: strings.Privacy_SecretChatsLinkPreviews,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_SecretChatLinkPreview),
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings, strings.Privacy_SecretChatsTitle.capitalized],
-            present: { context, _, present in
-                presentDataPrivacySettings(context, present, .linkPreviews)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/link-previews",
+                title: strings.Privacy_SecretChatsLinkPreviews,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_SecretChatLinkPreview),
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings, strings.Privacy_SecretChatsTitle.capitalized],
+                present: { context, _, present in
+                    presentDataPrivacySettings(context, present, .linkPreviews)
+                }
+            )
         )
-    )
-    items.append(
-        SettingsSearchableItem(
-            id: "privacy/data-settings/bot-settings",
-            title: strings.Settings_BotListSettings,
-            alternate: [],
-            icon: icon,
-            breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
-            present: { context, _, present in
-                let controller = context.sharedContext.makeBotSettingsScreen(context: context, peerId: nil)
-                present(.push, controller)
-            }
+        items.append(
+            SettingsSearchableItem(
+                id: "privacy/data-settings/bot-settings",
+                title: strings.Settings_BotListSettings,
+                alternate: [],
+                icon: icon,
+                breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings],
+                present: { context, _, present in
+                    let controller = context.sharedContext.makeBotSettingsScreen(context: context, peerId: nil)
+                    present(.push, controller)
+                }
+            )
         )
-    )
+    }
     return items
 }
 
@@ -3242,7 +3273,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         present(.push, autodownloadMediaConnectionTypeController(context: context, connectionType: connectionType, focusOnItemTag: itemTag))
     }
     
-    return [
+    var items: [SettingsSearchableItem] = [
         SettingsSearchableItem(
             id: "data",
             title: strings.Settings_ChatSettings,
@@ -3334,145 +3365,151 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             present: { context, _, present in
                 presentDataUsage(context, present, .reset)
             }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile",
-            title: strings.ChatSettings_AutoDownloadUsingCellular,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular),
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, nil)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/enable",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .master)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/usage",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .usage)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/photos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .photos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/stories",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .stories)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/videos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .videos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/files",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .files)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi",
-            title: strings.ChatSettings_AutoDownloadUsingWiFi,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingWifi),
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, nil)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/enable",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .master)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/usage",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .usage)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/photos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .photos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/stories",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .stories)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/videos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .videos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/files",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .files)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/reset",
-            title: strings.ChatSettings_AutoDownloadReset,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset),
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings],
-            present: { context, _, present in
-                presentDataSettings(context, present, .automaticDownloadReset)
-            }
-        ),
+        )
+    ]
+    if context.supportContext == nil {
+        items.append(contentsOf: [
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile",
+                title: strings.ChatSettings_AutoDownloadUsingCellular,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular),
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, nil)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/enable",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .master)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/usage",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .usage)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/photos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .photos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/stories",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .stories)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/videos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .videos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/files",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .files)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi",
+                title: strings.ChatSettings_AutoDownloadUsingWiFi,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingWifi),
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, nil)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/enable",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .master)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/usage",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .usage)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/photos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .photos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/stories",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .stories)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/videos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .videos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/files",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .files)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/reset",
+                title: strings.ChatSettings_AutoDownloadReset,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset),
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings],
+                present: { context, _, present in
+                    presentDataSettings(context, present, .automaticDownloadReset)
+                }
+            )
+        ])
+    }
+    items.append(contentsOf: [
         SettingsSearchableItem(
             id: "data/save-to-photos/chats",
             title: strings.Notifications_PrivateChats,
@@ -3672,7 +3709,8 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
                 present(.push, intentsSettingsController(context: context, focusOnItemTag: .reset))
             }
         )
-    ]
+    ])
+    return items
 }
 
 private func proxySearchableItems(context: AccountContext, servers: [ProxyServerSettings]) -> [SettingsSearchableItem] {
@@ -4179,23 +4217,25 @@ private func helpSearchableItems(context: AccountContext) -> [SettingsSearchable
     
     var items: [SettingsSearchableItem] = []
     
-    items.append(
-        SettingsSearchableItem(
-            id: "ask-question",
-            title: strings.Settings_Support,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Support),
-            icon: .support,
-            breadcrumbs: [],
-            present: { context, _, present in
-                let _ = (context.engine.peers.supportPeerId()
-                |> deliverOnMainQueue).start(next: { peerId in
-                    if let peerId = peerId {
-                        present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
-                    }
-                })
-            }
+    if context.supportContext == nil {
+        items.append(
+            SettingsSearchableItem(
+                id: "ask-question",
+                title: strings.Settings_Support,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Support),
+                icon: .support,
+                breadcrumbs: [],
+                present: { context, _, present in
+                    let _ = (context.engine.peers.supportPeerId()
+                    |> deliverOnMainQueue).start(next: { peerId in
+                        if let peerId = peerId {
+                            present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
+                        }
+                    })
+                }
+            )
         )
-    )
+    }
     
     items.append(
         SettingsSearchableItem(
@@ -4266,6 +4306,36 @@ private func helpSearchableItems(context: AccountContext) -> [SettingsSearchable
     )
     
     return items
+}
+
+private func supportSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+    guard context.supportContext != nil else {
+        return []
+    }
+    
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+    let title = strings.Support_Settings_Title
+    let item: (String, String, [String], [String], SupportSettingsEntryTag?) -> SettingsSearchableItem = { id, itemTitle, alternate, breadcrumbs, itemTag in
+        return SettingsSearchableItem(
+            id: id,
+            title: itemTitle,
+            alternate: alternate,
+            icon: .support,
+            breadcrumbs: breadcrumbs,
+            present: { context, _, present in
+                present(.push, supportSettingsController(context: context, focusOnItemTag: itemTag))
+            }
+        )
+    }
+
+    return [
+        item("support", title, synonyms(strings.SettingsSearch_Synonyms_Support), [], nil),
+        item("support/silent", strings.Support_Settings_SendSilently, synonyms(strings.Support_Settings_SendSilentlySynonyms), [title], .sendSilently),
+        item("support/chats-period", strings.Support_ChatLoading_SearchPeriod, synonyms(strings.Support_ChatLoading_SearchPeriodSynonyms), [title], .period),
+        item("support/load-more", strings.Support_ChatLoading_SearchLoadMore, synonyms(strings.Support_ChatLoading_SearchLoadMoreSynonyms), [title], .loadMore),
+        item("support/auto-download", strings.Support_Quiet_AutoDownload, synonyms(strings.Support_Quiet_AutoDownloadSynonyms), [title], .automaticMediaDownload),
+        item("support/in-app-notifications", strings.Support_Quiet_InAppNotifications, synonyms(strings.Support_Quiet_InAppNotificationsSynonyms), [title], .inAppNotifications)
+    ]
 }
 
 func settingsSearchableItems(
@@ -4404,23 +4474,27 @@ func settingsSearchableItems(
         let profileItems = profileSearchableItems(context: context, canAddAccount: canAddAccount)
         allItems.append(contentsOf: profileItems)
         
-        let savedMessages = SettingsSearchableItem(
-            id: "saved-messages",
-            title: strings.Settings_SavedMessages,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_SavedMessages),
-            icon: .savedMessages,
-            breadcrumbs: [],
-            present: { context, _, present in
-                present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
-            }
-        )
-        allItems.append(savedMessages)
+        if context.supportContext == nil {
+            let savedMessages = SettingsSearchableItem(
+                id: "saved-messages",
+                title: strings.Settings_SavedMessages,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_SavedMessages),
+                icon: .savedMessages,
+                breadcrumbs: [],
+                present: { context, _, present in
+                    present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
+                }
+            )
+            allItems.append(savedMessages)
+        }
         
         let devicesItems = devicesSearchableItems(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: activeWebSessionsContext)
         allItems.append(contentsOf: devicesItems)
         
-        let callItems = callSearchableItems(context: context)
-        allItems.append(contentsOf: callItems)
+        if context.supportContext == nil {
+            let callItems = callSearchableItems(context: context)
+            allItems.append(contentsOf: callItems)
+        }
         
         let chatFolders = chatFoldersSearchableItems(context: context)
         allItems.append(contentsOf: chatFolders)
@@ -4442,6 +4516,9 @@ func settingsSearchableItems(
         
         let appearanceItems = appearanceSearchableItems(context: context)
         allItems.append(contentsOf: appearanceItems)
+        
+        let supportItems = supportSearchableItems(context: context)
+        allItems.append(contentsOf: supportItems)
         
         let powerSavingItems = energySavingSearchableItems(context: context)
         allItems.append(contentsOf: powerSavingItems)

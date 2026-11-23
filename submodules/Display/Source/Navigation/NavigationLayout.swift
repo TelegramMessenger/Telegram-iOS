@@ -31,7 +31,7 @@ func presentsModalInLargeLayout(_ layout: ContainerViewLayout) -> Bool {
     return min(layout.size.width, layout.size.height) >= 700.0
 }
 
-func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewLayout, controllers: [ViewController]) -> NavigationLayout {
+func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewLayout, rootMetrics: LayoutMetrics? = nil, controllers: [ViewController]) -> NavigationLayout {
     var rootControllers: [ViewController] = []
     var modalStack: [ModalContainerLayout] = []
     for controller in controllers {
@@ -102,7 +102,7 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
     case .single:
         rootLayout = .flat(rootControllers)
     case .automaticMasterDetail:
-        switch layout.metrics.widthClass {
+        switch (rootMetrics ?? layout.metrics).widthClass {
         case .compact:
             rootLayout = .flat(rootControllers)
         case .regular:

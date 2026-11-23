@@ -954,6 +954,7 @@ struct AccountReplayedFinalState {
     let updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)]
     let groupCallMessageUpdates: [GroupCallMessageUpdate]
     let storyUpdates: [InternalStoryUpdate]
+    let supportReceivedDrafts: [SupportReceivedDraft]
     let delayNotificatonsUntil: Int32?
     let updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id]
     let updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id]
@@ -987,6 +988,7 @@ struct AccountFinalStateEvents {
     let updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)]
     let groupCallMessageUpdates: [GroupCallMessageUpdate]
     let storyUpdates: [InternalStoryUpdate]
+    let supportReceivedDrafts: [SupportReceivedDraft]
     let displayAlerts: [(text: String, isDropAuth: Bool)]
     let dismissBotWebViews: [Int64]
     let joinChatWebViewDecisions: [JoinChatWebViewDecision]
@@ -1016,7 +1018,7 @@ struct AccountFinalStateEvents {
     let updatedEmojiGameInfo: EmojiGameInfo?
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.addedReactionEvents.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.sentScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedGroupCallParticipants.isEmpty && self.groupCallMessageUpdates.isEmpty && self.storyUpdates.isEmpty && self.displayAlerts.isEmpty && self.dismissBotWebViews.isEmpty && self.joinChatWebViewDecisions.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty && !self.updateConfig && !self.isPremiumUpdated && self.updatedStarsBalance.isEmpty && self.updatedTonBalance.isEmpty && self.walletTransferUpdates.isEmpty && self.walletTonConnectEvents.isEmpty && self.updatedWalletState == nil && self.updatedAgentSettings == nil && self.updatedStarsRevenueStatus.isEmpty && self.reportMessageDelivery.isEmpty && self.addedConferenceInvitationMessagesIds.isEmpty && self.updatedStarGiftAuctionState.isEmpty && self.updatedStarGiftAuctionMyState.isEmpty && self.updatedEmojiGameInfo == nil
+        return self.addedIncomingMessageIds.isEmpty && self.addedReactionEvents.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.sentScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedGroupCallParticipants.isEmpty && self.groupCallMessageUpdates.isEmpty && self.storyUpdates.isEmpty && self.supportReceivedDrafts.isEmpty && self.displayAlerts.isEmpty && self.dismissBotWebViews.isEmpty && self.joinChatWebViewDecisions.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty && !self.updateConfig && !self.isPremiumUpdated && self.updatedStarsBalance.isEmpty && self.updatedTonBalance.isEmpty && self.walletTransferUpdates.isEmpty && self.walletTonConnectEvents.isEmpty && self.updatedWalletState == nil && self.updatedAgentSettings == nil && self.updatedStarsRevenueStatus.isEmpty && self.reportMessageDelivery.isEmpty && self.addedConferenceInvitationMessagesIds.isEmpty && self.updatedStarGiftAuctionState.isEmpty && self.updatedStarGiftAuctionMyState.isEmpty && self.updatedEmojiGameInfo == nil
     }
     
     /// No events. Every field is given here, as at every other construction (seam 7). The compiler holds
@@ -1029,10 +1031,10 @@ struct AccountFinalStateEvents {
     /// stored fields, so it fails for a new field of any kind. Tests that name only some fields use
     /// `AccountFinalStateEvents.testing(...)`.
     init() {
-        self.init(addedIncomingMessageIds: [], addedReactionEvents: [], wasScheduledMessageIds: [], deletedMessageIds: [], updatedTypingActivities: [:], updatedWebpages: [:], updatedCalls: [], addedCallSignalingData: [], updatedGroupCallParticipants: [], groupCallMessageUpdates: [], storyUpdates: [], displayAlerts: [], dismissBotWebViews: [], joinChatWebViewDecisions: [], delayNotificatonsUntil: nil, updatedMaxMessageId: nil, updatedQts: nil, externallyUpdatedPeerId: Set(), authorizationListUpdated: false, updatedIncomingThreadReadStates: [:], updatedOutgoingThreadReadStates: [:], updateConfig: false, isPremiumUpdated: false, updatedStarsBalance: [:], updatedTonBalance: [:], walletTransferUpdates: [], walletTonConnectEvents: [], updatedWalletState: nil, updatedAgentSettings: nil, updatedStarsRevenueStatus: [:], sentScheduledMessageIds: Set(), reportMessageDelivery: Set(), addedConferenceInvitationMessagesIds: [], updatedStarGiftAuctionState: [:], updatedStarGiftAuctionMyState: [:], updatedEmojiGameInfo: nil)
+        self.init(addedIncomingMessageIds: [], addedReactionEvents: [], wasScheduledMessageIds: [], deletedMessageIds: [], updatedTypingActivities: [:], updatedWebpages: [:], updatedCalls: [], addedCallSignalingData: [], updatedGroupCallParticipants: [], groupCallMessageUpdates: [], storyUpdates: [], supportReceivedDrafts: [], displayAlerts: [], dismissBotWebViews: [], joinChatWebViewDecisions: [], delayNotificatonsUntil: nil, updatedMaxMessageId: nil, updatedQts: nil, externallyUpdatedPeerId: Set(), authorizationListUpdated: false, updatedIncomingThreadReadStates: [:], updatedOutgoingThreadReadStates: [:], updateConfig: false, isPremiumUpdated: false, updatedStarsBalance: [:], updatedTonBalance: [:], walletTransferUpdates: [], walletTonConnectEvents: [], updatedWalletState: nil, updatedAgentSettings: nil, updatedStarsRevenueStatus: [:], sentScheduledMessageIds: Set(), reportMessageDelivery: Set(), addedConferenceInvitationMessagesIds: [], updatedStarGiftAuctionState: [:], updatedStarGiftAuctionMyState: [:], updatedEmojiGameInfo: nil)
     }
     
-    init(addedIncomingMessageIds: [MessageId], addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)], wasScheduledMessageIds: [MessageId], deletedMessageIds: [DeletedMessageId], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage?], updatedCalls: [Api.PhoneCall], addedCallSignalingData: [(Int64, Data)], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)], groupCallMessageUpdates: [GroupCallMessageUpdate], storyUpdates: [InternalStoryUpdate], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], joinChatWebViewDecisions: [JoinChatWebViewDecision], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?, externallyUpdatedPeerId: Set<PeerId>, authorizationListUpdated: Bool, updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updateConfig: Bool, isPremiumUpdated: Bool, updatedStarsBalance: [PeerId: StarsAmount], updatedTonBalance: [PeerId: StarsAmount], walletTransferUpdates: [WalletTransferUpdate], walletTonConnectEvents: [WalletTonConnectEvent], updatedWalletState: Api.WalletState?, updatedAgentSettings: EngineAgentSettings?, updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances], sentScheduledMessageIds: Set<MessageId>, reportMessageDelivery: Set<MessageId>, addedConferenceInvitationMessagesIds: [MessageId], updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState], updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState], updatedEmojiGameInfo: EmojiGameInfo?) {
+    init(addedIncomingMessageIds: [MessageId], addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)], wasScheduledMessageIds: [MessageId], deletedMessageIds: [DeletedMessageId], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage?], updatedCalls: [Api.PhoneCall], addedCallSignalingData: [(Int64, Data)], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)], groupCallMessageUpdates: [GroupCallMessageUpdate], storyUpdates: [InternalStoryUpdate], supportReceivedDrafts: [SupportReceivedDraft], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], joinChatWebViewDecisions: [JoinChatWebViewDecision], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?, externallyUpdatedPeerId: Set<PeerId>, authorizationListUpdated: Bool, updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updateConfig: Bool, isPremiumUpdated: Bool, updatedStarsBalance: [PeerId: StarsAmount], updatedTonBalance: [PeerId: StarsAmount], walletTransferUpdates: [WalletTransferUpdate], walletTonConnectEvents: [WalletTonConnectEvent], updatedWalletState: Api.WalletState?, updatedAgentSettings: EngineAgentSettings?, updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances], sentScheduledMessageIds: Set<MessageId>, reportMessageDelivery: Set<MessageId>, addedConferenceInvitationMessagesIds: [MessageId], updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState], updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState], updatedEmojiGameInfo: EmojiGameInfo?) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.addedReactionEvents = addedReactionEvents
         self.wasScheduledMessageIds = wasScheduledMessageIds
@@ -1044,6 +1046,7 @@ struct AccountFinalStateEvents {
         self.updatedGroupCallParticipants = updatedGroupCallParticipants
         self.groupCallMessageUpdates = groupCallMessageUpdates
         self.storyUpdates = storyUpdates
+        self.supportReceivedDrafts = supportReceivedDrafts
         self.displayAlerts = displayAlerts
         self.dismissBotWebViews = dismissBotWebViews
         self.joinChatWebViewDecisions = joinChatWebViewDecisions
@@ -1083,6 +1086,7 @@ struct AccountFinalStateEvents {
         self.updatedGroupCallParticipants = state.updatedGroupCallParticipants
         self.groupCallMessageUpdates = state.groupCallMessageUpdates
         self.storyUpdates = state.storyUpdates
+        self.supportReceivedDrafts = state.supportReceivedDrafts
         self.displayAlerts = state.state.state.displayAlerts
         self.dismissBotWebViews = state.state.state.dismissBotWebViews
         self.joinChatWebViewDecisions = state.state.state.joinChatWebViewDecisions
@@ -1167,6 +1171,7 @@ struct AccountFinalStateEvents {
             updatedGroupCallParticipants: self.updatedGroupCallParticipants + other.updatedGroupCallParticipants,
             groupCallMessageUpdates: self.groupCallMessageUpdates + other.groupCallMessageUpdates,
             storyUpdates: self.storyUpdates + other.storyUpdates,
+            supportReceivedDrafts: self.supportReceivedDrafts + other.supportReceivedDrafts,
             displayAlerts: self.displayAlerts + other.displayAlerts,
             dismissBotWebViews: self.dismissBotWebViews + other.dismissBotWebViews,
             joinChatWebViewDecisions: self.joinChatWebViewDecisions + other.joinChatWebViewDecisions,

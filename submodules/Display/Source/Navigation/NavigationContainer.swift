@@ -87,6 +87,23 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     public private(set) var controllers: [ViewController] = []
     private var state: State = State(layout: nil, canBeClosed: nil, top: nil, transition: nil, pending: nil)
     
+    var firstControllerPreviousItem: NavigationPreviousAction? {
+        didSet {
+            if self.firstControllerPreviousItem != oldValue, self.state.canBeClosed == true, let firstController = self.controllers.first {
+                let previousItem = self.firstControllerPreviousItem ?? .close
+                firstController.transitionNavigationBar?.previousItem = previousItem
+                firstController.previousItem = previousItem
+            }
+        }
+    }
+    
+    var firstControllerSwipe: ((CGFloat, CGFloat, UIGestureRecognizer.State) -> Void)?
+    private var isFirstControllerSwipeActive: Bool = false
+    
+    var swipeClosesFirstController: Bool {
+        return self.controllers.count == 1 && self.firstControllerPreviousItem != nil && self.state.transition == nil
+    }
+    
     weak var minimizedContainer: MinimizedContainer?
     
     private var ignoreInputHeight: Bool = false
@@ -195,7 +212,7 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         super.didLoad()
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let strongSelf = self, strongSelf.controllers.count > 1 else {
+            guard let strongSelf = self, strongSelf.controllers.count > 1 || strongSelf.swipeClosesFirstController else {
                 return []
             }
             return .right
@@ -245,7 +262,7 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
             if translation.x < 4.0 {
                 return false
             }
-            if self.controllers.count == 1 {
+            if self.controllers.count == 1 && !self.swipeClosesFirstController {
                 return false
             }
             return true
@@ -271,6 +288,16 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         let translation = recognizer.translation(in: self.view)
         let velocity = recognizer.velocity(in: self.view)
+        if recognizer.state == .began {
+            self.isFirstControllerSwipeActive = self.swipeClosesFirstController
+        }
+        if self.isFirstControllerSwipeActive {
+            if recognizer.state == .ended || recognizer.state == .cancelled {
+                self.isFirstControllerSwipeActive = false
+            }
+            self.firstControllerSwipe?(translation.x, velocity.x, recognizer.state)
+            return
+        }
         switch recognizer.state {
         case .began:
             let location = recognizer.location(in: self.view)
@@ -583,8 +610,9 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
             for i in 0 ..< controllers.count {
                 if i == 0 {
                     if canBeClosed {
-                        controllers[i].transitionNavigationBar?.previousItem = .close
-                        controllers[i].previousItem = .close
+                        let previousItem = self.firstControllerPreviousItem ?? .close
+                        controllers[i].transitionNavigationBar?.previousItem = previousItem
+                        controllers[i].previousItem = previousItem
                     } else {
                         controllers[i].transitionNavigationBar?.previousItem = nil
                         controllers[i].previousItem = nil

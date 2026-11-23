@@ -34,6 +34,9 @@ open class SearchDisplayControllerContentNode: ASDisplayNode {
     open func searchTextUpdated(text: String) {
     }
     
+    open func searchTextReturned(text: String) {
+    }
+    
     open func searchTokensUpdated(tokens: [SearchBarToken]) {
     }
     

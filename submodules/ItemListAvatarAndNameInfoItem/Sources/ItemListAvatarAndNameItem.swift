@@ -423,11 +423,11 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                 updatedTheme = item.presentationData.theme
             }
             
-            let premiumConfiguration: PremiumConfiguration
+            let premiumBadgesShown: Bool
             if case let .accountContext(context) = item.itemContext {
-                premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                premiumBadgesShown = context.premiumBadgesShown
             } else {
-                premiumConfiguration = .defaultValue
+                premiumBadgesShown = !PremiumConfiguration.defaultValue.isPremiumDisabled
             }
             
             var credibilityIconImage: UIImage?
@@ -441,7 +441,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     credibilityIconOffset = 2.0
                 } else if peer.isVerified {
                     credibilityIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.presentationData.theme)
-                } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                } else if peer.showsPremiumStar && premiumBadgesShown {
                     credibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                 }
             }

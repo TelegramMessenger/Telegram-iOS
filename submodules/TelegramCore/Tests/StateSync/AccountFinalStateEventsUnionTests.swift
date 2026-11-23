@@ -115,6 +115,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
             updatedGroupCallParticipants: [(1, .conferenceChainBlocks(subChainId: 0, blocks: [], nextOffset: 1))],
             groupCallMessageUpdates: [GroupCallMessageUpdate(callId: 1, update: .newOpaqueMessage(authorId: self.userA, data: Data([1])))],
             storyUpdates: [.read(peerId: self.userA, maxId: 1)],
+            supportReceivedDrafts: [SupportReceivedDraft(peerId: self.userA, text: "earlier")],
             displayAlerts: [(text: "earlier", isDropAuth: false)],
             dismissBotWebViews: [1],
             joinChatWebViewDecisions: [JoinChatWebViewDecision(peerId: self.channel, queryId: 1, result: .approved)],
@@ -161,6 +162,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
             updatedGroupCallParticipants: [(2, .conferenceChainBlocks(subChainId: 0, blocks: [], nextOffset: 2))],
             groupCallMessageUpdates: [GroupCallMessageUpdate(callId: 2, update: .newOpaqueMessage(authorId: self.userB, data: Data([2])))],
             storyUpdates: [.read(peerId: self.userA, maxId: 2)],
+            supportReceivedDrafts: [SupportReceivedDraft(peerId: self.userA, text: "later")],
             displayAlerts: [(text: "later", isDropAuth: true)],
             dismissBotWebViews: [2],
             joinChatWebViewDecisions: [JoinChatWebViewDecision(peerId: self.channel, queryId: 2, result: .declined)],
@@ -208,6 +210,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
         XCTAssertEqual(merged.updatedGroupCallParticipants.map { $0.0 }, [2])
         XCTAssertEqual(merged.groupCallMessageUpdates.map { $0.callId }, [2])
         XCTAssertEqual(self.storyReadMaxIds(merged.storyUpdates), [2])
+        XCTAssertEqual(merged.supportReceivedDrafts.map { $0.text }, ["later"])
         XCTAssertEqual(merged.displayAlerts.map { $0.text }, ["later"])
         XCTAssertEqual(merged.dismissBotWebViews, later.dismissBotWebViews)
         XCTAssertEqual(merged.joinChatWebViewDecisions.map { $0.queryId }, [2])
@@ -241,7 +244,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
     /// parameter compiles and `union(with:)` drops it. This count fails for a field of any kind.
     func testStoredFieldCountMatchesEveryInitAndUnion() {
         let count = Mirror(reflecting: AccountFinalStateEvents()).children.count
-        XCTAssertEqual(count, 36, "AccountFinalStateEvents has \(count) stored fields, not 36: update init(), init(state:) and union(with:) (AccountIntermediateState.swift) and the test helper AccountFinalStateEvents.testing(...) (Tests/StateSync/AccountFinalStateEvents+Testing.swift) for the changed field, then this count")
+        XCTAssertEqual(count, 37, "AccountFinalStateEvents has \(count) stored fields, not 37: update init(), init(state:) and union(with:) (AccountIntermediateState.swift) and the test helper AccountFinalStateEvents.testing(...) (Tests/StateSync/AccountFinalStateEvents+Testing.swift) for the changed field, then this count")
     }
 
     /// Lists append in replay order, sets unite, flags OR; current-state values (balances, revenue,
@@ -261,6 +264,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
         XCTAssertEqual(merged.updatedGroupCallParticipants.map { $0.0 }, [1, 2])
         XCTAssertEqual(merged.groupCallMessageUpdates.map { $0.callId }, [1, 2])
         XCTAssertEqual(self.storyReadMaxIds(merged.storyUpdates), [1, 2])
+        XCTAssertEqual(merged.supportReceivedDrafts.map { $0.text }, ["earlier", "later"])
         XCTAssertEqual(merged.displayAlerts.map { $0.text }, ["earlier", "later"])
         XCTAssertEqual(merged.dismissBotWebViews, [1, 2])
         XCTAssertEqual(merged.joinChatWebViewDecisions.map { $0.queryId }, [1, 2])

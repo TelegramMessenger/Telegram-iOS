@@ -52,23 +52,26 @@ func channelReadStateOnOpenOutsideChatList(peer: Peer?) -> PeerReadState {
 /// of, judged by the peer stored when the operation is replayed. Operations replay in order, so a membership
 /// change earlier in the same replay (a join's channel merge) is already stored.
 func readStateOperationTargetsNonMember(_ operation: AccountStateMutationOperation, getPeer: (PeerId) -> Peer?) -> Bool {
-    let peerId: PeerId
-    switch operation {
-    case let .ReadInbox(messageId):
-        peerId = messageId.peerId
-    case let .ResetReadState(peerIdValue, _, _, _, _, _, _):
-        peerId = peerIdValue
-    case let .ResetIncomingReadState(_, peerIdValue, _, _, _, _):
-        peerId = peerIdValue
-    case let .UpdatePeerChatUnreadMark(peerIdValue, threadId, _, _):
-        if threadId != nil {
-            return false
-        }
-        peerId = peerIdValue
-    default:
+    guard let peerId = readStateOperationPeerId(operation) else {
         return false
     }
     return !peerKeepsReadState(getPeer(peerId))
+}
+
+/// The peer whose main chat incoming read state `operation` writes.
+func readStateOperationPeerId(_ operation: AccountStateMutationOperation) -> PeerId? {
+    switch operation {
+    case let .ReadInbox(messageId):
+        return messageId.peerId
+    case let .ResetReadState(peerId, _, _, _, _, _, _):
+        return peerId
+    case let .ResetIncomingReadState(_, peerId, _, _, _, _):
+        return peerId
+    case let .UpdatePeerChatUnreadMark(peerId, threadId, _, _):
+        return threadId == nil ? peerId : nil
+    default:
+        return nil
+    }
 }
 
 /// Whether a stored channel the account has just become a member of must ask the server for its read

@@ -189,7 +189,7 @@ final class NewsFeedSupportTests: XCTestCase {
 
     // The app-config rules, as they apply once the feed API is compiled in.
     private func isEnabled(_ configuration: AppConfiguration) -> Bool {
-        return isNewsFeedEnabled(appConfiguration: configuration, apiIsAvailable: true)
+        return isNewsFeedEnabled(appConfiguration: configuration, isSupportAccount: false, apiIsAvailable: true)
     }
 
     private func isServerAvailable(_ configuration: AppConfiguration) -> Bool {
@@ -229,14 +229,19 @@ final class NewsFeedSupportTests: XCTestCase {
     // Layer 233 as served has no feed API: News stays off, the device-built Added feed included, whatever the app
     // config says.
     func testNewsIsOffWhileTheFeedApiIsParked() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0), apiIsAvailable: false))
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil), apiIsAvailable: false))
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0), isSupportAccount: false, apiIsAvailable: false))
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil), isSupportAccount: false, apiIsAvailable: false))
         XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0), apiIsAvailable: false))
+    }
+
+    func testNewsIsOffForASupportAccountWhateverTheAppConfigSays() {
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0), isSupportAccount: true, apiIsAvailable: true))
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil), isSupportAccount: true, apiIsAvailable: true))
     }
 
     // Call sites pass no argument: the gates follow the build's feed API.
     func testTheGatesFollowTheBuildsFeedApi() {
-        XCTAssertEqual(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: 1.0)), newsFeedApiIsAvailable)
+        XCTAssertEqual(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: 1.0), isSupportAccount: false), newsFeedApiIsAvailable)
         XCTAssertEqual(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0)), newsFeedApiIsAvailable)
     }
 

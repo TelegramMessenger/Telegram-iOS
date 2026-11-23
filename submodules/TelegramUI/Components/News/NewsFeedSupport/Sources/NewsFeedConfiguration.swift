@@ -40,10 +40,11 @@ public func isNewsFeedServerAvailable(appConfiguration: AppConfiguration, apiIsA
 /// Whether News is shown (the tab, Add to News). Never while the feed API is parked (`newsFeedApiIsAvailable`), the
 /// device-built Added feed included; then for dev accounts, and for any account the server turns it on for with
 /// `news_feed_enabled` true or nonzero (missing or unparseable means off). Without the server's feed the Added page is
-/// built on the device from the subscribed channels' posts (`AddedFeedSource.localChannels`). `apiIsAvailable` is a
-/// parameter only so tests can pin the app-config rule in either build.
-public func isNewsFeedEnabled(appConfiguration: AppConfiguration, apiIsAvailable: Bool = newsFeedApiIsAvailable) -> Bool {
-    guard apiIsAvailable else {
+/// built on the device from the subscribed channels' posts (`AddedFeedSource.localChannels`). Never for a support
+/// account, whose app keeps to Chats and Settings. `apiIsAvailable` is a parameter only so tests can pin the app-config
+/// rule in either build.
+public func isNewsFeedEnabled(appConfiguration: AppConfiguration, isSupportAccount: Bool, apiIsAvailable: Bool = newsFeedApiIsAvailable) -> Bool {
+    guard apiIsAvailable, !isSupportAccount else {
         return false
     }
     return isDevAccount(appConfiguration: appConfiguration) || newsFeedSwitch(appConfiguration: appConfiguration) == true

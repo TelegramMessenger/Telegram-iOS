@@ -110,7 +110,7 @@ private final class RecentSessionSheetContent: CombinedComponent {
                 if !session.flags.contains(.passwordPending) && session.apiId != 22 {
                     self.allowIncomingCalls = session.flags.contains(.acceptsIncomingCalls)
                     
-                    if ![2040, 2496].contains(session.apiId) {
+                    if ![2040, 2496].contains(session.apiId) && context.supportContext == nil {
                         self.allowSecretChats = session.flags.contains(.acceptsSecretChats)
                     }
                 }
