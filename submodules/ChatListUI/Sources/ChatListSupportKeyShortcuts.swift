@@ -56,6 +56,33 @@ public func supportTemplatesErrorText(_ error: SupportTemplatesError, presentati
     }
 }
 
+public func supportTemplatesFileChangeErrorText(_ error: SupportTemplatesFileChangeError, presentationData: PresentationData) -> String {
+    let strings = presentationData.strings
+    switch error {
+    case .wrongName:
+        return strings.Support_Templates_FileErrorWrongName
+    case .nameTaken:
+        return strings.Support_Templates_FileErrorNameTaken
+    case .fileMissing:
+        return strings.Support_Templates_FileErrorMissing
+    case .invalidUrl:
+        return strings.Support_Templates_FileErrorInvalidUrl
+    case let .fetch(.network(description)):
+        return strings.Support_Templates_FileErrorNetwork.replacingOccurrences(of: "{reason}", with: description)
+    case .fetch(.noData):
+        return strings.Support_Templates_FileErrorNoData
+    case let .fetch(.http(status)):
+        return strings.Support_Templates_FileErrorHttp.replacingOccurrences(of: "{status}", with: "\(status)")
+    case .fetch(.tooLarge):
+        return strings.Support_Templates_FileErrorTooLarge.replacingOccurrences(of: "{size}", with: supportTemplatesSizeText(presentationData: presentationData))
+    case .notText:
+        return strings.Support_Templates_FileErrorNotText
+    case .noTemplates:
+        return strings.Support_Templates_FileErrorNoTemplates
+    case .saveFailed:
+        return strings.Support_Templates_FileErrorSave
+    }
+}
 
 public func supportPresentTemplatesReloadResult(context: AccountContext, result: SupportTemplatesReloadResult, successText: String, elevatedLayout: Bool, present: @escaping (ViewController) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

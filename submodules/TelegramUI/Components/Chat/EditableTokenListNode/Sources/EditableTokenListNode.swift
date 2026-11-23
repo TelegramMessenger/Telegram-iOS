@@ -14,6 +14,7 @@ public struct EditableTokenListToken {
     public enum Subject {
         case peer(EnginePeer)
         case category(UIImage?)
+        case text
     }
     
     public let id: AnyHashable
@@ -109,7 +110,7 @@ private final class TokenNode: ASDisplayNode {
         
         let cornerDiameter: CGFloat
         switch token.subject {
-        case .peer:
+        case .peer, .text:
             cornerDiameter = 28.0
         case .category:
             cornerDiameter = 14.0
@@ -141,6 +142,8 @@ private final class TokenNode: ASDisplayNode {
         case let .category(image):
             self.addSubnode(self.categoryAvatarNode)
             self.categoryAvatarNode.image = image
+        case .text:
+            self.removeIconNode.isHidden = true
         }
         
         // One element per token: its title (the avatar and the remove glyph are decoration).
@@ -153,6 +156,9 @@ private final class TokenNode: ASDisplayNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let titleSize = self.titleNode.measure(CGSize(width: constrainedSize.width - 8.0, height: constrainedSize.height))
+        if case .text = self.token.subject {
+            return CGSize(width: 12.0 + titleSize.width + 12.0, height: 28.0)
+        }
         return CGSize(width: 22.0 + titleSize.width + 16.0, height: 28.0)
     }
     
@@ -167,7 +173,13 @@ private final class TokenNode: ASDisplayNode {
         self.categoryAvatarNode.frame = self.avatarNode.frame
         self.removeIconNode.frame = self.avatarNode.frame
         
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 29.0, y: floor((self.bounds.size.height - titleSize.height) / 2.0)), size: titleSize)
+        let titleX: CGFloat
+        if case .text = self.token.subject {
+            titleX = 12.0
+        } else {
+            titleX = 29.0
+        }
+        self.titleNode.frame = CGRect(origin: CGPoint(x: titleX, y: floor((self.bounds.size.height - titleSize.height) / 2.0)), size: titleSize)
     }
     
     func updateIsSelected(_ isSelected: Bool, animated: Bool) {

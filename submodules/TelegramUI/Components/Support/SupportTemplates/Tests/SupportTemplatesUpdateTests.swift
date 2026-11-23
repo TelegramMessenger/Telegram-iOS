@@ -405,4 +405,247 @@ final class SupportTemplatesManagerTests: XCTestCase {
         XCTAssertEqual(fetchCount, 2)
         XCTAssertFalse(manager.state.isReloading)
     }
+
+    func testEditOverridesTheFileAndSurvivesARelaunch() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nHello\n{KEYS}\nhi\n{VALUE}\nOld answer")])
+        manager.setEdit(file: "tl_one.txt", id: "hello", edit: SupportTemplateEdit(value: "New answer\n", addedKeys: ["hey"], removedKeys: ["hi"]))
+        _ = self.reload(manager)
+        XCTAssertNil(manager.templates.matchExact("hi"))
+        XCTAssertEqual(manager.templates.matchExact("hey")?.question.value, "New answer")
+        XCTAssertEqual(manager.state.files.first?.editCount, 1)
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.status), [.edited])
+        XCTAssertEqual(self.stored("tl_one.txt")?.questions["hello"]?.value, "Old answer")
+
+        let relaunched = self.makeManager()
+        _ = self.reload(relaunched)
+        XCTAssertEqual(relaunched.templates.matchExact("hey")?.question.value, "New answer")
+    }
+
+    func testAnEditEqualToTheFileIsDroppedAndRestoreDefaultsDropsAll() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB\n{QUESTION}\nC\n{KEYS}\nkc\n{VALUE}\nD")])
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(original: SupportTemplatesQuestion(question: "A", originalKeys: ["ka"], value: "B"), question: "A", keys: ["ka"], value: "B"))
+        manager.setEdit(file: "tl_one.txt", id: "c", edit: .removal)
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.state.files.first?.editCount, 1)
+        XCTAssertNil(manager.templates.matchExact("kc"))
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.status), [.removed, .original])
+
+        manager.restoreDefaults(file: "tl_one.txt")
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.state.files.first?.editCount, 0)
+        XCTAssertEqual(manager.templates.matchExact("kc")?.question.value, "D")
+        XCTAssertFalse(self.fileExists("edits.json"))
+    }
+
+    func testEditSurvivesAUrlUpdate() {
+        let url = "https://example.com/one.txt"
+        self.responses[url] = .success(Data("{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nServer two".utf8))
+        let manager = self.makeManager()
+        try! FileManager.default.createDirectory(at: self.folder, withIntermediateDirectories: true)
+        try! Data("{URL}\n\(url)\n{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nServer one".utf8).write(to: self.folder.appendingPathComponent("tl_one.txt"))
+        _ = self.reload(manager)
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "Mine"))
+        _ = self.reload(manager)
+        XCTAssertEqual(self.stored("tl_one.txt")?.questions["a"]?.value, "Server two")
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "Mine")
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).first?.original?.value, "Server two")
+    }
+
+    func testRemovingAFileDropsItsEdits() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{VALUE}\nB")])
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "C"))
+        manager.removeFile(name: "tl_one.txt")
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{VALUE}\nB")])
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.status), [.original])
+    }
+
+    func testOwnTemplatesExpandAndAreListedInOrder() {
+        let manager = self.makeManager()
+        manager.saveOwnTemplate(SupportOwnTemplate(id: "2", question: "Second", keys: [" two "], value: "Answer two"))
+        manager.saveOwnTemplate(SupportOwnTemplate(id: "1", question: "First", keys: ["one"], value: "Answer one"))
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.templates.matchExact("two")?.question.value, "Answer two")
+        XCTAssertEqual(manager.listEntries(.own).map(\.id), ["2", "1"])
+        XCTAssertEqual(manager.state.ownTemplateCount, 2)
+        XCTAssertEqual(manager.state.files, [])
+
+        manager.saveOwnTemplate(SupportOwnTemplate(id: "2", question: "Second", keys: ["two"], value: "Changed"))
+        manager.removeOwnTemplate(id: "1")
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.templates.matchExact("two")?.question.value, "Changed")
+        XCTAssertNil(manager.templates.matchExact("one"))
+
+        let relaunched = self.makeManager()
+        _ = self.reload(relaunched)
+        XCTAssertEqual(relaunched.listEntries(.own).map(\.template.value), ["Changed"])
+    }
+
+    private func changeFile(_ manager: SupportTemplatesManager, _ name: String, newName: String, url: String) -> SupportTemplatesFileChangeError? {
+        let done = self.expectation(description: "change")
+        var error: SupportTemplatesFileChangeError?
+        manager.changeFile(name: name, newName: newName, url: url, completion: { result in
+            if case let .failure(value) = result {
+                error = value
+            }
+            done.fulfill()
+        })
+        self.wait(for: [done], timeout: 10.0)
+        return error
+    }
+
+    func testRenameMovesTheFileItsOldCopyAndItsEdits() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB")])
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB2")])
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "Mine"))
+        XCTAssertNil(self.changeFile(manager, "tl_one.txt", newName: "tl_two.txt", url: ""))
+        XCTAssertFalse(self.fileExists("tl_one.txt"))
+        XCTAssertFalse(self.fileExists("tl_one.txt.old"))
+        XCTAssertTrue(self.fileExists("tl_two.txt.old"))
+        XCTAssertEqual(manager.state.files.map(\.name), ["tl_two.txt"])
+        XCTAssertEqual(manager.listEntries(.file("tl_two.txt")).map(\.status), [.edited])
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "Mine")
+    }
+
+    func testRenameRefusesATakenOrWrongName() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{VALUE}\nB"), self.picked("tl_two.txt", "{QUESTION}\nC\n{VALUE}\nD")])
+        XCTAssertEqual(self.changeFile(manager, "tl_one.txt", newName: "TL_Two.txt", url: ""), .nameTaken)
+        XCTAssertEqual(self.changeFile(manager, "tl_one.txt", newName: "notes.txt", url: ""), .wrongName)
+        XCTAssertEqual(self.changeFile(manager, "tl_one.txt", newName: "tl_a/b.txt", url: ""), .wrongName)
+        XCTAssertEqual(manager.state.files.map(\.name), ["tl_one.txt", "tl_two.txt"])
+    }
+
+    func testANewUrlIsVerifiedAndItsContentBecomesTheDefault() {
+        let url = "https://example.com/new.txt"
+        self.responses[url] = .success(Data("{QUESTION}\nA\n{KEYS}\nserverkey\n{VALUE}\nFrom the server".utf8))
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nmykey\n{VALUE}\nLocal")])
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "Edited", addedKeys: ["extra"]))
+        XCTAssertNil(self.changeFile(manager, "tl_one.txt", newName: "tl_one.txt", url: url))
+        XCTAssertEqual(self.stored("tl_one.txt")?.url, url)
+        XCTAssertEqual(self.stored("tl_one.txt")?.questions["a"]?.value, "From the server")
+        XCTAssertEqual(self.stored("tl_one.txt.old")?.questions["a"]?.value, "Local")
+        XCTAssertEqual(manager.state.files.first?.url, url)
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).first?.original?.value, "From the server")
+        XCTAssertEqual(manager.templates.matchExact("extra")?.question.value, "Edited")
+        XCTAssertEqual(manager.templates.matchExact("serverkey")?.question.value, "Edited")
+        XCTAssertNil(manager.templates.matchExact("mykey"))
+    }
+
+    func testABrokenUrlChangesNothing() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{VALUE}\nLocal")])
+        self.responses["https://example.com/missing.txt"] = .failure(.http(404))
+        self.responses["https://example.com/empty.txt"] = .success(Data("no templates here".utf8))
+        XCTAssertEqual(self.changeFile(manager, "tl_one.txt", newName: "tl_renamed.txt", url: "https://example.com/missing.txt"), .fetch(.http(404)))
+        XCTAssertEqual(self.changeFile(manager, "tl_one.txt", newName: "tl_one.txt", url: "https://example.com/empty.txt"), .noTemplates)
+        XCTAssertEqual(self.changeFile(manager, "tl_one.txt", newName: "tl_one.txt", url: "ftp://example.com/x.txt"), .invalidUrl)
+        XCTAssertEqual(manager.state.files.map(\.name), ["tl_one.txt"])
+        XCTAssertEqual(self.stored("tl_one.txt")?.url, "")
+        XCTAssertFalse(self.fileExists("tl_one.txt.old"))
+    }
+
+    func testClearingTheUrlStopsUpdates() {
+        let url = "https://example.com/one.txt"
+        self.responses[url] = .success(Data("{QUESTION}\nA\n{VALUE}\nServer".utf8))
+        let manager = self.makeManager()
+        try! FileManager.default.createDirectory(at: self.folder, withIntermediateDirectories: true)
+        try! Data("{URL}\n\(url)\n{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nServer".utf8).write(to: self.folder.appendingPathComponent("tl_one.txt"))
+        _ = self.reload(manager)
+        XCTAssertNil(self.changeFile(manager, "tl_one.txt", newName: "tl_one.txt", url: ""))
+        XCTAssertEqual(self.stored("tl_one.txt")?.url, "")
+        XCTAssertEqual(self.stored("tl_one.txt")?.questions["a"]?.originalKeys, ["ka"])
+        self.fetched = []
+        _ = self.reload(manager)
+        XCTAssertEqual(self.fetched, [])
+    }
+
+    func testFileNameNormalization() {
+        XCTAssertEqual(supportTemplatesFileNameNormalized(" billing "), "tl_billing.txt")
+        XCTAssertEqual(supportTemplatesFileNameNormalized("TL_billing.TXT"), "TL_billing.TXT")
+    }
+
+    func testExportHasTheEditsWithoutTheUrlAndParsesBack() {
+        let url = "https://example.com/one.txt"
+        self.responses[url] = .success(Data("{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB\n{QUESTION}\nC\n{VALUE}\nD".utf8))
+        let manager = self.makeManager()
+        try! FileManager.default.createDirectory(at: self.folder, withIntermediateDirectories: true)
+        try! Data("{URL}\n\(url)\n{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB\n{QUESTION}\nC\n{VALUE}\nD".utf8).write(to: self.folder.appendingPathComponent("tl_one.txt"))
+        _ = self.reload(manager)
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "First line\n\nThird line  ", addedKeys: ["kb"]))
+        manager.setEdit(file: "tl_one.txt", id: "c", edit: .removal)
+        _ = self.reload(manager)
+        let exported = parseSupportTemplatesFile(Data(manager.exportText(.file("tl_one.txt")).utf8))
+        XCTAssertEqual(exported.url, "")
+        XCTAssertEqual(Array(exported.questions.keys), ["a"])
+        XCTAssertEqual(exported.questions["a"]?.originalKeys, ["ka", "kb"])
+        XCTAssertEqual(exported.questions["a"]?.value, "First line\n\nThird line  ")
+    }
+
+    func testExportOfOwnTemplatesKeepsTheirOrder() {
+        let manager = self.makeManager()
+        manager.saveOwnTemplate(SupportOwnTemplate(id: "2", question: "Second", keys: ["two"], value: "Answer two"))
+        manager.saveOwnTemplate(SupportOwnTemplate(id: "1", question: "First", keys: [], value: "Answer one"))
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.exportText(.own), "{QUESTION}\nSecond\n{KEYS}\ntwo\n{VALUE}\nAnswer two\n\n{QUESTION}\nFirst\n{VALUE}\nAnswer one\n\n")
+    }
+
+    private func writeUrlFile(_ url: String, _ text: String) {
+        try! FileManager.default.createDirectory(at: self.folder, withIntermediateDirectories: true)
+        try! Data("{URL}\n\(url)\n\(text)".utf8).write(to: self.folder.appendingPathComponent("tl_one.txt"))
+    }
+
+    func testAKeyOrTitleEditStillGetsAnswerUpdates() {
+        let url = "https://example.com/one.txt"
+        self.responses[url] = .success(Data("{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nOld A\n{QUESTION}\nC\n{KEYS}\nkc\n{VALUE}\nOld C".utf8))
+        self.writeUrlFile(url, "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nOld A\n{QUESTION}\nC\n{KEYS}\nkc\n{VALUE}\nOld C")
+        let manager = self.makeManager()
+        _ = self.reload(manager)
+        let a = manager.listEntries(.file("tl_one.txt")).first(where: { $0.id == "a" })!.original!
+        let c = manager.listEntries(.file("tl_one.txt")).first(where: { $0.id == "c" })!.original!
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(original: a, question: "A", keys: ["ka", "mine"], value: "Old A"))
+        manager.setEdit(file: "tl_one.txt", id: "c", edit: SupportTemplateEdit(original: c, question: "Renamed C", keys: ["kc"], value: "Old C"))
+        self.responses[url] = .success(Data("{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nNew A\n{QUESTION}\nC\n{KEYS}\nkc\n{VALUE}\nNew C".utf8))
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.templates.matchExact("mine")?.question.value, "New A")
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "New A")
+        XCTAssertEqual(manager.templates.matchExact("kc")?.question.question, "Renamed C")
+        XCTAssertEqual(manager.templates.matchExact("kc")?.question.value, "New C")
+    }
+
+    func testARemovedKeyStaysRemovedAndOtherKeysStay() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\nkb\n{VALUE}\nB")])
+        let original = manager.listEntries(.file("tl_one.txt"))[0].original!
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(original: original, question: "A", keys: ["kb", "kc"], value: "B"))
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\nkb\nkd\n{VALUE}\nB2")])
+        XCTAssertNil(manager.templates.matchExact("ka"))
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt"))[0].template.originalKeys, ["kb", "kd", "kc"])
+        XCTAssertEqual(manager.templates.matchExact("kd")?.question.value, "B2")
+    }
+
+    func testEditedTemplatesAreListedFirstAndRestoreTakesThemBack() {
+        let manager = self.makeManager()
+        _ = self.importFiles(manager, [self.picked("tl_one.txt", "{QUESTION}\nA\n{VALUE}\n1\n{QUESTION}\nB\n{VALUE}\n2\n{QUESTION}\nC\n{VALUE}\n3")])
+        manager.setEdit(file: "tl_one.txt", id: "c", edit: SupportTemplateEdit(value: "edited"))
+        manager.setEdit(file: "tl_one.txt", id: "b", edit: .removal)
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.id), ["b", "c", "a"])
+        manager.setEdit(file: "tl_one.txt", id: "c", edit: nil)
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.id), ["b", "a", "c"])
+        manager.restoreDefaults(file: "tl_one.txt")
+        _ = self.reload(manager)
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.id), ["a", "b", "c"])
+    }
+
+    func testAnOldFullEditStillDecodes() {
+        let data = Data(#"{"question":"Q","keys":["k"],"value":"V","isRemoved":false}"#.utf8)
+        let edit = try? JSONDecoder().decode(SupportTemplateEdit.self, from: data)
+        XCTAssertEqual(edit, SupportTemplateEdit(question: "Q", value: "V"))
+    }
 }
