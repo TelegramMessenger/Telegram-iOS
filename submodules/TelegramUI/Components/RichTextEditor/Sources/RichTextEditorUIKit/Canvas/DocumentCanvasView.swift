@@ -225,6 +225,7 @@ class DocumentCanvasView: UIView {
     /// (e.g. sent the message) and the editor does nothing. The SOFTWARE keyboard's Return never triggers a
     /// keyCommand, so it always inserts a newline (there's a separate send button) — matching the legacy input.
     final var onHardwareReturn: ((UIKeyModifierFlags) -> Bool)?
+    final var onHardwareTab: (() -> Void)?
 
     /// Interior content margins — interactable padding around the document, ADDED to the built-in
     /// `pageMargin`. Unlike the host's scroll insets (covered by chrome/keyboard, content scrolls under),
@@ -1432,7 +1433,7 @@ class DocumentCanvasView: UIView {
     @objc private final func handleTabKey() {
         // Inside a table cell → cell nav; otherwise a quote-aware Tab (body → author end, author → out).
         if isInsideTable(head) { moveToCell(forward: true); return }
-        handleQuoteTabForward()
+        if !handleQuoteTabForward() { onHardwareTab?() }
     }
     @objc private final func handleShiftTabKey() { moveToCell(forward: false) }
     @objc private final func handleReturnKey(_ command: UIKeyCommand) { performHardwareReturn(command.modifierFlags) }

@@ -22,6 +22,7 @@ import DeviceLocationManager
 import UrlEscaping
 import ContextUI
 import AlertUI
+import SupportTemplates
 import PresentationDataUtils
 import UndoUI
 import TelegramCallsUI
@@ -454,6 +455,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let supportSwitchPreloadDisposable = MetaDisposable()
     var supportDoneIgnoredUntil: Double = 0.0
     let supportDoneUnreadDisposable = MetaDisposable()
+    var supportTemplatesAutocomplete = SupportSettings.default.templatesAutocomplete
+    let supportTemplatesSettingsDisposable = MetaDisposable()
+    var supportTemplatesStateObserver: SupportTemplatesManager.ObserverToken?
     var supportOccupationPeerId: EnginePeer.Id? {
         guard case let .peer(peerId) = self.chatLocation, case .standard(.default) = self.mode else {
             return nil
@@ -7290,6 +7294,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.supportOccupationDisposable?.dispose()
         self.supportSwitchPreloadDisposable.dispose()
         self.supportDoneUnreadDisposable.dispose()
+        self.supportTemplatesSettingsDisposable.dispose()
+        if let supportTemplatesStateObserver = self.supportTemplatesStateObserver {
+            self.context.supportTemplates?.removeStateObserver(supportTemplatesStateObserver)
+        }
         self.supportOpenChatDisposable.dispose()
         self.networkStateDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
@@ -8487,6 +8495,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         super.viewWillDisappear(animated)
         self.forwardSideListAppearance(.willDisappear, animated: animated)
 
+        self.supportTemplatesClose()
         self.walletTransferAnimationsVisible = false
         
         if #available(iOS 18.0, *) {

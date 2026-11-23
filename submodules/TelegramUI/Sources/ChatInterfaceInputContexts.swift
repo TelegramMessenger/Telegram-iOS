@@ -160,6 +160,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             return ChatTextInputPanelState(accessoryItems: [.botInput(isEnabled: true, inputMode: .keyboard)], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
+                if controller.supportTemplatesAreAvailable {
+                    accessoryItems.append(.supportTemplates)
+                }
                 accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
                 
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
@@ -251,6 +254,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 
                 if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands && !hasForward {
                     accessoryItems.append(.commands)
+                }
+                
+                if controller.supportTemplatesAreAvailable {
+                    accessoryItems.append(.supportTemplates)
                 }
                 
                 if !canSendTextMessages {

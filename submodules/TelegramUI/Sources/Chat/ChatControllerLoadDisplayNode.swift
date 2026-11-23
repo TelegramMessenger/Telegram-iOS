@@ -1022,6 +1022,7 @@ extension ChatControllerImpl {
                     self?.chatDisplayNode.textInputPanelNode?.supportDoneChatIsUnread = isUnread
                 }))
             }
+            self.setupSupportTemplates()
         }
         self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone, handleSupportSwitch in
             guard let strongSelf = self else {

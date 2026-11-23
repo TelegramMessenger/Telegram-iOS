@@ -139,6 +139,13 @@ extension ChatControllerImpl {
                     KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {})
                 )
             }
+            if self.supportTemplatesAreAvailable {
+                inputShortcuts.append(
+                    KeyShortcut(input: "\t", action: { [weak self] in
+                        self?.supportTemplatesHardwareTab()
+                    })
+                )
+            }
         } else if UIResponder.currentFirst() == nil {
             inputShortcuts = [
                 KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
