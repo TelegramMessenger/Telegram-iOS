@@ -771,7 +771,7 @@ final class RichTextAttachmentScreenComponent: Component {
         }
 
         var isSendRichFormattingLocked: Bool {
-            guard let component = self.component, !component.context.isPremium else {
+            guard let component = self.component, !component.context.isRichTextUnlocked else {
                 return false
             }
             let content = chatInputContent(fromDocument: self.currentDocument, media: self.currentMedia, emojiFiles: self.currentEmojiFiles)
@@ -1098,7 +1098,7 @@ final class RichTextAttachmentScreenComponent: Component {
             if editorState.isInTable {
                 items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuFormula, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FormatFormula"), color: theme.contextMenu.primaryColor)
-                }, additionalLeftIcon: component.context.isPremium ? nil : { _ in
+                }, additionalLeftIcon: component.context.isRichTextUnlocked ? nil : { _ in
                     return UIImage(bundleImageName: "Premium/ContextStar")
                 }, action: self.formulaEditorAction(inline: true, hasCursor: hasCursor))))
                 items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuInlineButton, icon: { theme in
@@ -1111,7 +1111,7 @@ final class RichTextAttachmentScreenComponent: Component {
             if !editorState.hasSelection {
                 items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuHeading, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FormatHeading"), color: theme.contextMenu.primaryColor)
-                }, additionalLeftIcon: component.context.isPremium ? nil : { _ in
+                }, additionalLeftIcon: component.context.isRichTextUnlocked ? nil : { _ in
                     return UIImage(bundleImageName: "Premium/ContextStar")
                 }, action: { [weak self] c, _ in
                     guard let self, let environment = self.environment else {
@@ -1235,7 +1235,7 @@ final class RichTextAttachmentScreenComponent: Component {
             
             items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuPullquote, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FormatPullquote"), color: theme.contextMenu.primaryColor)
-            }, additionalLeftIcon: component.context.isPremium ? nil : { _ in
+            }, additionalLeftIcon: component.context.isRichTextUnlocked ? nil : { _ in
                 return UIImage(bundleImageName: "Premium/ContextStar")
             }, action: { [weak self] c, _ in
                 guard let self else {
@@ -1257,7 +1257,7 @@ final class RichTextAttachmentScreenComponent: Component {
             
             items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuCode, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FormatCode"), color: theme.contextMenu.primaryColor)
-            }, additionalLeftIcon: component.context.isPremium ? nil : { _ in
+            }, additionalLeftIcon: component.context.isRichTextUnlocked ? nil : { _ in
                 return UIImage(bundleImageName: "Premium/ContextStar")
             }, action: { [weak self] c, _ in
                 guard let self else {
@@ -1285,7 +1285,7 @@ final class RichTextAttachmentScreenComponent: Component {
             // Alignment menu do.
             items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuFormula, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FormatFormula"), color: theme.contextMenu.primaryColor)
-            }, additionalLeftIcon: component.context.isPremium ? nil : { _ in
+            }, additionalLeftIcon: component.context.isRichTextUnlocked ? nil : { _ in
                 return UIImage(bundleImageName: "Premium/ContextStar")
             }, action: { [weak self] c, _ in
                 guard let self, let environment = self.environment else {
@@ -2090,14 +2090,14 @@ final class RichTextAttachmentScreenComponent: Component {
                         id: AnyHashable("list"), icon: "RichText/ToolList",
                         action: { [weak self] sourceView in self?.presentListMenu(from: sourceView) },
                         isSelected: editorState.listMarker != nil,
-                        showsPremiumBadge: !component.context.isPremium
+                        showsPremiumBadge: !component.context.isRichTextUnlocked
                     ))
                     
                     barActions.append(RichTextActionBarComponent.Action(
                         id: AnyHashable("quote"), icon: "RichText/ToolQuote",
                         action: { [weak self] sourceView in self?.presentAddMenu(from: sourceView) },
                         isSelected: editorState.listMarker != nil,
-                        showsPremiumBadge: !component.context.isPremium
+                        showsPremiumBadge: !component.context.isRichTextUnlocked
                     ))
                 }
             } else {
@@ -2117,7 +2117,7 @@ final class RichTextAttachmentScreenComponent: Component {
                         self?.presentListMenu(from: sourceView)
                     },
                     isSelected: false,
-                    showsPremiumBadge: !component.context.isPremium
+                    showsPremiumBadge: !component.context.isRichTextUnlocked
                 ))
                 barActions.append(RichTextActionBarComponent.Action(
                     id: AnyHashable("table"), icon: "RichText/ToolTable",
@@ -2170,7 +2170,7 @@ final class RichTextAttachmentScreenComponent: Component {
                         self.presentActionMenu(from: sourceView, items: items)
                     },
                     isSelected: false,
-                    showsPremiumBadge: !component.context.isPremium
+                    showsPremiumBadge: !component.context.isRichTextUnlocked
                 ))
                 if component.presentAttachmentMenu != nil {
                     barActions.append(RichTextActionBarComponent.Action(
