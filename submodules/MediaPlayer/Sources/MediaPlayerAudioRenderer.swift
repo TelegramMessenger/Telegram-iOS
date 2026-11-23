@@ -41,6 +41,55 @@ private let audioPlayerRendererBufferContextMap = Atomic<[Int32: Atomic<AudioPla
 private let audioPlayerRendererQueue = Queue()
 
 private var _nextPlayerRendererBufferContextId: Int32 = 1
+
+private func disposeAudioGraph(_ audioGraph: AUGraph) {
+    var status = AUGraphStop(audioGraph)
+    if status != noErr {
+        Logger.shared.log("AudioPlayerRenderer", "AUGraphStop error \(status)")
+    }
+    status = AUGraphUninitialize(audioGraph)
+    if status != noErr {
+        Logger.shared.log("AudioPlayerRenderer", "AUGraphUninitialize error \(status)")
+    }
+    status = AUGraphClose(audioGraph)
+    if status != noErr {
+        Logger.shared.log("AudioPlayerRenderer", "AUGraphClose error \(status)")
+    }
+    status = DisposeAUGraph(audioGraph)
+    if status != noErr {
+        Logger.shared.log("AudioPlayerRenderer", "DisposeAUGraph error \(status)")
+    }
+}
+
+// When a playlist item ends and the next one starts, the finished renderer's output is kept
+// running (it renders silence) until the next renderer's output has started. With no output
+// running in between, iOS can refuse to start the next one while the app is in the background
+// (AUGraphStart fails on CarPlay), so the next item never plays. Accessed on audioPlayerRendererQueue.
+private let handoverOutputTimeout: Double = 0.5
+private var handoverOutput: (audioGraph: AUGraph, generation: Int)?
+private var handoverOutputGeneration: Int = 0
+
+private func parkHandoverOutput(_ audioGraph: AUGraph) {
+    assert(audioPlayerRendererQueue.isCurrent())
+    closeHandoverOutput()
+    handoverOutputGeneration += 1
+    let generation = handoverOutputGeneration
+    handoverOutput = (audioGraph, generation)
+    audioPlayerRendererQueue.after(handoverOutputTimeout, {
+        if let current = handoverOutput, current.generation == generation {
+            closeHandoverOutput()
+        }
+    })
+}
+
+private func closeHandoverOutput() {
+    assert(audioPlayerRendererQueue.isCurrent())
+    guard let current = handoverOutput else {
+        return
+    }
+    handoverOutput = nil
+    disposeAudioGraph(current.audioGraph)
+}
 private func registerPlayerRendererBufferContext(_ context: Atomic<AudioPlayerRendererBufferContext>) -> Int32 {
     var id: Int32 = 0
     
@@ -228,6 +277,9 @@ private final class AudioPlayerRendererContext {
     let audioPaused: () -> Void
     
     var paused = true
+    // Set when the item reached its end and the player moves to the next one: the next stop(),
+    // or releasing the renderer, parks the output instead of closing it (see parkHandoverOutput).
+    var handOverOutputOnStop = false
     var baseRate: Double
     
     let audioLevelPipe: ValuePipe<Float>
@@ -314,7 +366,12 @@ private final class AudioPlayerRendererContext {
         
         unregisterPlayerRendererBufferContext(self.bufferContextId)
         
-        self.closeAudioUnit()
+        // A finished playlist item is usually paused and released without stop().
+        if self.handOverOutputOnStop {
+            self.parkAudioUnit()
+        } else {
+            self.closeAudioUnit()
+        }
     }
     
     fileprivate func setBaseRate(_ baseRate: Double) {
@@ -414,10 +471,17 @@ private final class AudioPlayerRendererContext {
     fileprivate func start() {
         assert(audioPlayerRendererQueue.isCurrent())
         
+        self.handOverOutputOnStop = false
         if self.paused {
             self.paused = false
             self.acquireAudioSession()
         }
+    }
+    
+    fileprivate func prepareOutputHandover() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
+        self.handOverOutputOnStop = true
     }
     
     fileprivate func stop() {
@@ -426,7 +490,12 @@ private final class AudioPlayerRendererContext {
         if !self.paused {
             self.paused = true
             self.setRate(0.0)
-            self.closeAudioUnit()
+            if self.handOverOutputOnStop {
+                self.handOverOutputOnStop = false
+                self.parkAudioUnit()
+            } else {
+                self.closeAudioUnit()
+            }
         }
     }
     
@@ -661,44 +730,50 @@ private final class AudioPlayerRendererContext {
         if let audioGraph = self.audioGraph {
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            guard AUGraphStart(audioGraph) == noErr else {
+            let startStatus = AUGraphStart(audioGraph)
+            guard startStatus == noErr else {
+                Logger.shared.log("AudioPlayerRenderer", "AUGraphStart error \(startStatus)")
                 self.closeAudioUnit()
+                closeHandoverOutput()
+                // Without a running output the player would keep showing "playing" with no sound.
+                self.audioPaused()
                 return
             }
+            closeHandoverOutput()
             
             print("\(CFAbsoluteTimeGetCurrent()) MediaPlayerAudioRenderer start audio unit: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
+    }
+    
+    private func parkAudioUnit() {
+        assert(audioPlayerRendererQueue.isCurrent())
+        
+        guard let audioGraph = self.audioGraph else {
+            return
+        }
+        // The buffer is empty at the end of an item, and the render callback writes silence for
+        // a paused or unregistered buffer context.
+        self.bufferContext.with { context in
+            context.buffer.clear()
+        }
+        parkHandoverOutput(audioGraph)
+        
+        self.audioGraph = nil
+        self.timePitchAudioUnit = nil
+        self.mixerAudioUnit = nil
+        self.equalizerAudioUnit = nil
+        self.outputAudioUnit = nil
     }
     
     private func closeAudioUnit() {
         assert(audioPlayerRendererQueue.isCurrent())
         
         if let audioGraph = self.audioGraph {
-            var status = noErr
-            
             self.bufferContext.with { context in
                 context.buffer.clear()
             }
             
-            status = AUGraphStop(audioGraph)
-            if status != noErr {
-                Logger.shared.log("AudioPlayerRenderer", "AUGraphStop error \(status)")
-            }
-            
-            status = AUGraphUninitialize(audioGraph)
-            if status != noErr {
-                Logger.shared.log("AudioPlayerRenderer", "AUGraphUninitialize error \(status)")
-            }
-            
-            status = AUGraphClose(audioGraph)
-            if status != noErr {
-                Logger.shared.log("AudioPlayerRenderer", "AUGraphClose error \(status)")
-            }
-            
-            status = DisposeAUGraph(audioGraph)
-            if status != noErr {
-                Logger.shared.log("AudioPlayerRenderer", "DisposeAUGraph error \(status)")
-            }
+            disposeAudioGraph(audioGraph)
             
             self.audioGraph = nil
             self.timePitchAudioUnit = nil
@@ -918,6 +993,17 @@ public final class MediaPlayerAudioRenderer {
             if let contextRef = self.contextRef {
                 let context = contextRef.takeUnretainedValue()
                 context.stop()
+            }
+        }
+    }
+    
+    // The next stop() keeps the output running until another renderer's output has started
+    // (or a short timeout), so moving to the next playlist item works in the background.
+    public func prepareOutputHandover() {
+        audioPlayerRendererQueue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                context.prepareOutputHandover()
             }
         }
     }
