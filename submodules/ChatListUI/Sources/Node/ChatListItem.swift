@@ -1154,6 +1154,28 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
 private let telegramCodeRegex = try? NSRegularExpression(pattern: "(?<=: )\\b\\d{5,8}\\b(?=\\.)", options: [])
 private let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,8}\\b", options: [])
 
+// A support search lists one chat in several rows; only the selected one is marked.
+private func chatListSupportRowIsSelected(_ item: ChatListItem) -> Bool {
+    if let item = item as? SupportNarrowSearchRecentPeerItem {
+        return item.isMarked
+    }
+    guard let highlight = item.interaction.supportSearchHighlight else {
+        return true
+    }
+    switch highlight {
+    case let .message(messageId):
+        if case let .peer(peerData) = item.content {
+            return peerData.messages.first?.id == messageId
+        }
+        return false
+    case .none:
+        if case let .peer(peerData) = item.content {
+            return peerData.messages.isEmpty
+        }
+        return false
+    }
+}
+
 public class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
         let topicTitleNode: TextNode
@@ -2315,7 +2337,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 reallyHighlighted = true
             }
             if let itemChatLocation = item.content.chatLocation {
-                if itemChatLocation == item.interaction.highlightedChatLocation?.location {
+                if itemChatLocation == item.interaction.highlightedChatLocation?.location, chatListSupportRowIsSelected(item) {
                     reallyHighlighted = true
                 }
             }
@@ -2354,10 +2376,27 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode.isHidden = self.separatorBaseIsHidden || self.reallyHighlighted || nextIsHighlighted
     }
     
+    private var supportRegularHighlightColor: UIColor?
+
+    private func supportUpdateOpenChatHighlightColor(highlightedBackgroundColor: UIColor? = nil) {
+        if let highlightedBackgroundColor {
+            self.supportRegularHighlightColor = highlightedBackgroundColor
+        }
+        guard let item = self.item, item.context.supportContext != nil, item.presentationData.theme.overallDarkAppearance, !item.interaction.isSideListMode, let regularColor = self.supportRegularHighlightColor else {
+            return
+        }
+        var isOpenChat = false
+        if let itemChatLocation = item.content.chatLocation, itemChatLocation == item.interaction.highlightedChatLocation?.location, chatListSupportRowIsSelected(item) {
+            isOpenChat = true
+        }
+        self.highlightedBackgroundNode.backgroundColor = isOpenChat ? item.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.3) : regularColor
+    }
+
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
         defer {
             self.updateSideListSeparatorVisibility()
         }
+        self.supportUpdateOpenChatHighlightColor()
         let highlightProgress: CGFloat = self.item?.interaction.highlightedChatLocation?.progress ?? 1.0
         self.updateSeparatorAlpha(transition: transition)
         
@@ -4538,7 +4577,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         itemPeerId = index.messageIndex.id.peerId
                     }
                     
-                    if let itemPeerId = itemPeerId, let inlineNavigationLocation = item.interaction.inlineNavigationLocation, inlineNavigationLocation.location.peerId == itemPeerId {
+                    if let itemPeerId = itemPeerId, let inlineNavigationLocation = item.interaction.inlineNavigationLocation, inlineNavigationLocation.location.peerId == itemPeerId, chatListSupportRowIsSelected(item) {
                         let inlineNavigationMarkLayer: SimpleLayer
                         var animateIn = false
                         if let current = strongSelf.inlineNavigationMarkLayer {
@@ -5709,6 +5748,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     // The side list's plate matches its search field.
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.interaction.isSideListMode ? item.presentationData.theme.rootController.navigationSearchBar.inputFillColor : highlightedBackgroundColor
+                    strongSelf.supportUpdateOpenChatHighlightColor(highlightedBackgroundColor: highlightedBackgroundColor)
                     let topNegativeInset: CGFloat = 0.0
                     var highlightedBackgroundFrame = CGRect(origin: CGPoint(x: params.leftInset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     if item.interaction.isSideListMode {
