@@ -1,4 +1,5 @@
 import XCTest
+import SwiftSignalKit
 @testable import TelegramCore
 
 /// Occupation drafts as TDesktop's `support_helper.cpp` writes and reads them.
@@ -90,5 +91,58 @@ final class SupportOccupationTests: XCTestCase {
         XCTAssertNil(supportReceivedDraftText(nil))
         XCTAssertNil(supportReceivedDraftText(SynchronizeableChatInputState(replySubject: nil, text: "", entities: [], timestamp: 1, textSelection: nil, messageEffectId: nil, suggestedPost: nil)))
         XCTAssertEqual(supportReceivedDraftText(SynchronizeableChatInputState(replySubject: nil, text: "t:1;u:2;n:x", entities: [], timestamp: 1, textSelection: nil, messageEffectId: nil, suggestedPost: nil)), "t:1;u:2;n:x")
+    }
+
+    private func completes(_ signal: Signal<Never, NoError>) -> Bool {
+        var completed = false
+        let _ = signal.start(completed: {
+            completed = true
+        })
+        return completed
+    }
+
+    func testReleaseClaimWithoutManagerCompletesAtOnce() {
+        let context = SupportContext(settings: .single(.default))
+        XCTAssertTrue(self.completes(context.releaseClaim()))
+    }
+
+    func testReleaseClaimRunsTheCurrentManager() {
+        let context = SupportContext(settings: .single(.default))
+        var calls: [String] = []
+        let first = context.setReleaseClaim {
+            calls.append("first")
+            return .complete()
+        }
+        let second = context.setReleaseClaim {
+            calls.append("second")
+            return .complete()
+        }
+        XCTAssertTrue(self.completes(context.releaseClaim()))
+        XCTAssertEqual(calls, ["second"])
+
+        first.dispose()
+        XCTAssertTrue(self.completes(context.releaseClaim()))
+        XCTAssertEqual(calls, ["second", "second"])
+
+        second.dispose()
+        XCTAssertTrue(self.completes(context.releaseClaim()))
+        XCTAssertEqual(calls, ["second", "second"])
+    }
+
+    func testReleaseClaimWaitsForTheRelease() {
+        let context = SupportContext(settings: .single(.default))
+        let release = ValuePipe<Void>()
+        let registration = context.setReleaseClaim {
+            return release.signal() |> take(1) |> ignoreValues
+        }
+        var completed = false
+        let disposable = context.releaseClaim().start(completed: {
+            completed = true
+        })
+        XCTAssertFalse(completed)
+        release.putNext(Void())
+        XCTAssertTrue(completed)
+        disposable.dispose()
+        registration.dispose()
     }
 }
