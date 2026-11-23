@@ -8,6 +8,10 @@ public func isSupportAccountPhone(_ phone: String?) -> Bool {
     return phone.hasPrefix("424")
 }
 
+public func supportPremiumBadgesShown(isSupport: Bool, isPremiumDisabled: Bool) -> Bool {
+    return isSupport || !isPremiumDisabled
+}
+
 func supportPremiumStatusHasExpiryDate(_ status: String) -> Bool {
     return status.range(of: "\\b\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}\\b", options: .regularExpression) != nil
 }

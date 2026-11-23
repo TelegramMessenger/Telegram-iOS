@@ -450,7 +450,7 @@ private final class PeerInfoPendingPane {
         switch key {
         case .gifts:
             var canManage = false
-            var canGift = true
+            var canGift = context.supportContext == nil
             if let peer = data.peer {
                 if let cachedUserData = data.cachedData as? CachedUserData, cachedUserData.disallowedGifts == .All {
                     canGift = false

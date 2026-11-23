@@ -2734,7 +2734,7 @@ func peerInfoUserHeaderHasMore(_ user: TelegramUser, isSecretChat: Bool, isConta
     return !(isSecretChat && !isContact) && !user.flags.contains(.isSupport)
 }
 
-func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, isSupportAccount: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if case let .user(user) = peer {
         if !isOpenedFromChat {
@@ -2742,7 +2742,7 @@ func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?,
         }
         var callsAvailable = false
         var videoCallsAvailable = false
-        if !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport) {
+        if !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport), !isSupportAccount {
             if let cachedUserData = cachedData as? CachedUserData {
                 callsAvailable = cachedUserData.voiceCallsAvailable
                 videoCallsAvailable = cachedUserData.videoCallsAvailable
@@ -2801,7 +2801,7 @@ func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?,
                 canViewStats = false
             }
             
-            if hasVoiceChat || canStartVoiceChat {
+            if (hasVoiceChat || canStartVoiceChat) && !isSupportAccount {
                 result.append(.voiceChat)
             }
             if case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), !channel.hasPermission(.manageDirect) {
@@ -2860,7 +2860,7 @@ func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?,
             canStartVoiceChat = false
         }
 
-        if hasVoiceChat || canStartVoiceChat {
+        if (hasVoiceChat || canStartVoiceChat) && !isSupportAccount {
             result.append(.voiceChat)
         }
         result.append(.mute)

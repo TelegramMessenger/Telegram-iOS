@@ -912,7 +912,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private var canDelete: Bool {
         let canDelete: Bool
         if self.peer.id == self.context.account.peerId {
-            canDelete = true
+            canDelete = self.context.supportContext == nil
         } else if case let .legacyGroup(group) = self.peer {
             switch group.role {
                 case .creator, .admin:

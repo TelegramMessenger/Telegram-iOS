@@ -418,7 +418,7 @@ extension ChatControllerImpl {
                 
                 var (buttons, allButtons, initialButton) = buttonsAndInitialButton
                 if !isEditingMessage {
-                    if !premiumGiftOptions.isEmpty {
+                    if !premiumGiftOptions.isEmpty && strongSelf.context.supportContext == nil {
                         buttons.insert(.gift, at: 1)
                     }
                     let firstBotIndex = buttons.firstIndex(where: { button in

@@ -1157,6 +1157,7 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func getNotificationExceptions() -> Promise<NotificationExceptionsList?>?
         
+    func openAddContact()
     func openContacts()
     func openSettings(edit: Bool)
     func openBirthdaySetup()
@@ -1969,6 +1970,11 @@ public extension AccountContext {
     var isRichTextUnlocked: Bool {
         return self.isPremium || self.supportContext != nil
     }
+    // Whether stars show on peers. A support account sees them even where Premium can't be bought; its own star is decided by showsPremiumStar.
+    var premiumBadgesShown: Bool {
+        return supportPremiumBadgesShown(isSupport: self.supportContext != nil, isPremiumDisabled: PremiumConfiguration.with(appConfiguration: self.currentAppConfiguration.with { $0 }).isPremiumDisabled)
+    }
+    
 }
 
 public struct AntiSpamBotConfiguration {

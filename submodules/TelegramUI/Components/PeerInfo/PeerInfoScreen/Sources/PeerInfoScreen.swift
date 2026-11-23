@@ -176,6 +176,7 @@ enum PeerInfoSettingsSection {
     case passwordSetup
     case dataAndStorage
     case supportSettings
+    case addContact
     case appearance
     case language
     case stickers
@@ -6196,6 +6197,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             var navigationFlags = PeerInfoNavigationFlags()
             navigationFlags.isEditing = self.state.isEditing
             navigationFlags.isSettings = self.isSettings
+            navigationFlags.isSupportSettings = self.context.supportContext != nil
             navigationFlags.isMyProfile = self.isMyProfile
             navigationFlags.canEdit = peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact)
             if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, case let .channel(channel) = data.peer, channel.hasPermission(.postStories) {

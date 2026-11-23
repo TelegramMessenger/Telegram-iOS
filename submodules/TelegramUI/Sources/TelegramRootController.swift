@@ -995,6 +995,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
     }
     
+    public func openAddContact() {
+        let contactsController = self.contactsController ?? ContactsController(context: self.context)
+        self.supportAddContactController = contactsController
+        contactsController.addPressed()
+    }
+    
     /// Contacts has no tab: the Settings tab, with the screen Settings ▸ Contacts pushes over it.
     public func openContacts() {
         guard let rootTabController = self.rootTabController else {
