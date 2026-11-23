@@ -1,10 +1,35 @@
 import Foundation
+import Postbox
 
 public func isSupportAccountPhone(_ phone: String?) -> Bool {
     guard let phone else {
         return false
     }
     return phone.hasPrefix("424")
+}
+
+func supportPremiumStatusHasExpiryDate(_ status: String) -> Bool {
+    return status.range(of: "\\b\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}\\b", options: .regularExpression) != nil
+}
+
+func supportUserWithPremiumFromStatus(transaction: Transaction, user: TelegramUser) -> TelegramUser {
+    guard isSupportAccountPhone(user.phone), let status = transaction.getPreferencesEntry(key: PreferencesKeys.premiumPromo)?.get(PremiumPromoConfiguration.self)?.status, supportPremiumStatusHasExpiryDate(status) else {
+        return user
+    }
+    var flags = user.flags
+    flags.insert(.isPremium)
+    flags.insert(.hidesPremiumStar)
+    return user.withUpdatedFlags(flags)
+}
+
+func supportRefreshPremiumFromStatus(transaction: Transaction, accountPeerId: PeerId) {
+    guard let user = transaction.getPeer(accountPeerId) as? TelegramUser, isSupportAccountPhone(user.phone) else {
+        return
+    }
+    var flags = user.flags
+    flags.remove(.isPremium)
+    flags.remove(.hidesPremiumStar)
+    updatePeersCustom(transaction: transaction, peers: [user.withUpdatedFlags(flags)], update: { _, updated in updated })
 }
 
 func resolvedIsSupportUser(storedPhone: String?, recordAttribute: Bool) -> Bool {

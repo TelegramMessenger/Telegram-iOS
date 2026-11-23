@@ -15,7 +15,7 @@ extension ReplayContext {
     func applyMergeApiUsers(_ users: [Api.User]) {
         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
         if let updatedAccountPeer = parsedPeers.get(accountPeerId) as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
-            if updatedAccountPeer.isPremium != previousAccountPeer.isPremium {
+            if supportUserWithPremiumFromStatus(transaction: transaction, user: updatedAccountPeer).isPremium != previousAccountPeer.isPremium {
                 isPremiumUpdated = true
             }
         }
