@@ -129,6 +129,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case hideChatsWithoutIncoming
         case hideChatsWithoutIncomingInfo
         case automaticMediaDownload
+        case hideProfilePhotos
         case inAppNotifications
         case quietInfo
         case trailingTags
@@ -164,6 +165,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case hideChatsWithoutIncoming(String, Bool)
     case hideChatsWithoutIncomingInfo(String)
     case automaticMediaDownload(String, Bool)
+    case hideProfilePhotos(String, Bool)
     case inAppNotifications(String, Bool)
     case quietInfo(String)
     case trailingTags(String, Bool)
@@ -198,7 +200,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.order.rawValue
         case .hideChatsWithoutIncoming, .hideChatsWithoutIncomingInfo:
             return SupportSettingsSection.received.rawValue
-        case .automaticMediaDownload, .inAppNotifications, .quietInfo:
+        case .automaticMediaDownload, .hideProfilePhotos, .inAppNotifications, .quietInfo:
             return SupportSettingsSection.quiet.rawValue
         case .trailingTags, .collapseMiddleTags, .trailingTagsInfo:
             return SupportSettingsSection.tags.rawValue
@@ -241,6 +243,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .hideChatsWithoutIncomingInfo
         case .automaticMediaDownload:
             return .automaticMediaDownload
+        case .hideProfilePhotos:
+            return .hideProfilePhotos
         case .inAppNotifications:
             return .inAppNotifications
         case .quietInfo:
@@ -312,6 +316,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 12
         case .automaticMediaDownload:
             return 13
+        case .hideProfilePhotos:
+            return 14
         case .inAppNotifications:
             return 15
         case .quietInfo:
@@ -422,6 +428,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             }, tag: SupportSettingsEntryTag.automaticMediaDownload)
+        case let .hideProfilePhotos(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.hideProfilePhotos = value
+                    return settings
+                }
+            })
         case let .inAppNotifications(title, value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateSettings { settings in
@@ -547,7 +561,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.hideChatsWithoutIncoming(strings.Support_HideOutgoingOnly_Title, settings.hideChatsWithoutIncomingMessages))
     entries.append(.hideChatsWithoutIncomingInfo(strings.Support_HideOutgoingOnly_Info))
+
     entries.append(.automaticMediaDownload(strings.Support_Quiet_AutoDownload, settings.automaticMediaDownload))
+    entries.append(.hideProfilePhotos(strings.Support_Quiet_HideProfilePhotos, settings.hideProfilePhotos))
     entries.append(.inAppNotifications(strings.Support_Quiet_InAppNotifications, settings.inAppNotifications))
     entries.append(.quietInfo(strings.Support_Quiet_Info))
 

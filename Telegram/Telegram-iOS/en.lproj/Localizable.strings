@@ -17369,6 +17369,7 @@ Error: %8$@";
 
 "Support.Quiet.AutoDownload" = "Auto-download media";
 "Support.Quiet.AutoDownloadSynonyms" = "auto\ndownload\nmedia";
+"Support.Quiet.HideProfilePhotos" = "Hide profile photos";
 "Support.Quiet.InAppNotifications" = "In-app notifications";
 "Support.Quiet.InAppNotificationsSynonyms" = "notifications\nbanner\nsound\nvibrate";
 "Support.Quiet.Info" = "These apply to this account only. With auto-download off, media loads when you tap it. With profile photos hidden, everyone shows their initials and no photos are downloaded. With notifications off, new messages play no sound and show no banner while the app is open.";
