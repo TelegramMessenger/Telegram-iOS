@@ -37,6 +37,8 @@ public struct SupportSettings: Codable, Equatable {
     public var sendAllSilently: Bool
     public var chatListBeside: SupportChatListBeside
     public var shortcutOverrides: [SupportShortcutOverride] = []
+    public var trailingTags: Bool = true
+    public var collapseMiddleTags: Bool = true
     public var hideKeyboardOnSwitch: Bool = true
     public var swipeToNextChat: Bool = false
     public var hideChatsWithoutIncomingMessages: Bool = false
@@ -63,6 +65,8 @@ public struct SupportSettings: Codable, Equatable {
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
         self.chatListBeside = (try container.decodeIfPresent(Int32.self, forKey: "chatListBeside")).flatMap(SupportChatListBeside.init(rawValue:)) ?? defaults.chatListBeside
         self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
+        self.trailingTags = try container.decodeIfPresent(Bool.self, forKey: "trailingTags") ?? defaults.trailingTags
+        self.collapseMiddleTags = try container.decodeIfPresent(Bool.self, forKey: "collapseMiddleTags") ?? defaults.collapseMiddleTags
         self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
         self.swipeToNextChat = try container.decodeIfPresent(Bool.self, forKey: "swipeToNextChat") ?? defaults.swipeToNextChat
         self.hideChatsWithoutIncomingMessages = try container.decodeIfPresent(Bool.self, forKey: "hideChatsWithoutIncomingMessages") ?? defaults.hideChatsWithoutIncomingMessages
@@ -79,6 +83,8 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
         try container.encode(self.chatListBeside.rawValue, forKey: "chatListBeside")
         try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
+        try container.encode(self.trailingTags, forKey: "trailingTags")
+        try container.encode(self.collapseMiddleTags, forKey: "collapseMiddleTags")
         try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
         try container.encode(self.swipeToNextChat, forKey: "swipeToNextChat")
         try container.encode(self.hideChatsWithoutIncomingMessages, forKey: "hideChatsWithoutIncomingMessages")

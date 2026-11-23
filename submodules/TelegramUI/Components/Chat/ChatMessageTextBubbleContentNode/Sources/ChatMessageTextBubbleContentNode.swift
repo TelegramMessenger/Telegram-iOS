@@ -67,6 +67,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var linkHighlightingNode: LinkHighlightingNode?
     private var shimmeringNode: ShimmeringLinkNode?
     private var textSelectionNode: TextSelectionNode?
+    private var trailingSelectionTextNode: TrailingSelectionTextNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
     
@@ -430,6 +431,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if incoming && item.associatedData.isSuspiciousPeer, let entities = messageEntities {
                     messageEntities = entities.filter(\.isShownFromSuspiciousPeer)
+                }
+                
+                if incoming, item.context.supportContext?.currentTrailingTags == true, !item.associatedData.isSuspiciousPeer, item.controllerInteraction.searchTextHighightState == nil, let entities = messageEntities, let footer = trailingHashtagFooter(text: rawText, entities: entities) {
+                    rawText = (rawText as NSString).substring(to: footer.textEnd)
+                    messageEntities = entities.filter { $0.range.upperBound <= footer.textEnd }
                 }
                 
                 var formattedDateUpdatePeriod: Int32?
@@ -870,7 +876,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.textNode.visibilityRect = subRect
                             }
                             
-                            if let textSelectionNode = strongSelf.textSelectionNode {
+                            if strongSelf.trailingSelectionTextNode != nil {
+                                strongSelf.updateTrailingSelectionLayout()
+                            } else if let textSelectionNode = strongSelf.textSelectionNode {
                                 let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
                                 textSelectionNode.frame = textFrame
                                 textSelectionNode.highlightAreaNode.frame = textFrame
@@ -1589,6 +1597,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if !value {
             if let textSelectionNode = self.textSelectionNode {
                 self.textSelectionNode = nil
+                self.trailingSelectionTextNode = nil
                 textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
                     textSelectionNode?.highlightAreaNode.removeFromSupernode()
@@ -1615,7 +1624,17 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
                 }
                 
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: item.presentationData.theme.theme.overallDarkAppearance), strings: item.presentationData.strings, textNodeOrView: .node(self.textNode.textNode), updateIsActive: { [weak self] value in
+                var trailingSelectionTextNode: TrailingSelectionTextNode?
+                if let trailingNode = self.trailingSelectionSibling(messageId: item.message.id) {
+                    trailingSelectionTextNode = TrailingSelectionTextNode(bodyNode: self.textNode.textNode, trailingNode: trailingNode)
+                }
+                let textNodeOrView: TextSelectionNode.TextNodeOrView
+                if let trailingSelectionTextNode {
+                    textNodeOrView = .node(trailingSelectionTextNode)
+                } else {
+                    textNodeOrView = .node(self.textNode.textNode)
+                }
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: item.presentationData.theme.theme.overallDarkAppearance), strings: item.presentationData.strings, textNodeOrView: textNodeOrView, updateIsActive: { [weak self] value in
                     self?.updateIsTextSelectionActive?(value)
                 }, present: { [weak self] c, a in
                     guard let self, let item = self.item else {
@@ -1683,14 +1702,26 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 textSelectionNode.enableShare = enableOtherActions && enableCopy
                 textSelectionNode.menuSkipCoordnateConversion = !enableOtherActions
                 self.textSelectionNode = textSelectionNode
-                self.containerNode.addSubnode(textSelectionNode)
-                self.containerNode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode.textNode)
-                textSelectionNode.frame = self.textNode.textNode.frame
-                textSelectionNode.highlightAreaNode.frame = self.textNode.textNode.frame
+                if let trailingSelectionTextNode, let supernode = self.supernode {
+                    self.trailingSelectionTextNode = trailingSelectionTextNode
+                    textSelectionNode.adjustInitialSelection = { [weak trailingSelectionTextNode] range in
+                        return trailingSelectionTextNode?.expandedSelection(range) ?? range
+                    }
+                    textSelectionNode.addSubnode(trailingSelectionTextNode)
+                    supernode.addSubnode(textSelectionNode)
+                    supernode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self)
+                    self.updateTrailingSelectionLayout()
+                } else {
+                    self.containerNode.addSubnode(textSelectionNode)
+                    self.containerNode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode.textNode)
+                    textSelectionNode.frame = self.textNode.textNode.frame
+                    textSelectionNode.highlightAreaNode.frame = self.textNode.textNode.frame
+                }
             }
         } else {
             if let textSelectionNode = self.textSelectionNode {
                 self.textSelectionNode = nil
+                self.trailingSelectionTextNode = nil
                 self.updateIsTextSelectionActive?(false)
                 textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
@@ -1702,6 +1733,38 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             if self.displayContentsUnderSpoilers.value {
                 self.updateDisplayContentsUnderSpoilers(value: false, at: nil)
             }
+        }
+    }
+    
+    private func trailingSelectionSibling(messageId: EngineMessage.Id) -> (ASDisplayNode & ChatMessageBubbleTrailingSelectionContent)? {
+        guard let supernode = self.supernode else {
+            return nil
+        }
+        for subnode in supernode.subnodes ?? [] {
+            if subnode !== self, let contentNode = subnode as? ChatMessageBubbleContentNode, contentNode.item?.message.id == messageId, let trailingNode = subnode as? (ASDisplayNode & ChatMessageBubbleTrailingSelectionContent) {
+                return trailingNode
+            }
+        }
+        return nil
+    }
+    
+    private func updateTrailingSelectionLayout() {
+        guard let textSelectionNode = self.textSelectionNode, let trailingSelectionTextNode = self.trailingSelectionTextNode, let supernode = textSelectionNode.supernode else {
+            return
+        }
+        let textNode = self.textNode.textNode
+        var frame = textNode.view.convert(textNode.bounds, to: supernode.view)
+        if let trailingNode = trailingSelectionTextNode.trailingNode {
+            for target in trailingNode.trailingSelectionTargets {
+                frame = frame.union(trailingNode.view.convert(target.frame, to: supernode.view))
+            }
+        }
+        let shouldUpdateLayout = textSelectionNode.frame.size != frame.size
+        textSelectionNode.frame = frame
+        textSelectionNode.highlightAreaNode.frame = frame
+        trailingSelectionTextNode.frame = CGRect(origin: CGPoint(), size: frame.size)
+        if shouldUpdateLayout {
+            textSelectionNode.updateLayout()
         }
     }
     
@@ -1853,5 +1916,112 @@ extension ChatMessageTextBubbleContentNode: ChatMessageQuoteSourceContentNode {
             return nil
         }
         return EngineMessageReplyQuote(text: trimmedText.string, offset: textSelection.offset, entities: trimmedText.entities, media: nil)
+    }
+}
+
+private final class TrailingSelectionTextNode: ASDisplayNode, TextNodeProtocol {
+    private weak var bodyNode: TextNodeProtocol?
+    private(set) weak var trailingNode: (ASDisplayNode & ChatMessageBubbleTrailingSelectionContent)?
+    
+    init(bodyNode: TextNodeProtocol, trailingNode: ASDisplayNode & ChatMessageBubbleTrailingSelectionContent) {
+        self.bodyNode = bodyNode
+        self.trailingNode = trailingNode
+        
+        super.init()
+        
+        self.isUserInteractionEnabled = false
+    }
+    
+    private var bodyLength: Int {
+        return self.bodyNode?.currentText?.length ?? 0
+    }
+    
+    var currentText: NSAttributedString? {
+        let result = NSMutableAttributedString()
+        if let bodyText = self.bodyNode?.currentText {
+            result.append(bodyText)
+        }
+        if let trailingNode = self.trailingNode {
+            result.append(NSAttributedString(string: trailingNode.trailingSelectionText))
+        }
+        return result
+    }
+    
+    private func targets() -> [(range: NSRange, frame: CGRect)] {
+        guard let trailingNode = self.trailingNode, trailingNode.isNodeLoaded, self.isNodeLoaded else {
+            return []
+        }
+        let offset = self.bodyLength
+        return trailingNode.trailingSelectionTargets.map { target in
+            return (NSRange(location: offset + target.range.location, length: target.range.length), trailingNode.view.convert(target.frame, to: self.view))
+        }
+    }
+    
+    func expandedSelection(_ range: NSRange) -> NSRange {
+        var lowerBound = range.location
+        var upperBound = range.location + range.length
+        for target in self.targets() where max(lowerBound, target.range.location) < min(upperBound, target.range.location + target.range.length) {
+            lowerBound = min(lowerBound, target.range.location)
+            upperBound = max(upperBound, target.range.location + target.range.length)
+        }
+        return NSRange(location: lowerBound, length: upperBound - lowerBound)
+    }
+    
+    func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
+        let targets = self.targets()
+        if let top = targets.map({ $0.frame.minY }).min(), point.y >= top - 4.0 {
+            if orNearest {
+                var nearest: (range: NSRange, frame: CGRect)?
+                var nearestDistance = CGFloat.greatestFiniteMagnitude
+                for target in targets {
+                    let dx = max(0.0, max(target.frame.minX - point.x, point.x - target.frame.maxX))
+                    let dy = max(0.0, max(target.frame.minY - point.y, point.y - target.frame.maxY))
+                    let distance = dx + dy * 4.0
+                    if distance < nearestDistance {
+                        nearestDistance = distance
+                        nearest = target
+                    }
+                }
+                if let nearest {
+                    return (point.x < nearest.frame.midX ? nearest.range.location : nearest.range.location + nearest.range.length, [:])
+                }
+            } else if let target = targets.first(where: { $0.frame.insetBy(dx: -2.0, dy: -2.0).contains(point) }) {
+                return (target.range.location + min(1, max(0, target.range.length - 1)), [:])
+            }
+            return nil
+        }
+        guard let bodyNode = self.bodyNode else {
+            return nil
+        }
+        return bodyNode.attributesAtPoint(self.view.convert(point, to: bodyNode.view), orNearest: orNearest)
+    }
+    
+    func textRangeRects(in range: NSRange) -> (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)? {
+        var rects: [CGRect] = []
+        var start: TextRangeRectEdge?
+        var end: TextRangeRectEdge?
+        let bodyLength = self.bodyLength
+        if let bodyNode = self.bodyNode, range.location < bodyLength {
+            let bodyRange = NSRange(location: range.location, length: min(range.location + range.length, bodyLength) - range.location)
+            if bodyRange.length > 0, let result = bodyNode.textRangeRects(in: bodyRange) {
+                let offset = bodyNode.view.convert(CGPoint(), to: self.view)
+                rects.append(contentsOf: result.rects.map { $0.offsetBy(dx: offset.x, dy: offset.y) })
+                start = TextRangeRectEdge(x: result.start.x + offset.x, y: result.start.y + offset.y, height: result.start.height)
+                end = TextRangeRectEdge(x: result.end.x + offset.x, y: result.end.y + offset.y, height: result.end.height)
+            }
+        }
+        for target in self.targets() {
+            if max(range.location, target.range.location) < min(range.location + range.length, target.range.location + target.range.length) {
+                rects.append(target.frame)
+                if start == nil {
+                    start = TextRangeRectEdge(x: target.frame.minX, y: target.frame.minY, height: target.frame.height)
+                }
+                end = TextRangeRectEdge(x: target.frame.maxX, y: target.frame.minY, height: target.frame.height)
+            }
+        }
+        guard let start, let end, !rects.isEmpty else {
+            return nil
+        }
+        return (rects, start, end)
     }
 }

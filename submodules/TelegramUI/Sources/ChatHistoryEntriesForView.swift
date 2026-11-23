@@ -500,6 +500,53 @@ func chatHistoryEntriesForView(
         }
     }
     
+    if let supportContext = context.supportContext, supportContext.currentTrailingTags {
+        let hasTrailingTags: (Message) -> Bool = { message in
+            return message.effectivelyIncoming(context.account.peerId) && trailingHashtagFooter(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], isCaption: !message.media.isEmpty) != nil
+        }
+        var taggedPositions: [Int] = []
+        var unreadDividerPosition: Int?
+        for i in entries.indices {
+            switch entries[i] {
+            case let .MessageEntry(message, _, _, _, _, _):
+                if hasTrailingTags(message) {
+                    taggedPositions.append(i)
+                }
+            case let .MessageGroupEntry(_, messages, _):
+                if messages.contains(where: { hasTrailingTags($0.0) }) {
+                    taggedPositions.append(i)
+                }
+            case .UnreadEntry:
+                unreadDividerPosition = i
+            default:
+                break
+            }
+        }
+        let expandedPositions = trailingTagsExpandedPositions(
+            taggedPositions: taggedPositions,
+            unreadDividerPosition: unreadDividerPosition,
+            collapsesMiddle: supportContext.currentCollapseMiddleTags,
+            reachesStart: view.earlierId == nil && !view.holeEarlier,
+            reachesEnd: view.laterId == nil && !view.holeLater
+        )
+        for i in expandedPositions {
+            switch entries[i] {
+            case let .MessageEntry(message, presentationData, isRead, location, selection, attributes):
+                var attributes = attributes
+                attributes.expandsTrailingTags = true
+                entries[i] = .MessageEntry(message, presentationData, isRead, location, selection, attributes)
+            case let .MessageGroupEntry(groupStableId, messages, presentationData):
+                if let index = messages.lastIndex(where: { hasTrailingTags($0.0) }) {
+                    var messages = messages
+                    messages[index].3.expandsTrailingTags = true
+                    entries[i] = .MessageGroupEntry(groupStableId, messages, presentationData)
+                }
+            default:
+                break
+            }
+        }
+    }
+
     var addedThreadHead = false
     if case let .replyThread(replyThreadMessage) = location, !replyThreadMessage.isForumPost, view.earlierId == nil, !view.holeEarlier, !view.isLoading, !isMusicPlaylist {
         loop: for entry in view.additionalData {
