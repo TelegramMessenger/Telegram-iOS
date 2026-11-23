@@ -6,6 +6,7 @@ import TelegramCore
 import AccountContext
 import UndoUI
 import SupportTemplates
+import SupportContactConfirmScreen
 
 extension ChatControllerImpl {
     var supportTemplatesAreAvailable: Bool {
@@ -112,11 +113,81 @@ extension ChatControllerImpl {
 
     private func supportTemplateChosen(value: String, replacing range: NSRange?) {
         if supportTemplateValueIsContact(value) {
+            self.supportTemplateContactChosen(value: value, replacing: range)
             return
         }
         let textInputPanelNode = self.chatDisplayNode.textInputPanelNode
         textInputPanelNode?.ensureFocused()
         self.supportTemplatesClose()
         textInputPanelNode?.supportInsertTemplateValue(value, replacing: range)
+    }
+
+    private func supportTemplateContactToast(_ text: String) {
+        self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: text, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in
+            return false
+        }), in: .current)
+    }
+
+    private func supportTemplateContactChosen(value: String, replacing range: NSRange?) {
+        guard let contact = SupportTemplateContact(value: value) else {
+            self.supportTemplateContactToast(self.presentationData.strings.Support_ContactTemplates_Malformed)
+            return
+        }
+        let state = self.presentationInterfaceState
+        guard state.interfaceState.editMessage == nil else {
+            self.supportTemplateContactToast(self.presentationData.strings.Support_ContactTemplates_FinishEditing)
+            return
+        }
+        let inputState = state.interfaceState.effectiveInputState
+        let composer = self.chatDisplayNode.textInputPanelNode?.supportComposerTextAndSelection ?? (inputState.inputText.string, NSRange(location: inputState.selectionRange.lowerBound, length: inputState.selectionRange.count))
+        let text = contact.textToSend(composerText: composer.0, selection: composer.1, replacing: range)
+        let restoresKeyboard = self.chatDisplayNode.supportTemplatesPanel != nil || state.inputMode == .text
+        let media = TelegramMediaContact(firstName: contact.firstName, lastName: contact.lastName, phoneNumber: contact.phone, peerId: nil, vCardData: nil)
+        let _ = (combineLatest(
+            self.context.engine.messages.supportSendSwitchesChat() |> take(1),
+            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] sendSwitchesChat, accountPeer in
+            guard let self else {
+                return
+            }
+            let params = SupportContactConfirmScreenParams(context: self.context, presentationData: self.presentationData, theme: state.theme, wallpaper: state.chatWallpaper, accountPeer: accountPeer, text: text, contact: media, canSendWithoutSwitching: sendSwitchesChat)
+            let screen = SupportContactConfirmScreen(params: params, completion: { [weak self] action in
+                guard let self else {
+                    return
+                }
+                switch action {
+                case .send:
+                    self.supportTemplateSendContact(media, comment: contact.comment, replacing: range, restoresKeyboard: restoresKeyboard, handleSupportSwitch: true)
+                case .sendWithoutSwitching:
+                    self.supportTemplateSendContact(media, comment: contact.comment, replacing: range, restoresKeyboard: restoresKeyboard, handleSupportSwitch: false)
+                case .cancel:
+                    if restoresKeyboard {
+                        self.chatDisplayNode.textInputPanelNode?.ensureFocused()
+                    }
+                }
+            })
+            self.supportTemplatesClose()
+            self.chatDisplayNode.dismissInput()
+            self.present(screen, in: .window(.root))
+        })
+    }
+
+    private func supportTemplateSendContact(_ media: TelegramMediaContact, comment: String, replacing range: NSRange?, restoresKeyboard: Bool, handleSupportSwitch: Bool) {
+        guard let textInputPanelNode = self.chatDisplayNode.textInputPanelNode else {
+            return
+        }
+        if restoresKeyboard {
+            textInputPanelNode.ensureFocused()
+        }
+        textInputPanelNode.supportInsertTemplateValue(comment, replacing: range)
+        if self.presentationInterfaceState.sendPaidMessageStars != nil {
+            let count = Int32(ceil(CGFloat(textInputPanelNode.inputTextState.inputText.length) / 4096.0)) + 1
+            self.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] postpone in
+                self?.chatDisplayNode.sendCurrentMessage(postpone: postpone, handleSupportSwitch: handleSupportSwitch, supportContact: media)
+            })
+        } else {
+            self.chatDisplayNode.sendCurrentMessage(handleSupportSwitch: handleSupportSwitch, supportContact: media)
+        }
     }
 }

@@ -14,6 +14,39 @@ public func supportTemplateValueIsContact(_ value: String) -> Bool {
     return value.hasPrefix("contact:")
 }
 
+public struct SupportTemplateContact: Equatable {
+    public let comment: String
+    public let phone: String
+    public let firstName: String
+    public let lastName: String
+
+    public init?(value: String) {
+        guard supportTemplateValueIsContact(value) else {
+            return nil
+        }
+        let units = Array(value.utf16.dropFirst("contact:".utf16.count))
+        let line = units.firstIndex(of: 0x0A)
+        let contact = String(decoding: units[..<(line ?? units.count)], as: UTF16.self)
+        let parts = contact.split(separator: " ", omittingEmptySubsequences: true)
+        guard parts.count > 1 else {
+            return nil
+        }
+        self.comment = line.map { String(decoding: units[($0 + 1)...], as: UTF16.self) } ?? ""
+        self.phone = String(parts[0])
+        self.firstName = String(parts[1])
+        self.lastName = parts.dropFirst(2).joined(separator: " ")
+    }
+
+    public func textToSend(composerText: String, selection: NSRange, replacing range: NSRange?) -> String {
+        let text = composerText as NSString
+        let replaced = range ?? selection
+        guard replaced.location != NSNotFound, replaced.location + replaced.length <= text.length else {
+            return composerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return text.replacingCharacters(in: replaced, with: self.comment).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 public final class SupportTemplates {
     public static let queryLimit = 10
     private static let weightStep = 1000

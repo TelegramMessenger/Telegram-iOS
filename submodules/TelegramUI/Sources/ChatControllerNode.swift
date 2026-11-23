@@ -5158,7 +5158,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
 
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, sendWithoutFormatting: Bool = false, handleSupportSwitch: Bool = false, completion: @escaping () -> Void = {}) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, sendWithoutFormatting: Bool = false, handleSupportSwitch: Bool = false, supportContact: TelegramMediaContact? = nil, completion: @escaping () -> Void = {}) {
         guard let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode else {
             return
         }
@@ -5212,7 +5212,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.controller?.push(premiumController)
                         }),
                         TextAlertAction(type: .genericAction, title: strings.RichText_SendWithoutFormatting, action: { [weak self] in
-                            self?.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, postpone: postpone, messageEffect: messageEffect, sendWithoutFormatting: true, handleSupportSwitch: handleSupportSwitch, completion: completion)
+                            self?.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, postpone: postpone, messageEffect: messageEffect, sendWithoutFormatting: true, handleSupportSwitch: handleSupportSwitch, supportContact: supportContact, completion: completion)
                         }),
                         TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {
                         })
@@ -5512,7 +5512,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
             }
             
-            if !messages.isEmpty || postEmptyMessages || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
+            // The text carries the reply, as on TDesktop; a contact sent alone keeps it.
+            let supportContactMessage: EnqueueMessage? = supportContact.flatMap { contact in
+                return .message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: contact), threadId: self.chatLocation.threadId, replyToMessageId: messages.isEmpty ? self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel : nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+            }
+            
+            if !messages.isEmpty || postEmptyMessages || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || supportContactMessage != nil {
                 if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                     var attributes: [MessageAttribute] = []
                     attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
@@ -5558,6 +5563,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.messageTransitionNode.add(correlationId: correlationId, source: source, initiated: {
                             })
                         }
+                    }
+                    
+                    // After the correlation id, so the send animation stays on the text.
+                    if let supportContactMessage {
+                        messages.append(overrideThreadId.flatMap { supportContactMessage.withUpdatedThreadId($0) } ?? supportContactMessage)
                     }
                     
                     self.setupSendActionOnViewUpdate({ [weak self] in
