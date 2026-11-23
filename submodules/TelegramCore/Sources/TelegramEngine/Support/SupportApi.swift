@@ -72,7 +72,7 @@ func supportUserInfo(_ result: Api.help.UserInfo) -> SupportUserInfo? {
     }
 }
 
-func supportTrimmedUserInfoText(text: String, entities: [MessageTextEntity]) -> (text: String, entities: [MessageTextEntity]) {
+public func supportTrimmedUserInfoText(text: String, entities: [MessageTextEntity]) -> (text: String, entities: [MessageTextEntity]) {
     let utf16 = Array(text.utf16)
     let isWhitespace: (UInt16) -> Bool = { unit in
         return Unicode.Scalar(unit).flatMap(CharacterSet.whitespacesAndNewlines.contains) ?? false
