@@ -358,11 +358,16 @@ final class AuthorizedApplicationContext {
                         })
                     }
                     
-                    let inAppNotificationSettings: InAppNotificationSettings
+                    var inAppNotificationSettings: InAppNotificationSettings
                     if let current = strongSelf.inAppNotificationSettings {
                         inAppNotificationSettings = current
                     } else {
                         inAppNotificationSettings = InAppNotificationSettings.defaultSettings
+                    }
+                    if let supportContext = strongSelf.context.supportContext, !supportContext.currentInAppNotifications {
+                        inAppNotificationSettings.playSounds = false
+                        inAppNotificationSettings.vibrate = false
+                        inAppNotificationSettings.displayPreviews = false
                     }
                     
                     if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {

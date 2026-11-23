@@ -20,6 +20,39 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertFalse(settings.sendAllSilently)
     }
 
+    func testQuietByDefault() {
+        XCTAssertFalse(SupportSettings.default.automaticMediaDownload)
+        XCTAssertFalse(SupportSettings.default.inAppNotifications)
+    }
+
+    func testStoredSettingsFromBeforeTheQuietKeysStayQuiet() {
+        let stored = PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)
+        XCTAssertEqual(stored?.automaticMediaDownload, false)
+        XCTAssertEqual(stored?.inAppNotifications, false)
+    }
+
+    func testContextFollowsTheQuietSettings() {
+        let settings = ValuePromise<SupportSettings>(.default)
+        let context = SupportContext(settings: settings.get())
+        var values: [Bool] = []
+        let disposable = context.automaticMediaDownload.start(next: { value in
+            values.append(value)
+        })
+        defer {
+            disposable.dispose()
+        }
+        XCTAssertFalse(context.currentAutomaticMediaDownload)
+        XCTAssertFalse(context.currentInAppNotifications)
+
+        var updated = SupportSettings.default
+        updated.automaticMediaDownload = true
+        updated.inAppNotifications = true
+        settings.set(updated)
+        XCTAssertTrue(context.currentAutomaticMediaDownload)
+        XCTAssertTrue(context.currentInAppNotifications)
+        XCTAssertEqual(values, [false, true])
+    }
+
     func testSupportKeepsOnlySecuritySuggestions() {
         let shown: [ServerProvidedSuggestion] = [.validatePassword, .setupPassword, .setupLoginEmail, .setupLoginEmailBlocking]
         for suggestion in shown {
@@ -32,7 +65,7 @@ final class SupportSettingsTests: XCTestCase {
     }
 
     func testRoundTrip() {
-        let settings = SupportSettings(switchBehavior: .previous, fixChatsOrder: false, templatesAutocomplete: false, chatLoadPeriod: SupportSettings.allChatsLoadPeriod, allSearchResults: true, sendAllSilently: true)
+        let settings = SupportSettings(switchBehavior: .previous, fixChatsOrder: false, templatesAutocomplete: false, chatLoadPeriod: SupportSettings.allChatsLoadPeriod, allSearchResults: true, sendAllSilently: true, automaticMediaDownload: true, inAppNotifications: true)
         XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self), settings)
         XCTAssertEqual(PreferencesEntry(SupportSettings.default)?.get(SupportSettings.self), .default)
     }

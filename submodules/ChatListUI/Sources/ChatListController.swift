@@ -2289,7 +2289,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
             self.preloadStorySubscriptionsDisposable = (combineLatest(queue: .mainQueue(),
                 preloadStorySubscriptions,
-                self.context.sharedContext.automaticMediaDownloadSettings,
+                self.context.accountAutomaticMediaDownloadSettings,
                 automaticDownloadNetworkType
             )
             |> deliverOnMainQueue).startStrict(next: { [weak self] resources, automaticMediaDownloadSettings, automaticDownloadNetworkType in

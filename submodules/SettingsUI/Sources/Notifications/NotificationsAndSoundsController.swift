@@ -601,10 +601,12 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     }
     entries.append(.reactions(presentationData.theme, presentationData.strings.Notifications_Reactions, reactionsValue, hasReactionNotifications ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     
-    entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
-    entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))
-    entries.append(.inAppVibrate(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsVibrate, inAppSettings.vibrate))
-    entries.append(.inAppPreviews(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsPreview, inAppSettings.displayPreviews))
+    if !isSupportAccount {
+        entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
+        entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))
+        entries.append(.inAppVibrate(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsVibrate, inAppSettings.vibrate))
+        entries.append(.inAppPreviews(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsPreview, inAppSettings.displayPreviews))
+    }
     
     entries.append(.displayNamesOnLockscreen(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreen, inAppSettings.displayNameOnLockscreen))
     entries.append(.displayNamesOnLockscreenInfo(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreenInfoWithLink))
