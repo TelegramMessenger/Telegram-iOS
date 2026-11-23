@@ -17486,6 +17486,18 @@ Error: %8$@";
 
 "Support.DoneNext.VoiceOver" = "Done, next chat";
 
+"Support.Info.Placeholder" = "Support information";
+"Support.Info.AddTitle" = "Add support info";
+"Support.Info.EditTitle" = "Edit support info";
+"Support.Info.Label" = "{author}, {date}";
+"Support.Info.CheckWarning" = "⚠️ check info";
+"Support.Info.Copied" = "Support info copied.";
+"Support.Info.LoadError" = "Could not load the support info";
+"Support.Info.TooLong" = "The note is too long";
+"Support.Info.DeleteTitle" = "Delete support info?";
+"Support.Info.DeleteText" = "This removes the note for all agents.";
+"Support.Info.SaveError" = "Could not save the note";
+
 "Support.ContactTemplates.Malformed" = "This contact template is malformed";
 "Support.ContactTemplates.FinishEditing" = "Finish editing before sending a contact template";
 "Support.ContactTemplates.ConfirmTitle" = "Confirmation";
