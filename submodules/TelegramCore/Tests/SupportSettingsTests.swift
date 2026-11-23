@@ -65,6 +65,15 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertFalse(context.currentHideKeyboardOnSwitch)
     }
 
+    func testSwipeToNextChatIsOffByDefaultAndRoundTrips() {
+        XCTAssertFalse(SupportSettings.default.swipeToNextChat)
+        XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.swipeToNextChat, false)
+
+        var settings = SupportSettings.default
+        settings.swipeToNextChat = true
+        XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self)?.swipeToNextChat, true)
+    }
+
     func testComposerFocusSkipIsForOneChatOnceAndExpires() {
         let context = SupportContext(settings: .single(.default))
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))

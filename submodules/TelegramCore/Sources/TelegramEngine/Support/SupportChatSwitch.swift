@@ -145,7 +145,10 @@ private func supportSwitchTarget(transaction: Transaction, peerId: PeerId, chatL
     case .previous:
         downward = false
     }
+    return supportUnreadTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, downward: downward, getFilterPredicate: getFilterPredicate)
+}
 
+private func supportUnreadTarget(transaction: Transaction, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: [PeerId]?, downward: Bool, getFilterPredicate: (ChatListFilterData) -> ChatListFilterPredicate) -> PeerId? {
     let isTarget: (PeerId) -> Bool = { targetPeerId in
         guard targetPeerId != peerId, transaction.getCombinedPeerReadState(targetPeerId)?.isUnread == true, let peer = transaction.getPeer(targetPeerId) else {
             return false
@@ -263,4 +266,40 @@ func _internal_supportSwitchTargetUpdates(account: Account, peerId: PeerId, chat
     |> afterNext { target in
         Logger.shared.log("SupportSwitch", "preload for \(peerId.toInt64()) filter \(String(describing: chatListFilterId)): \(String(describing: target?.toInt64()))")
     }
+}
+
+public enum SupportSwipeToNextChat: Equatable {
+    case off
+    case noUnreadChat
+    case chat(EnginePeer, unreadCount: Int)
+}
+
+// Not sending away from the chat is no reason to stop the swipe, so only the direction is taken from the setting.
+func supportSwipeIsDownward(_ behavior: SupportSwitchBehavior) -> Bool {
+    return behavior != .previous
+}
+
+func _internal_supportSwipeToNextChatUpdates(account: Account, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: @escaping () -> [PeerId]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportSwipeToNextChat, NoError> {
+    guard account.isSupportUser else {
+        return .single(.off)
+    }
+    let postbox = account.postbox
+    return postbox.combinedView(keys: [
+        .preferences(keys: Set([PreferencesKeys.supportSettings])),
+        .unreadCounts(items: [.total(nil), .totalInGroup(Namespaces.PeerGroup.archive)])
+    ])
+    |> mapToThrottled { _ -> Signal<SupportSwipeToNextChat, NoError> in
+        return postbox.transaction { transaction -> SupportSwipeToNextChat in
+            let settings = supportSettings(transaction: transaction)
+            guard settings.swipeToNextChat else {
+                return .off
+            }
+            guard let target = supportUnreadTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds(), downward: supportSwipeIsDownward(settings.switchBehavior), getFilterPredicate: getFilterPredicate), let peer = transaction.getPeer(target) else {
+                return .noUnreadChat
+            }
+            return .chat(EnginePeer(peer), unreadCount: Int(transaction.getCombinedPeerReadState(target)?.count ?? 0))
+        }
+        |> then(.complete() |> delay(1.0, queue: Queue.concurrentDefaultQueue()))
+    }
+    |> distinctUntilChanged
 }

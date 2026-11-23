@@ -99,6 +99,7 @@ extension ChatControllerImpl {
             var offerNextChannelToRead: Bool = false
             var nextChannelToRead: NextChannelToRead?
             var nextChannelToReadDisplayName: Bool = false
+            var supportSwipeToNextChat: Bool = false
             var isNotAccessible: Bool = false
             var isManagedBot: Bool = false
             var hasBots: Bool = false
@@ -1220,6 +1221,36 @@ extension ChatControllerImpl {
                                 }
                             })
                         }
+                    } else if case .standard(.default) = mode, let supportContext = context.supportContext, strongSelf.nextChannelToReadDisposable == nil, let peerId = chatLocation.peerId, chatLocation.threadId == nil, let peer = renderedPeer?.chatMainPeer, !peer.isForumOrMonoForum {
+                        let accountPeerId = context.account.peerId
+                        strongSelf.nextChannelToReadDisposable = (context.engine.messages.supportSwipeToNextChatUpdates(peerId: peerId, chatListFilterId: currentChatListFilter, searchResultPeerIds: { [weak supportContext] in
+                            return supportContext?.searchResultPeerIds
+                        }, getFilterPredicate: { data in
+                            return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+                        })
+                        |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] target in
+                            guard let strongSelf else {
+                                return
+                            }
+                            let previousState = strongSelf.state
+                            switch target {
+                            case .off:
+                                strongSelf.state.supportSwipeToNextChat = false
+                                strongSelf.state.offerNextChannelToRead = false
+                                strongSelf.state.nextChannelToRead = nil
+                            case .noUnreadChat:
+                                strongSelf.state.supportSwipeToNextChat = true
+                                strongSelf.state.offerNextChannelToRead = true
+                                strongSelf.state.nextChannelToRead = nil
+                            case let .chat(peer, unreadCount):
+                                strongSelf.state.supportSwipeToNextChat = true
+                                strongSelf.state.offerNextChannelToRead = true
+                                strongSelf.state.nextChannelToRead = NextChannelToRead(peer: peer, threadData: nil, unreadCount: unreadCount, location: .same)
+                            }
+                            if strongSelf.state.supportSwipeToNextChat != previousState.supportSwipeToNextChat || strongSelf.state.offerNextChannelToRead != previousState.offerNextChannelToRead || strongSelf.state.nextChannelToRead != previousState.nextChannelToRead {
+                                strongSelf.onUpdated?(previousState)
+                            }
+                        })
                     }
                     
                     if let upgradedToPeerId {

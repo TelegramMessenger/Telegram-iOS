@@ -5806,7 +5806,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
 
     var shouldAllowOverscrollActions: Bool {
-        if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 0.0 {
+        if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 0.0, self.context.supportContext == nil {
             return false
         }
         if self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
@@ -5816,7 +5816,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return false
         }
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-            if inputPanelNode.isFocused {
+            // Support chats keep the composer focused, so the swipe to the next chat stays available with it.
+            if inputPanelNode.isFocused && self.context.supportContext == nil {
                 return false
             }
             if !inputPanelNode.text.isEmpty {

@@ -101,6 +101,7 @@ public enum SupportSettingsEntryTag: ItemListItemTag, Equatable {
 private enum SupportSettingsSection: Int32 {
     case switching
     case sending
+    case swipe
     case order
     case beside
     case period
@@ -116,6 +117,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case sendSilently
         case hideKeyboardOnSwitch
         case hideKeyboardOnSwitchInfo
+        case swipeToNextChat
+        case swipeToNextChatInfo
         case fixChatsOrder
         case fixChatsOrderInfo
         case besideHeader
@@ -141,6 +144,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case sendSilently(String, Bool)
     case hideKeyboardOnSwitch(String, Bool)
     case hideKeyboardOnSwitchInfo(String)
+    case swipeToNextChat(String, Bool)
+    case swipeToNextChatInfo(String)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
     case besideHeader(String)
@@ -166,6 +171,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.switching.rawValue
         case .sendSilently, .hideKeyboardOnSwitch, .hideKeyboardOnSwitchInfo:
             return SupportSettingsSection.sending.rawValue
+        case .swipeToNextChat, .swipeToNextChatInfo:
+            return SupportSettingsSection.swipe.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
         case .besideHeader, .beside, .besideInfo:
@@ -193,6 +200,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .hideKeyboardOnSwitch
         case .hideKeyboardOnSwitchInfo:
             return .hideKeyboardOnSwitchInfo
+        case .swipeToNextChat:
+            return .swipeToNextChat
+        case .swipeToNextChatInfo:
+            return .swipeToNextChatInfo
         case .fixChatsOrder:
             return .fixChatsOrder
         case .fixChatsOrderInfo:
@@ -244,6 +255,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 5
         case .hideKeyboardOnSwitchInfo:
             return 6
+        case .swipeToNextChat:
+            return 7
+        case .swipeToNextChatInfo:
+            return 8
         case .fixChatsOrder:
             return 9
         case .fixChatsOrderInfo:
@@ -316,6 +331,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .swipeToNextChat(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.swipeToNextChat = value
+                    return settings
+                }
+            })
         case let .fixChatsOrder(title, value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateSettings { settings in
@@ -342,7 +365,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .hideKeyboardOnSwitchInfo(text), let .fixChatsOrderInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -416,6 +439,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     entries.append(.sendSilently(strings.Support_Settings_SendSilently, settings.sendAllSilently))
     entries.append(.hideKeyboardOnSwitch(strings.Support_HideKeyboard_Title, settings.hideKeyboardOnSwitch))
     entries.append(.hideKeyboardOnSwitchInfo(strings.Support_HideKeyboard_Info))
+
+    entries.append(.swipeToNextChat(strings.Support_SwipeNext_Title, settings.swipeToNextChat))
+    entries.append(.swipeToNextChatInfo(strings.Support_SwipeNext_Info))
 
     entries.append(.fixChatsOrder(strings.Support_FixOrder_Title, settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo(strings.Support_FixOrder_Info))
