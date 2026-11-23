@@ -1157,7 +1157,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         
         let textNodeFrame = self.textNode.textNode.frame
         let textLocalPoint = CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)
-        if let (index, attributes) = self.textNode.textNode.attributesAtPoint(textLocalPoint) {
+        if let (index, attributes) = self.textNode.textNode.attributesAtPoint(textLocalPoint, withinLineOnly: self.item?.context.supportContext != nil) {
             var rects: [CGRect]?
             let possibleNames: [String] = [
                 TelegramTextAttributes.URL,
@@ -1332,7 +1332,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             var spoilerRects: [CGRect]?
             if let point = point {
                 let textNodeFrame = self.textNode.textNode.frame
-                if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY), withinLineOnly: item.context.supportContext != nil) {
                     let possibleNames: [String] = [
                         TelegramTextAttributes.URL,
                         TelegramTextAttributes.PeerMention,

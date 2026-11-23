@@ -148,7 +148,8 @@ func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerP
             }
         }
         
-        return items.filter({ !dismissedSuggestions.contains($0.id) })
+        let isSupportAccount = account.supportContext != nil
+        return items.filter({ !dismissedSuggestions.contains($0.id) && (!isSupportAccount || supportShowsServerSuggestion($0)) })
     }
     |> distinctUntilChanged
 }

@@ -246,6 +246,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme.theme)
                     }
                 }
+                if item.context.supportContext != nil {
+                    buttonImage = nil
+                }
                 
                 let dateText = stringForMessageTimestampStatus(context: item.context, message: EngineMessage(item.message), dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, associatedData: item.associatedData)
                 
@@ -373,6 +376,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.labelNode.isHidden = false
                             }
                             
+                            strongSelf.buttonNode.isHidden = buttonImage == nil
                             if let buttonImage = buttonImage {
                                 strongSelf.buttonNode.setImage(buttonImage, for: [])
                                 strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: boundingWidth - buttonImage.size.width - 8.0, y: hasLabelLine ? 15.0 : floorToScreenPixels(titleFrame.midY - buttonImage.size.height / 2.0)), size: buttonImage.size)
@@ -427,9 +431,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if self.buttonNode.frame.contains(point) {
+        if !self.buttonNode.isHidden && self.buttonNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
-        } else if self.bounds.contains(point), let item = self.item {
+        } else if self.bounds.contains(point), let item = self.item, item.context.supportContext == nil {
             var isVideo = false
             for media in item.message.media {
                 if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, _, isVideoValue) = action.action {

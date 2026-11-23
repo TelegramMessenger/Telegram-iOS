@@ -1100,6 +1100,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .photoUpdated(image):
                             openMessageByAction = image != nil
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
+                            if self.context.supportContext != nil {
+                                return true
+                            }
                             if let activeCall = self.presentationInterfaceState.activeGroupCallInfo?.activeCall {
                                 self.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled, isStream: activeCall.isStream))
                             } else {

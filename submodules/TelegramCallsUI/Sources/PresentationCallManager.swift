@@ -428,6 +428,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     }
     
     public func requestCall(context: AccountContext, peerId: EnginePeer.Id, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult {
+        if context.supportContext != nil {
+            return .requested
+        }
         var alreadyInCallType: CallAlreadyInProgressType?
         
         if let call = self.currentCall {
@@ -594,6 +597,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         isVideo: Bool,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
+        if context.supportContext != nil {
+            return .single(false)
+        }
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
@@ -932,6 +938,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     }
     
     public func scheduleGroupCall(context: AccountContext, peerId: EnginePeer.Id, endCurrentIfAny: Bool, parentController: ViewController) -> RequestScheduleGroupCallResult {
+        if context.supportContext != nil {
+            return .success
+        }
         let begin: () -> Void = { [weak self, weak parentController] in
             guard let parentController else {
                 return
@@ -982,6 +991,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     }
     
     public func joinGroupCall(context: AccountContext, peerId: EnginePeer.Id, invite: String?, requestJoinAsPeerId: ((@escaping (EnginePeer.Id?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+        if context.supportContext != nil {
+            return .joined
+        }
         let begin: () -> Void = { [weak self] in
             if let requestJoinAsPeerId = requestJoinAsPeerId, (initialCall.isStream == nil || initialCall.isStream == false) {
                 requestJoinAsPeerId({ joinAsPeerId in
@@ -1116,6 +1128,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         endCurrentIfAny: Bool,
         unmuteByDefault: Bool
     ) -> JoinGroupCallManagerResult {
+        if accountContext.supportContext != nil {
+            return .joined
+        }
         let createCall: (Bool) -> Void = { [weak self] unmuteByDefault in
             guard let self else {
                 return
