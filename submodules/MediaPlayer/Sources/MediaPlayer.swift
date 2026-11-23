@@ -1044,6 +1044,8 @@ private final class MediaPlayerContext {
                         self.pause(lostAudioSession: false)
                     case let .action(f):
                         self.stoppedAtEnd = true
+                        // The action usually starts the next item: keep the output until it plays.
+                        self.audioRenderer?.renderer.prepareOutputHandover()
                         self.pause(lostAudioSession: false)
                         f()
                     case let .loopDisablingSound(f):
