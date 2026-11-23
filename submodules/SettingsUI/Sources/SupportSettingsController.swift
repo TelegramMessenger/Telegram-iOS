@@ -37,6 +37,14 @@ private func supportSwitchBehaviors(strings: PresentationStrings) -> [(behavior:
     ]
 }
 
+private func supportChatListBesideOptions(strings: PresentationStrings) -> [(value: SupportChatListBeside, title: String)] {
+    return [
+        (.off, strings.Support_ChatListBeside_Off),
+        (.landscape, strings.Support_ChatListBeside_Landscape),
+        (.everywhere, strings.Support_ChatListBeside_Everywhere)
+    ]
+}
+
 private func supportTemplateFileInfo(strings: PresentationStrings, file: SupportTemplatesFileInfo) -> String {
     let templates = strings.Support_Templates_FileTemplates(Int32(file.templateCount))
     let edited = strings.Support_Templates_FileEdited(Int32(file.editCount))
@@ -94,6 +102,7 @@ private enum SupportSettingsSection: Int32 {
     case switching
     case sending
     case order
+    case beside
     case period
     case loading
     case shortcuts
@@ -109,6 +118,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case hideKeyboardOnSwitchInfo
         case fixChatsOrder
         case fixChatsOrderInfo
+        case besideHeader
+        case beside(Int32)
+        case besideInfo
         case periodHeader
         case period(Int32)
         case periodInfo
@@ -131,6 +143,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case hideKeyboardOnSwitchInfo(String)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
+    case besideHeader(String)
+    case beside(index: Int32, value: SupportChatListBeside, title: String, isSelected: Bool)
+    case besideInfo(String)
     case periodHeader(String)
     case period(index: Int32, period: Int32, title: String, isSelected: Bool)
     case periodInfo(String)
@@ -153,6 +168,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.sending.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
+        case .besideHeader, .beside, .besideInfo:
+            return SupportSettingsSection.beside.rawValue
         case .periodHeader, .period, .periodInfo:
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
@@ -180,6 +197,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .fixChatsOrder
         case .fixChatsOrderInfo:
             return .fixChatsOrderInfo
+        case .besideHeader:
+            return .besideHeader
+        case let .beside(_, value, _, _):
+            return .beside(value.rawValue)
+        case .besideInfo:
+            return .besideInfo
         case .periodHeader:
             return .periodHeader
         case let .period(_, period, _, _):
@@ -225,6 +248,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 9
         case .fixChatsOrderInfo:
             return 10
+        case .besideHeader:
+            return 20
+        case let .beside(index, _, _, _):
+            return 21 + index
+        case .besideInfo:
+            return 24
         case .periodHeader:
             return 25
         case let .period(index, _, _, _):
@@ -295,6 +324,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .besideHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .beside(_, value, title, isSelected):
+            return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: title, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.chatListBeside = value
+                    return settings
+                }
+            })
         case let .periodHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section, tag: SupportSettingsEntryTag.period)
         case let .period(_, period, title, isSelected):
@@ -303,7 +342,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .hideKeyboardOnSwitchInfo(text), let .fixChatsOrderInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .fixChatsOrderInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -380,6 +419,12 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.fixChatsOrder(strings.Support_FixOrder_Title, settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo(strings.Support_FixOrder_Info))
+
+    entries.append(.besideHeader(strings.Support_ChatListBeside_Header))
+    for (index, option) in supportChatListBesideOptions(strings: strings).enumerated() {
+        entries.append(.beside(index: Int32(index), value: option.value, title: option.title, isSelected: option.value == settings.chatListBeside))
+    }
+    entries.append(.besideInfo(strings.Support_ChatListBeside_Info))
 
     entries.append(.periodHeader(strings.Support_ChatLoading_Header))
     for (index, period) in supportChatLoadPeriods.enumerated() {

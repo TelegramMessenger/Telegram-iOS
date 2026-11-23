@@ -59,6 +59,12 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
     }
     
+    open override func narrowMasterRevealUpdated(_ isRevealed: Bool) {
+        for controller in self.controllers {
+            controller.narrowMasterRevealUpdated(isRevealed)
+        }
+    }
+    
     public private(set) var controllers: [ViewController] = []
     
     private let _ready = Promise<Bool>()
@@ -103,6 +109,22 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
+    public var hidesTabBar: Bool = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.tabBarControllerNode.hidesBarWithGlass = self.hidesTabBar
+                self.tabBarControllerNode.tabBarHidden = self.hidesTabBar
+            }
+        }
+    }
+    public var hidesTabBarItems: Bool = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.tabBarControllerNode.hidesItems = self.hidesTabBarItems
+            }
+        }
+    }
+
     public init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         self.strings = strings

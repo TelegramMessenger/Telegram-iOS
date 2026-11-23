@@ -55,6 +55,10 @@ final class TabBarControllerNode: ASDisplayNode {
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    var hidesItems: Bool = false
+    var hidesBarWithGlass: Bool = false
+    private var appliedHidesBarWithGlass: Bool = false
+    private var appliedHidesItems: Bool = false
     private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
     private let itemHasDoubleTapAction: (Int) -> Bool
     private let itemDoubleTapped: (Int) -> Void
@@ -278,6 +282,12 @@ final class TabBarControllerNode: ASDisplayNode {
         if self.tabBarView.view == nil {
             tabBarTransition = .immediate
         }
+        var previousSearchButtonFrame: CGRect?
+        if self.appliedHidesItems != self.hidesItems, let tabBarComponentView = self.tabBarView.view as? TabBarComponent.View {
+            previousSearchButtonFrame = tabBarComponentView.searchButtonFrame?.offsetBy(dx: tabBarComponentView.frame.minX, dy: tabBarComponentView.frame.minY)
+        }
+        self.appliedHidesItems = self.hidesItems
+        
         let tabBarSize = self.tabBarView.update(
             transition: tabBarTransition,
             component: AnyComponent(TabBarComponent(
@@ -337,6 +347,7 @@ final class TabBarControllerNode: ASDisplayNode {
                 outerInsets: UIEdgeInsets(top: 0.0, left: tabBarSideInset, bottom: tabBarBottomInset, right: tabBarSideInset),
                 axis: sidePlacement == nil ? .horizontal : .vertical,
                 isCompact: isCompact,
+                hidesItems: self.hidesItems,
                 usesSystemLayout: !isWide
             )),
             environment: {},
@@ -344,7 +355,7 @@ final class TabBarControllerNode: ASDisplayNode {
         )
         let tabBarFrame: CGRect
         if let sidePlacement {
-            tabBarFrame = self.tabBarHidden ? sidePlacement.hiddenFrame(containerWidth: params.layout.size.width) : sidePlacement.frame
+            tabBarFrame = (self.tabBarHidden && !self.hidesBarWithGlass) ? sidePlacement.hiddenFrame(containerWidth: params.layout.size.width) : sidePlacement.frame
         } else {
             let centeredX: CGFloat
             if isSystemLayout {
@@ -353,7 +364,7 @@ final class TabBarControllerNode: ASDisplayNode {
             } else {
                 centeredX = floor((params.layout.size.width - tabBarSize.width) * 0.5)
             }
-            tabBarFrame = CGRect(origin: CGPoint(x: centeredX, y: params.layout.size.height - (self.tabBarHidden ? 0.0 : (tabBarSize.height + tabBarBottomInset))), size: tabBarSize)
+            tabBarFrame = CGRect(origin: CGPoint(x: centeredX, y: params.layout.size.height - ((self.tabBarHidden && !self.hidesBarWithGlass) ? 0.0 : (tabBarSize.height + tabBarBottomInset))), size: tabBarSize)
         }
         
         if let tabBarComponentView = self.tabBarView.view {
@@ -373,7 +384,17 @@ final class TabBarControllerNode: ASDisplayNode {
                     tabBarComponentView.layer.animateAlpha(from: 0.0, to: tabBarAlpha, duration: crossfadeDuration * 0.5, delay: crossfadeDuration * 0.5)
                 }
             }
-            tabBarFrameTransition.updateFrame(view: tabBarComponentView, frame: tabBarFrame)
+            if self.hidesBarWithGlass || self.appliedHidesBarWithGlass {
+                tabBarFrameTransition.updatePosition(layer: tabBarComponentView.layer, position: tabBarFrame.center)
+                tabBarFrameTransition.updateBounds(layer: tabBarComponentView.layer, bounds: CGRect(origin: CGPoint(), size: tabBarFrame.size))
+                transition.updateTransformScale(layer: tabBarComponentView.layer, scale: self.hidesBarWithGlass ? 0.001 : 1.0)
+                self.appliedHidesBarWithGlass = self.hidesBarWithGlass
+            } else {
+                tabBarFrameTransition.updateFrame(view: tabBarComponentView, frame: tabBarFrame)
+            }
+            if let previousSearchButtonFrame, let tabBarComponentView = tabBarComponentView as? TabBarComponent.View, let searchButtonFrame = tabBarComponentView.searchButtonFrame?.offsetBy(dx: tabBarFrame.minX, dy: tabBarFrame.minY) {
+                tabBarComponentView.animateSearchButton(fromOffset: CGPoint(x: previousSearchButtonFrame.midX - searchButtonFrame.midX, y: previousSearchButtonFrame.midY - searchButtonFrame.midY))
+            }
             transition.updateAlpha(layer: tabBarComponentView.layer, alpha: tabBarAlpha)
             // A hidden bar is moved below the screen, not removed: VoiceOver must not reach it there.
             tabBarComponentView.accessibilityElementsHidden = self.tabBarHidden

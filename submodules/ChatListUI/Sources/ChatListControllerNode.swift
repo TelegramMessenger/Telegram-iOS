@@ -30,6 +30,7 @@ import ChatListHeaderNoticeComponent
 import ChatListFilterTabContainerNode
 import GlassControls
 import SideColumnLayout
+import EdgeEffect
 
 public enum ChatListContainerNodeFilter: Equatable {
     case all
@@ -872,6 +873,12 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         }
     }
     
+    func supportKeepRowsOnNextInsetChange() {
+        for (_, itemNode) in self.itemNodes {
+            itemNode.listNode.supportKeepsRowsOnNextInsetChange = true
+        }
+    }
+    
     func updateSelectedChatLocation(data: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         for (_, itemNode) in self.itemNodes {
             itemNode.listNode.updateSelectedChatLocation(data, progress: progress, transition: transition)
@@ -1198,6 +1205,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     let navigationBarView = ComponentView<Empty>()
+    private var supportNarrowListTopEdge: EdgeEffectView?
+    private var supportNavigationBarIsHidden: Bool = false
     weak var controller: ChatListControllerImpl?
     
     private var toolbar: ComponentView<Empty>?
@@ -1569,7 +1578,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var navigationHeaderPanels: AnyComponent<Empty>?
         if self.controller?.tabContainerData != nil || !panels.isEmpty {
             var tabs: AnyComponent<Empty>?
-            if let tabContainerData = self.controller?.tabContainerData, tabContainerData.0.count > 1 {
+            if let tabContainerData = self.controller?.tabContainerData, tabContainerData.0.count > 1, self.controller?.supportShowsListOnly != true {
                 let folderFilterIndex: (ChatListFilterTabEntryId, [ChatListFilterTabEntry]) -> Int? = { id, entries in
                     var index = 0
                     for entry in entries {
@@ -1818,6 +1827,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 self.view.addSubview(navigationBarComponentView)
             }
             transition.setFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
+            if self.supportNavigationBarIsHidden, navigationBarComponentView.bounds.minY != navigationBarSize.height {
+                navigationBarComponentView.bounds = CGRect(origin: CGPoint(x: 0.0, y: navigationBarSize.height), size: navigationBarSize)
+            }
             
             return (navigationBarSize.height, 0.0)
         } else {
@@ -1892,6 +1904,13 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         transition.updateSublayerTransformOffset(layer: self.mainContainerNode.layer, offset: CGPoint(x: 0.0, y: -mainDelta))
     }
     
+    func supportNarrowListPeerUpdated() {
+        guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, storiesInset) = self.containerLayout else {
+            return
+        }
+        self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, storiesInset: storiesInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+    }
+    
     func requestNavigationBarLayout(transition: ComponentTransition) {
         guard let (layout, _, _, _, _) = self.containerLayout else {
             return
@@ -1917,6 +1936,13 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
     
+    private func searchNavigationBarHeight(layout: ContainerViewLayout, cleanNavigationBarHeight: CGFloat) -> CGFloat {
+        if self.context.supportContext != nil, layout.size.width > layout.size.height {
+            return (layout.statusBarHeight ?? 0.0) + 8.0
+        }
+        return cleanNavigationBarHeight
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var navigationBarHeight = navigationBarHeight
         var visualNavigationHeight = visualNavigationHeight
@@ -1931,6 +1957,24 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         visualNavigationHeight = navigationBarLayout.navigationHeight
         cleanNavigationBarHeight = navigationBarLayout.navigationHeight
         storiesInset = navigationBarLayout.storiesInset
+        
+        let supportNarrowListPeerId = self.controller?.supportNarrowListPeerId
+        let supportNarrowListIsRevealed = self.controller?.supportNarrowListIsRevealed ?? false
+        if self.context.supportContext != nil {
+            let navigationBarIsHidden = supportNarrowListPeerId != nil && !supportNarrowListIsRevealed
+            if self.supportNavigationBarIsHidden != navigationBarIsHidden, let navigationBarView = self.navigationBarView.view {
+                self.supportNavigationBarIsHidden = navigationBarIsHidden
+                navigationBarView.isUserInteractionEnabled = !navigationBarIsHidden
+                ComponentTransition(transition).setBounds(view: navigationBarView, bounds: CGRect(origin: CGPoint(x: 0.0, y: navigationBarIsHidden ? navigationBarView.bounds.height : 0.0), size: navigationBarView.bounds.size))
+            }
+        }
+        if supportNarrowListPeerId != nil {
+            let statusBarHeight = layout.statusBarHeight ?? 0.0
+            navigationBarHeight = statusBarHeight
+            visualNavigationHeight = statusBarHeight
+            cleanNavigationBarHeight = statusBarHeight
+            storiesInset = 0.0
+        }
         
         self.containerLayout = (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, storiesInset)
         
@@ -2058,7 +2102,23 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             cleanMainNavigationBarHeight = visualNavigationHeight
             mainInsets.top = visualNavigationHeight
         }
-        self.mainContainerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location, inlineNavigationTransitionFraction: self.inlineStackContainerTransitionFraction, storiesInset: storiesInset, transition: transition)
+        self.mainContainerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location ?? supportNarrowListPeerId.flatMap { .forum(peerId: $0) }, inlineNavigationTransitionFraction: supportNarrowListPeerId != nil ? (supportNarrowListIsRevealed ? 0.0 : 1.0) : self.inlineStackContainerTransitionFraction, storiesInset: storiesInset, transition: transition)
+        
+        if supportNarrowListPeerId != nil {
+            let topEdge: EdgeEffectView
+            if let current = self.supportNarrowListTopEdge {
+                topEdge = current
+            } else {
+                topEdge = EdgeEffectView()
+                topEdge.isUserInteractionEnabled = false
+                self.supportNarrowListTopEdge = topEdge
+                self.view.insertSubview(topEdge, aboveSubview: self.mainContainerNode.view)
+            }
+            let topEdgeFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: navigationBarHeight + 12.0))
+            topEdge.frame = topEdgeFrame
+            topEdge.update(content: self.presentationData.theme.chatList.backgroundColor, rect: topEdgeFrame, edge: .top, edgeSize: topEdgeFrame.height, transition: .immediate)
+        }
+        self.supportNarrowListTopEdge?.isHidden = supportNarrowListPeerId == nil || supportNarrowListIsRevealed
         
         if let inlineStackContainerNode = self.inlineStackContainerNode {
             var inlineStackContainerNodeTransition = transition
@@ -2096,11 +2156,11 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         
         if let searchDisplayController = self.searchDisplayController {
             if !self.skipSearchDisplayControllerLayout {
-                searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: transition)
+                searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: self.searchNavigationBarHeight(layout: layout, cleanNavigationBarHeight: cleanNavigationBarHeight), transition: transition)
             }
         }
         if let disappearingSearchDisplayController = self.disappearingSearchDisplayController {
-            disappearingSearchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: transition)
+            disappearingSearchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: self.searchNavigationBarHeight(layout: layout, cleanNavigationBarHeight: cleanNavigationBarHeight), transition: transition)
         }
         
         self.updateNavigationScrolling(navigationHeight: navigationBarLayout.navigationHeight, transition: transition)
@@ -2194,7 +2254,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             
             strongSelf.isSearchDisplayControllerActive = ChatListNavigationBar.ActiveSearch(isExternal: placeholderNode == nil)
             
-            strongSelf.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
+            strongSelf.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: strongSelf.searchNavigationBarHeight(layout: containerLayout, cleanNavigationBarHeight: cleanNavigationBarHeight), transition: .immediate)
             strongSelf.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
                 guard let self else {
                     return
@@ -2235,7 +2295,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     }
                 })
                 
-                searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
+                searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: self.searchNavigationBarHeight(layout: layout, cleanNavigationBarHeight: cleanNavigationBarHeight), transition: .animated(duration: 0.4, curve: .spring))
                 
                 self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
             }

@@ -26,6 +26,30 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertEqual(PreferencesEntry(SupportSettings.default)?.get(SupportSettings.self), .default)
     }
 
+    func testChatListBesideDefaultsToOffAndRoundTrips() {
+        XCTAssertEqual(SupportSettings.default.chatListBeside, .off)
+        for value: SupportChatListBeside in [.off, .landscape, .everywhere] {
+            var settings = SupportSettings.default
+            settings.chatListBeside = value
+            XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self)?.chatListBeside, value)
+        }
+        XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.chatListBeside, .off)
+    }
+
+    func testChatListBesideUsesTheSplitViewInLandscapeAndTheColumnInPortrait() {
+        XCTAssertFalse(supportChatListBesideUsesSplitView(.off, isLandscape: true))
+        XCTAssertFalse(supportChatListBesideUsesSplitView(.off, isLandscape: false))
+        XCTAssertFalse(supportChatListBesideNarrowsList(.off, isLandscape: false))
+        XCTAssertTrue(supportChatListBesideUsesSplitView(.landscape, isLandscape: true))
+        XCTAssertFalse(supportChatListBesideUsesSplitView(.landscape, isLandscape: false))
+        XCTAssertFalse(supportChatListBesideNarrowsList(.landscape, isLandscape: false))
+        XCTAssertFalse(supportChatListBesideNarrowsList(.landscape, isLandscape: true))
+        XCTAssertTrue(supportChatListBesideUsesSplitView(.everywhere, isLandscape: true))
+        XCTAssertTrue(supportChatListBesideUsesSplitView(.everywhere, isLandscape: false))
+        XCTAssertFalse(supportChatListBesideNarrowsList(.everywhere, isLandscape: true))
+        XCTAssertTrue(supportChatListBesideNarrowsList(.everywhere, isLandscape: false))
+    }
+
     func testKeyboardHidesOnSwitchByDefaultAndFollowsTheSettings() {
         XCTAssertTrue(SupportSettings.default.hideKeyboardOnSwitch)
         XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.hideKeyboardOnSwitch, true)
