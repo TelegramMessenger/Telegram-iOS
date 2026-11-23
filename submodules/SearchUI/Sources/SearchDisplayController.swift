@@ -140,6 +140,9 @@ public final class SearchDisplayController {
         searchBar.tokensUpdated = { [weak contentNode] tokens in
             contentNode?.searchTokensUpdated(tokens: tokens)
         }
+        searchBar.textReturned = { [weak contentNode] text in
+            contentNode?.searchTextReturned(text: text)
+        }
         searchBar.cancel = { [weak self] in
             self?.isDeactivating = true
             self?.cancel()

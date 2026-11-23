@@ -67,8 +67,9 @@ final class ChatListSearchInteraction {
     let switchToFilter: (ChatListSearchPaneKey) -> Void
     let dismissSearch: () -> Void
     let openAdInfo: (ASDisplayNode, AdPeer) -> Void
+    let supportSearchHashtag: (String) -> Void
     
-    init(openPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, openMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping (ASDisplayNode) -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?, openStories: ((EnginePeer.Id, ASDisplayNode) -> Void)?, switchToFilter: @escaping (ChatListSearchPaneKey) -> Void, dismissSearch: @escaping () -> Void, openAdInfo: @escaping (ASDisplayNode, AdPeer) -> Void) {
+    init(openPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, openMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping (ASDisplayNode) -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?, openStories: ((EnginePeer.Id, ASDisplayNode) -> Void)?, switchToFilter: @escaping (ChatListSearchPaneKey) -> Void, dismissSearch: @escaping () -> Void, openAdInfo: @escaping (ASDisplayNode, AdPeer) -> Void, supportSearchHashtag: @escaping (String) -> Void) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -86,6 +87,7 @@ final class ChatListSearchInteraction {
         self.switchToFilter = switchToFilter
         self.dismissSearch = dismissSearch
         self.openAdInfo = openAdInfo
+        self.supportSearchHashtag = supportSearchHashtag
     }
 }
 
@@ -237,7 +239,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
         }, openDisabledPeer: { peer, threadId, reason in
             openDisabledPeer(peer, threadId, reason)
-        }, openMessage: { peer, threadId, messageId, deactivateOnAction in
+        }, openMessage: { [weak self] peer, threadId, messageId, deactivateOnAction in
+            self?.supportSaveSearchedHashtag()
             originalOpenMessage(peer, threadId, messageId, deactivateOnAction)
             if peer.id.namespace != Namespaces.Peer.SecretChat {
                 context.engine.accountData.addAppLogEvent(type: "search_global_open_message", data: .dictionary(["msg_id": .number(Double(messageId.id))]))
@@ -349,6 +352,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self?.dismissSearch?()
         }, openAdInfo: { [weak self] node, adPeer in
             self?.openAdInfo?(node, adPeer)
+        }, supportSearchHashtag: { [weak self] hashtag in
+            self?.supportSearchHashtag(hashtag)
         })
         self.paneContainerNode.interaction = interaction
         
@@ -709,6 +714,23 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
     }
     
+    override public func searchTextReturned(text: String) {
+        self.supportSaveSearchedHashtag()
+    }
+
+    private func supportSaveSearchedHashtag() {
+        guard self.context.supportContext != nil, case .chatList = self.location, let hashtag = supportSearchedHashtag(self.searchQueryValue ?? "") else {
+            return
+        }
+        let _ = addRecentHashtagSearchQuery(engine: self.context.engine, string: hashtag).startStandalone()
+    }
+
+    private func supportSearchHashtag(_ hashtag: String) {
+        self.searchTextUpdated(text: hashtag)
+        self.updateSearchOptions(self.currentSearchOptions)
+        self.supportSaveSearchedHashtag()
+    }
+
     override public func searchTextUpdated(text: String) {
         let searchQuery: String? = !text.isEmpty ? text : nil
 

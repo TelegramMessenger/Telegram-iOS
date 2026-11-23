@@ -34,6 +34,35 @@ final class ChatListSupportSearchTests: XCTestCase {
         XCTAssertEqual(self.rows([2, 3], shown: &shown), [1])
     }
 
+    func testABareHashShowsEveryRecentHashtag() {
+        XCTAssertEqual(supportRecentHashtags(["#order", "#refund", "#otp"], matching: "#"), ["#order", "#refund", "#otp"])
+    }
+
+    func testTypingNarrowsRecentHashtagsByPrefixIgnoringCase() {
+        XCTAssertEqual(supportRecentHashtags(["#Order", "#refund", "#orders"], matching: "#or"), ["#Order", "#orders"])
+    }
+
+    func testTheTypedHashtagItselfIsNotSuggested() {
+        XCTAssertEqual(supportRecentHashtags(["#order", "#orders"], matching: "#ORDER"), ["#orders"])
+    }
+
+    func testNarrowedRecentHashtagsAreCapped() {
+        let hashtags = (0 ..< 8).map { "#tag\($0)" }
+        XCTAssertEqual(supportRecentHashtags(hashtags, matching: "#tag").count, 5)
+    }
+
+    func testRecentHashtagsNeedAHashtagQuery() {
+        XCTAssertEqual(supportRecentHashtags(["#order"], matching: "order"), [])
+        XCTAssertEqual(supportRecentHashtags(["#order"], matching: "#or der"), [])
+    }
+
+    func testOnlyASingleHashtagIsSavedAsASearch() {
+        XCTAssertEqual(supportSearchedHashtag(" #order "), "#order")
+        XCTAssertNil(supportSearchedHashtag("#"))
+        XCTAssertNil(supportSearchedHashtag("order"))
+        XCTAssertNil(supportSearchedHashtag("#order now"))
+    }
+
     func testChatResultsComeBeforeSupportPublicPostsWhateverTheirDates() {
         XCTAssertEqual(supportSearchSectionComesFirst(.generic, .supportPublicPosts), true)
         XCTAssertEqual(supportSearchSectionComesFirst(.supportPublicPosts, .generic), false)
