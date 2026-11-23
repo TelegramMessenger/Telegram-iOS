@@ -39,6 +39,7 @@ public struct SupportSettings: Codable, Equatable {
     public var shortcutOverrides: [SupportShortcutOverride] = []
     public var hideKeyboardOnSwitch: Bool = true
     public var swipeToNextChat: Bool = false
+    public var hideChatsWithoutIncomingMessages: Bool = false
 
     public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, chatListBeside: SupportChatListBeside = .off) {
         self.switchBehavior = switchBehavior
@@ -64,6 +65,7 @@ public struct SupportSettings: Codable, Equatable {
         self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
         self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
         self.swipeToNextChat = try container.decodeIfPresent(Bool.self, forKey: "swipeToNextChat") ?? defaults.swipeToNextChat
+        self.hideChatsWithoutIncomingMessages = try container.decodeIfPresent(Bool.self, forKey: "hideChatsWithoutIncomingMessages") ?? defaults.hideChatsWithoutIncomingMessages
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -79,6 +81,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
         try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
         try container.encode(self.swipeToNextChat, forKey: "swipeToNextChat")
+        try container.encode(self.hideChatsWithoutIncomingMessages, forKey: "hideChatsWithoutIncomingMessages")
     }
 }
 

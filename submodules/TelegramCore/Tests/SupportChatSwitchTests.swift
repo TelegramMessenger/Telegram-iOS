@@ -194,6 +194,29 @@ final class SupportChatSwitchTests: XCTestCase {
         XCTAssertTrue(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: user))
         XCTAssertFalse(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(1), peer: user))
         XCTAssertFalse(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: nil))
+        XCTAssertFalse(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: user, isHiddenWithoutIncomingMessages: true))
+    }
+
+    func testAChatThatNeverReceivedAMessageIsHidden() {
+        let accountPeerId = self.peerId(100)
+        let neverReceived = EnginePeerReadCounters(incomingReadId: 0, outgoingReadId: 5, count: 0, markedUnread: false)
+        XCTAssertTrue(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: neverReceived))
+
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: EnginePeerReadCounters(incomingReadId: 3, outgoingReadId: 5, count: 0, markedUnread: false)))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: EnginePeerReadCounters(incomingReadId: 0, outgoingReadId: 0, count: 1, markedUnread: false)))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: EnginePeerReadCounters(incomingReadId: 0, outgoingReadId: 5, count: 0, markedUnread: true)))
+    }
+
+    func testAChatWhoseReadStateIsUnknownPinnedOrNotOneToOneStays() {
+        let accountPeerId = self.peerId(100)
+        let neverReceived = EnginePeerReadCounters(incomingReadId: 0, outgoingReadId: 5, count: 0, markedUnread: false)
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: nil))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: EnginePeerReadCounters(state: nil, isMuted: false)))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: false, readCounters: EnginePeerReadCounters()))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: self.peerId(1), accountPeerId: accountPeerId, isPinned: true, readCounters: neverReceived))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: accountPeerId, accountPeerId: accountPeerId, isPinned: false, readCounters: neverReceived))
+        let groupId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(1))
+        XCTAssertFalse(supportHidesChatWithoutIncomingMessages(peerId: groupId, accountPeerId: accountPeerId, isPinned: false, readCounters: neverReceived))
     }
 
     func testDeferredSendsAreRecognised() {
