@@ -47,17 +47,47 @@ public final class SupportContext {
     private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
     private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
+    private let searchResults = Atomic<(owner: ObjectIdentifier, peerIds: [PeerId])?>(value: nil)
     private let chatHistory = Atomic<SupportChatHistory>(value: SupportChatHistory())
+    private let chatHistoryPeerIdsPromise = ValuePromise<[PeerId]>([], ignoreRepeated: true)
     private let hardwareKeyGate = Atomic<SupportHardwareKeyGate>(value: SupportHardwareKeyGate())
     
     func takeChatOrderLaunchResort() -> Bool {
         return !self.chatOrderLaunchResortTaken.swap(true)
     }
     
+    // The chats an open search lists, in order. A send walks these instead of the chat list while they are set.
+    public var searchResultPeerIds: [PeerId]? {
+        return self.searchResults.with { $0?.peerIds }
+    }
+    
+    public func setSearchResults(peerIds: [PeerId]?, owner: AnyObject) {
+        let ownerId = ObjectIdentifier(owner)
+        let _ = self.searchResults.modify { current in
+            if let peerIds {
+                return (ownerId, peerIds)
+            }
+            return current?.owner == ownerId ? nil : current
+        }
+    }
+    
+    var chatHistoryPeerIds: Signal<[PeerId], NoError> {
+        return self.chatHistoryPeerIdsPromise.get()
+    }
+
     public func pushChatHistory(peerId: PeerId) {
-        let _ = self.chatHistory.modify { current in
+        let updated = self.chatHistory.modify { current in
             var current = current
             current.push(peerId: peerId)
+            return current
+        }
+        self.chatHistoryPeerIdsPromise.set(updated.peerIds)
+    }
+
+    public func selectChatHistory(position: Int, peerId: PeerId) {
+        let _ = self.chatHistory.modify { current in
+            var current = current
+            current.select(position: position, peerId: peerId)
             return current
         }
     }

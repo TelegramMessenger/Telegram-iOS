@@ -218,6 +218,10 @@ public extension TelegramEngine {
             return _internal_supportPeerId(account: self.account)
         }
         
+
+        public func supportActiveChats() -> Signal<[SupportActiveChat], NoError> {
+            return _internal_supportActiveChats(account: self.account)
+        }
         public func refreshSupportUserInfo(peerId: PeerId) -> Signal<Never, RefreshSupportUserInfoError> {
             return _internal_refreshSupportUserInfo(account: self.account, peerId: peerId)
         }

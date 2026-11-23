@@ -16,11 +16,12 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertTrue(settings.fixChatsOrder)
         XCTAssertTrue(settings.templatesAutocomplete)
         XCTAssertEqual(settings.chatLoadPeriod, 7 * self.day)
+        XCTAssertFalse(settings.allSearchResults)
         XCTAssertFalse(settings.sendAllSilently)
     }
 
     func testRoundTrip() {
-        let settings = SupportSettings(switchBehavior: .previous, fixChatsOrder: false, templatesAutocomplete: false, chatLoadPeriod: SupportSettings.allChatsLoadPeriod, sendAllSilently: true)
+        let settings = SupportSettings(switchBehavior: .previous, fixChatsOrder: false, templatesAutocomplete: false, chatLoadPeriod: SupportSettings.allChatsLoadPeriod, allSearchResults: true, sendAllSilently: true)
         XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self), settings)
         XCTAssertEqual(PreferencesEntry(SupportSettings.default)?.get(SupportSettings.self), .default)
     }

@@ -12,22 +12,24 @@ public struct SupportSettings: Codable, Equatable {
     public static let allChatsLoadPeriod: Int32 = 0
 
     public static var `default`: SupportSettings {
-        return SupportSettings(switchBehavior: .next, fixChatsOrder: true, templatesAutocomplete: true, chatLoadPeriod: 7 * 24 * 60 * 60, sendAllSilently: false)
+        return SupportSettings(switchBehavior: .next, fixChatsOrder: true, templatesAutocomplete: true, chatLoadPeriod: 7 * 24 * 60 * 60, allSearchResults: false, sendAllSilently: false)
     }
 
     public var switchBehavior: SupportSwitchBehavior
     public var fixChatsOrder: Bool
     public var templatesAutocomplete: Bool
     public var chatLoadPeriod: Int32
+    public var allSearchResults: Bool
     public var sendAllSilently: Bool
     public var shortcutOverrides: [SupportShortcutOverride] = []
     public var hideKeyboardOnSwitch: Bool = true
 
-    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, sendAllSilently: Bool) {
+    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool) {
         self.switchBehavior = switchBehavior
         self.fixChatsOrder = fixChatsOrder
         self.templatesAutocomplete = templatesAutocomplete
         self.chatLoadPeriod = chatLoadPeriod
+        self.allSearchResults = allSearchResults
         self.sendAllSilently = sendAllSilently
     }
 
@@ -39,6 +41,7 @@ public struct SupportSettings: Codable, Equatable {
         self.fixChatsOrder = try container.decodeIfPresent(Bool.self, forKey: "fixChatsOrder") ?? defaults.fixChatsOrder
         self.templatesAutocomplete = try container.decodeIfPresent(Bool.self, forKey: "templatesAutocomplete") ?? defaults.templatesAutocomplete
         self.chatLoadPeriod = try container.decodeIfPresent(Int32.self, forKey: "chatLoadPeriod") ?? defaults.chatLoadPeriod
+        self.allSearchResults = try container.decodeIfPresent(Bool.self, forKey: "allSearchResults") ?? defaults.allSearchResults
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
         self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
         self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
@@ -51,6 +54,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.fixChatsOrder, forKey: "fixChatsOrder")
         try container.encode(self.templatesAutocomplete, forKey: "templatesAutocomplete")
         try container.encode(self.chatLoadPeriod, forKey: "chatLoadPeriod")
+        try container.encode(self.allSearchResults, forKey: "allSearchResults")
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
         try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
         try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
