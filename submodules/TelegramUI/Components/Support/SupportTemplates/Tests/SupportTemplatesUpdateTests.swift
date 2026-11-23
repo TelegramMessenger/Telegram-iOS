@@ -562,6 +562,48 @@ final class SupportTemplatesManagerTests: XCTestCase {
         XCTAssertEqual(relaunched.templates.matchExact("own")?.question.value, "Own answer")
     }
 
+    func testAnEditOfAVanishedQuestionWaitsForItsReturn() {
+        let manager = self.makeManager()
+        self.place("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB\n{QUESTION}\nC\n{KEYS}\nkc\n{VALUE}\nD")
+        _ = self.reloadLocal(manager)
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "Mine"))
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.state.files.first?.editCount, 1)
+
+        self.place("tl_one.txt", "{QUESTION}\nC\n{KEYS}\nkc\n{VALUE}\nD")
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.state.files.first?.editCount, 0)
+        XCTAssertNil(manager.templates.matchExact("ka"))
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).map(\.status), [.original])
+        XCTAssertTrue(self.fileExists("edits.json"))
+
+        self.place("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB2")
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.state.files.first?.editCount, 1)
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "Mine")
+        XCTAssertEqual(manager.listEntries(.file("tl_one.txt")).first?.original?.value, "B2")
+    }
+
+    func testEditsOfAFileGoneFromTheFolderStayUnderItsName() {
+        let manager = self.makeManager()
+        self.place("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB")
+        _ = self.reloadLocal(manager)
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "Mine"))
+        _ = self.reloadLocal(manager)
+
+        try! FileManager.default.moveItem(at: self.folder.appendingPathComponent("tl_one.txt"), to: self.folder.appendingPathComponent("tl_two.txt"))
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.state.files.map(\.name), ["tl_two.txt"])
+        XCTAssertEqual(manager.state.files.first?.editCount, 0)
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "B")
+        XCTAssertTrue(self.fileExists("edits.json"))
+
+        try! FileManager.default.moveItem(at: self.folder.appendingPathComponent("tl_two.txt"), to: self.folder.appendingPathComponent("tl_one.txt"))
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.state.files.first?.editCount, 1)
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "Mine")
+    }
+
     private func changeFile(_ manager: SupportTemplatesManager, _ name: String, newName: String, url: String) -> SupportTemplatesFileChangeError? {
         let done = self.expectation(description: "change")
         var error: SupportTemplatesFileChangeError?
