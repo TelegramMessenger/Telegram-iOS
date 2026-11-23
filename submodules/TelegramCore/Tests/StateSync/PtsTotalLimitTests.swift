@@ -99,6 +99,46 @@ final class PtsTotalLimitTests: StateSyncTestCase {
         }
         XCTAssertEqual(self.server.requestNames.count, cases.count + 1)
     }
+
+    /// A support account (its phone starts with 424) sends at most `supportPtsTotalLimit`, so a long absence resets
+    /// instead of replaying every missed update.
+    private func launchIdleAsSupportAccount() {
+        let state = self.state(pts: 100)
+        self.fixture.seedAccount(state: state, accountPhone: "4240000000")
+        self.makeStateManager()
+        self.server.on(Name.getDifference, .result(StateSyncApi.differenceEmpty(date: self.baseDate + 1, seq: state.seq)))
+        self.fixture.resetStateManager()
+        self.isUpdating.wait { $0.last == false }
+        self.drainOperationQueue()
+    }
+
+    func testSupportAccountSendsTheLowerLimit() {
+        self.launchIdleAsSupportAccount()
+
+        XCTAssertEqual(self.server.requestNames, [Name.getDifference])
+        self.assertGetDifference(0, pts: 100, date: self.baseDate, qts: 5, ptsTotalLimit: 1000)
+    }
+
+    func testSupportAccountCapsAHigherConfiguredLimit() {
+        self.fixture.seedAppConfiguration(["pts_total_limit": 5000])
+        self.launchIdleAsSupportAccount()
+
+        self.assertGetDifference(0, pts: 100, date: self.baseDate, qts: 5, ptsTotalLimit: 1000)
+    }
+
+    func testSupportAccountKeepsALowerConfiguredLimit() {
+        self.fixture.seedAppConfiguration(["pts_total_limit": 500])
+        self.launchIdleAsSupportAccount()
+
+        self.assertGetDifference(0, pts: 100, date: self.baseDate, qts: 5, ptsTotalLimit: 500)
+    }
+
+    func testSupportAccountKeepsTheServersOffSwitch() {
+        self.fixture.seedAppConfiguration(["pts_total_limit": 0])
+        self.launchIdleAsSupportAccount()
+
+        self.assertGetDifference(0, pts: 100, date: self.baseDate, qts: 5, ptsTotalLimit: nil)
+    }
 }
 
 /// The notification extension's `standalonePollDifference` sends the same `pts_total_limit` as the app, read
