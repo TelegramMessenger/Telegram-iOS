@@ -17480,6 +17480,8 @@ Error: %8$@";
 "Support.Claims.Taken" = "✋️ chat taken";
 "Support.Claims.Here" = "✋️ {name} is here";
 
+"Support.AbuseBot.Title" = "Abuse Bot";
+
 "Support.Mode.LostTitle" = "Support Mode Lost";
 "Support.Mode.LostText" = "This account should have support mode, but it seems it was lost. Restart?";
 "Support.Mode.LostRestart" = "Restart";
