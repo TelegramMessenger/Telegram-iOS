@@ -10,7 +10,9 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
     disposable.add(managedHoles.1)
     disposable.add(managedChatListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
     disposable.add(managedForumTopicListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId).start())
-    if supportContext != nil, !supplementary {
+    if let supportContext, !supplementary {
+        disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
+        disposable.add(managedSupportHiddenChatSweep(postbox: postbox, accountPeerId: accountPeerId).start())
         disposable.add(managedSupportDeletedUserSweep(postbox: postbox, accountPeerId: accountPeerId).start())
     }
     

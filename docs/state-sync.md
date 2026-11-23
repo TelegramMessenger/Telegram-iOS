@@ -69,7 +69,7 @@ are the audit's.
   `ReplayBatchingTests`, `StoreMessageUpdatingTests`, `AccountFinalStateFollowUpTests`,
   `AccountFinalStateEventsUnionTests`, `ChannelRecoveryRequestsTests`, `ChannelResetCoordinatorTests`,
   `AccountStateEventHubTests`, `BranchMergeTests`, `HolesFromPreviousStateTests`, `FinalStateReplayerTests`,
-  `NonMemberChannelReplayTests`,
+  `NonMemberChannelReplayTests`, `SupportHiddenChatSweepTests`,
   `StoredMessageConfirmationTests`, `ConfirmationChannelDeletionTests`, `DeliverOnOrderingCharacterizationTests`
   (SwiftSignalKit's `deliverOn` on two bare queues, no manager).
 - A real manager end to end: `DifferenceCharacterizationTests`, `NotificationExtensionPollCharacterizationTests`,
