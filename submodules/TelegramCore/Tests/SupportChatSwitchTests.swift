@@ -197,6 +197,14 @@ final class SupportChatSwitchTests: XCTestCase {
         XCTAssertFalse(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: user, isHiddenWithoutIncomingMessages: true))
     }
 
+    func testUnreadWalkTakesOnlyOtherUnreadChatsThatAreNotForums() {
+        let user = TelegramUser(id: self.peerId(1), accessHash: nil, firstName: "A", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
+        XCTAssertTrue(supportUnreadIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), isUnread: true, peer: user))
+        XCTAssertFalse(supportUnreadIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), isUnread: false, peer: user))
+        XCTAssertFalse(supportUnreadIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(1), isUnread: true, peer: user))
+        XCTAssertFalse(supportUnreadIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), isUnread: true, peer: nil))
+    }
+
     func testAChatThatNeverReceivedAMessageIsHidden() {
         let accountPeerId = self.peerId(100)
         let neverReceived = EnginePeerReadCounters(incomingReadId: 0, outgoingReadId: 5, count: 0, markedUnread: false)

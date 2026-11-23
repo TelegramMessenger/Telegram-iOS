@@ -148,12 +148,16 @@ private func supportSwitchTarget(transaction: Transaction, peerId: PeerId, chatL
     return supportUnreadTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, downward: downward, getFilterPredicate: getFilterPredicate)
 }
 
+func supportUnreadIsTarget(targetPeerId: PeerId, currentPeerId: PeerId, isUnread: Bool, peer: Peer?) -> Bool {
+    guard targetPeerId != currentPeerId, isUnread, let peer else {
+        return false
+    }
+    return !peer.isForumOrMonoForum
+}
+
 private func supportUnreadTarget(transaction: Transaction, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: [PeerId]?, downward: Bool, getFilterPredicate: (ChatListFilterData) -> ChatListFilterPredicate) -> PeerId? {
     let isTarget: (PeerId) -> Bool = { targetPeerId in
-        guard targetPeerId != peerId, transaction.getCombinedPeerReadState(targetPeerId)?.isUnread == true, let peer = transaction.getPeer(targetPeerId) else {
-            return false
-        }
-        return !peer.isForumOrMonoForum
+        return supportUnreadIsTarget(targetPeerId: targetPeerId, currentPeerId: peerId, isUnread: transaction.getCombinedPeerReadState(targetPeerId)?.isUnread == true, peer: transaction.getPeer(targetPeerId))
     }
     if let searchResultPeerIds {
         return supportSearchSwitchTarget(peerId: peerId, resultPeerIds: searchResultPeerIds, downward: downward, isTarget: isTarget)
@@ -200,6 +204,20 @@ func _internal_supportSwitchTarget(account: Account, peerId: PeerId, chatListFil
         let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
         Logger.shared.log("SupportSwitch", "send in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)) search \(String(describing: searchResultPeerIds?.count)): \(String(describing: target?.toInt64()))")
         return target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) }
+    }
+}
+
+func _internal_supportUnreadChat(account: Account, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: [PeerId]?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+    return account.postbox.transaction { transaction -> EnginePeer? in
+        let target = supportUnreadTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, downward: downward, getFilterPredicate: getFilterPredicate)
+        Logger.shared.log("SupportSwitch", "unread \(downward ? "next" : "previous") from \(peerId.toInt64()) filter \(String(describing: chatListFilterId)) search \(String(describing: searchResultPeerIds?.count)): \(String(describing: target?.toInt64()))")
+        return target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) }
+    }
+}
+
+public extension TelegramEngine.Messages {
+    func supportUnreadChat(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: [EnginePeer.Id]?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+        return _internal_supportUnreadChat(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, downward: downward, getFilterPredicate: getFilterPredicate)
     }
 }
 
