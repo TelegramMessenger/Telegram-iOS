@@ -1,4 +1,5 @@
 import XCTest
+import Postbox
 @testable import TelegramCore
 
 /// A support account removes old one-to-one chats locally, read or unread. Everything the server
@@ -48,6 +49,17 @@ final class SupportChatListCleanupTests: XCTestCase {
 
     func testChatOpenOnScreenStays() {
         XCTAssertFalse(supportChatListCleanupRemovesChat(self.chat(hasOpenHistoryView: true)))
+    }
+
+    func testARowWithNewerMessagesIsHeld() {
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+        func index(_ timestamp: Int32) -> MessageIndex {
+            return MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: timestamp), timestamp: timestamp)
+        }
+        XCTAssertTrue(supportChatListCleanupRowIsHeld(rowIndex: index(100), topMessageIndex: index(200)))
+        XCTAssertFalse(supportChatListCleanupRowIsHeld(rowIndex: index(100), topMessageIndex: index(100)))
+        XCTAssertFalse(supportChatListCleanupRowIsHeld(rowIndex: index(200), topMessageIndex: index(100)))
+        XCTAssertFalse(supportChatListCleanupRowIsHeld(rowIndex: index(100), topMessageIndex: nil))
     }
 
     func testVacuumNeedsManyRemovedChatsAndFreeSpace() {

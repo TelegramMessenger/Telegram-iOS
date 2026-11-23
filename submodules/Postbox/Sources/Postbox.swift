@@ -182,6 +182,21 @@ public final class Transaction {
         self.postbox?.addChatListHole(groupId: groupId, hole: hole)
     }
     
+    public func setHoldsChatListOrder(_ value: Bool) {
+        assert(!self.disposed)
+        self.postbox?.chatListTable.holdsRowOrder = value
+    }
+    
+    public func resortHeldChatListRows(groupIds: [PeerGroupId]) -> Int {
+        assert(!self.disposed)
+        return self.postbox?.resortHeldChatListRows(groupIds: groupIds) ?? 0
+    }
+    
+    public func resortChatListRow(peerId: PeerId) {
+        assert(!self.disposed)
+        self.postbox?.resortChatListRows(peerIds: Set([peerId]))
+    }
+    
     public func deleteMessages(_ messageIds: [MessageId], forEachMedia: ((Media) -> Void)?) {
         assert(!self.disposed)
         self.postbox?.deleteMessages(messageIds, forEachMedia: forEachMedia)
@@ -2471,6 +2486,24 @@ final class PostboxImpl {
     
     fileprivate func replaceChatListHole(groupId: PeerGroupId, index: MessageIndex, hole: ChatListHole?) {
         self.chatListTable.replaceHole(groupId: groupId, index: index, hole: hole, operations: &self.currentChatListOperations)
+    }
+    
+    fileprivate func resortHeldChatListRows(groupIds: [PeerGroupId]) -> Int {
+        var peerIds = Set<PeerId>()
+        for groupId in groupIds {
+            peerIds.formUnion(self.chatListTable.heldRowPeerIds(groupId: groupId, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable))
+        }
+        if !peerIds.isEmpty {
+            self.resortChatListRows(peerIds: peerIds)
+        }
+        return peerIds.count
+    }
+    
+    fileprivate func resortChatListRows(peerIds: Set<PeerId>) {
+        let holdsRowOrder = self.chatListTable.holdsRowOrder
+        self.chatListTable.holdsRowOrder = false
+        self.chatListTable.replay(postbox: self, historyOperationsByPeerId: [:], updatedPeerChatListEmbeddedStates: peerIds, updatedPeerCachedData: [:], updatedChatListInclusions: [:], messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, operations: &self.currentChatListOperations)
+        self.chatListTable.holdsRowOrder = holdsRowOrder
     }
     
     fileprivate func addChatListHole(groupId: PeerGroupId, hole: ChatListHole) {

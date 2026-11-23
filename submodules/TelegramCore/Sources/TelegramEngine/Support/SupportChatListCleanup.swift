@@ -44,9 +44,23 @@ private func supportChatListCleanupSeekPosition(cutoff: Int32) -> (index: ChatLi
     return (ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: 0), timestamp: cutoff + 1)), true)
 }
 
+func supportChatListCleanupRowIsHeld(rowIndex: MessageIndex, topMessageIndex: MessageIndex?) -> Bool {
+    guard let topMessageIndex else {
+        return false
+    }
+    return topMessageIndex.timestamp > rowIndex.timestamp
+}
+
+private func supportChatListCleanupRowIsHeld(transaction: Transaction, index: ChatListIndex) -> Bool {
+    return supportChatListCleanupRowIsHeld(rowIndex: index.messageIndex, topMessageIndex: transaction.getTopPeerMessageIndex(peerId: index.messageIndex.id.peerId))
+}
+
 private func supportChatListCleanupCanHoldHole(transaction: Transaction, index: ChatListIndex) -> Bool {
     let messageIndex = index.messageIndex
     if messageIndex.id.namespace != Namespaces.Message.Cloud || messageIndex.id.id <= 1 {
+        return false
+    }
+    if supportChatListCleanupRowIsHeld(transaction: transaction, index: index) {
         return false
     }
     return transaction.getPeerChatInterfaceState(messageIndex.id.peerId)?.overrideChatTimestamp == nil
@@ -101,6 +115,10 @@ private func supportChatListCleanupRemoveBatch(transaction: Transaction, groupId
         case let .chat(index):
             next = (index, true)
             let peerId = index.messageIndex.id.peerId
+            if supportChatListCleanupRowIsHeld(transaction: transaction, index: index) {
+                transaction.resortChatListRow(peerId: peerId)
+                continue
+            }
             let peerIdValue = peerId.id._internalGetInt64Value()
             let isOneToOne = peerId.namespace == Namespaces.Peer.CloudUser
             let chat = SupportChatListCleanupChatInfo(
