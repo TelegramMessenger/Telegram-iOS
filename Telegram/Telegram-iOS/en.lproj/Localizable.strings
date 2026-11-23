@@ -17343,6 +17343,10 @@ Error: %8$@";
 "VoiceOver.Reactions.Premium" = "Premium Reactions";
 "VoiceOver.Passcode.Incorrect" = "Incorrect passcode. Please try again.";
 
+"Support.Settings.Title" = "Support Settings";
+"Support.Settings.SendSilently" = "Send all messages without sound";
+"Support.Settings.SendSilentlySynonyms" = "silent\nsound\nmute";
+
 "Support.Mode.LostTitle" = "Support Mode Lost";
 "Support.Mode.LostText" = "This account should have support mode, but it seems it was lost. Restart?";
 "Support.Mode.LostRestart" = "Restart";

@@ -4268,6 +4268,32 @@ private func helpSearchableItems(context: AccountContext) -> [SettingsSearchable
     return items
 }
 
+private func supportSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+    guard context.supportContext != nil else {
+        return []
+    }
+    
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+    let title = strings.Support_Settings_Title
+    let item: (String, String, [String], [String], SupportSettingsEntryTag?) -> SettingsSearchableItem = { id, itemTitle, alternate, breadcrumbs, itemTag in
+        return SettingsSearchableItem(
+            id: id,
+            title: itemTitle,
+            alternate: alternate,
+            icon: .support,
+            breadcrumbs: breadcrumbs,
+            present: { context, _, present in
+                present(.push, supportSettingsController(context: context, focusOnItemTag: itemTag))
+            }
+        )
+    }
+
+    return [
+        item("support", title, synonyms(strings.SettingsSearch_Synonyms_Support), [], nil),
+        item("support/silent", strings.Support_Settings_SendSilently, synonyms(strings.Support_Settings_SendSilentlySynonyms), [title], .sendSilently),
+    ]
+}
+
 func settingsSearchableItems(
     context: AccountContext,
     notificationExceptionsList: Signal<NotificationExceptionsList?, NoError> = .single(nil),

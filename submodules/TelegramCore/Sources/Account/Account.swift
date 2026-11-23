@@ -1334,7 +1334,7 @@ public class Account {
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
         self.isSupportUser = isSupportUser
-        self.supportContext = isSupportUser ? SupportContext() : nil
+        self.supportContext = isSupportUser ? SupportContext(settings: supportSettingsSignal(postbox: postbox)) : nil
         
         self.networkStatsContext = NetworkStatsContext(postbox: postbox)
         

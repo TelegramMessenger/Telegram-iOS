@@ -126,6 +126,31 @@ public func standaloneSendEnqueueMessages(
     threadId: Int64?,
     messages: [StandaloneSendEnqueueMessage]
 ) -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> {
+    return postbox.transaction { transaction -> Bool in
+        return supportSendsAllSilently(transaction: transaction, accountPeerId: accountPeerId)
+    }
+    |> castError(StandaloneSendMessagesError.self)
+    |> mapToSignal { sendsAllSilently -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> in
+        var messages = messages
+        if sendsAllSilently {
+            for i in messages.indices {
+                messages[i].isSilent = true
+            }
+        }
+        return standaloneSendEnqueueMessagesUploadingContent(accountPeerId: accountPeerId, postbox: postbox, network: network, stateManager: stateManager, auxiliaryMethods: auxiliaryMethods, peerId: peerId, threadId: threadId, messages: messages)
+    }
+}
+
+private func standaloneSendEnqueueMessagesUploadingContent(
+    accountPeerId: PeerId,
+    postbox: Postbox,
+    network: Network,
+    stateManager: AccountStateManager,
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    peerId: PeerId,
+    threadId: Int64?,
+    messages: [StandaloneSendEnqueueMessage]
+) -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> {
     struct MessageResult {
         var result: PendingMessageUploadedContentResult
         var media: [Media]
@@ -716,6 +741,9 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             
             var flags: Int32 = 0
             flags |= (1 << 7)
+            if account.isSupportUser && supportSettings(transaction: transaction).sendAllSilently {
+                flags |= Int32(1 << 5)
+            }
             
             for attribute in attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute {
