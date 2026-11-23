@@ -323,6 +323,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     /// The layout the chat's container gave it, before a docked side list narrows it (`sideListDockedChatLayout`).
     var sideListFullLayout: ContainerViewLayout?
     var sideListOpenFraction: CGFloat = 0.0
+    var supportInfoSidebar: ChatSupportInfoSidebar?
+    var supportInfoSidebarIsAvailable: Bool = false
+    var supportInfoSidebarHidesAvatarButton: Bool = false
+    var supportInfoSidebarButton: (item: UIBarButtonItem, theme: PresentationTheme)?
     var sideListEdgePanHandler: ChatSideListEdgePanHandler?
     /// The list got its appearance calls: it is out, or on its way out (not just under a finger from the edge).
     var sideListAppeared = false
@@ -8644,9 +8648,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let layout = self.supportInfoSidebarFullLayout(layout)
         self.sideListFullLayout = layout
         // A docked side list takes the right of the screen: the chat lays out in what is left.
-        self.chatContainerLayoutUpdated(self.sideListDockedChatLayout(layout), transition: transition)
+        self.updateSupportInfoSidebar(layout: layout, transition: transition)
+        self.chatContainerLayoutUpdated(self.sideListDockedChatLayout(self.supportInfoSidebarChatLayout(layout)), transition: transition)
     }
 
     private func chatContainerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

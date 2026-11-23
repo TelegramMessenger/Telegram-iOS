@@ -243,6 +243,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var cancelUpload: (() -> Void)?
     var requestUpdateLayout: ((Bool) -> Void)?
     var animateOverlaysFadeIn: (() -> Void)?
+    private(set) var avatarCollapseFraction: CGFloat = 0.0
     var updateUnderHeaderContentsAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
@@ -1905,6 +1906,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarOffset: CGFloat
         //
         avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
+        self.avatarCollapseFraction = titleCollapseFraction
         avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         
         if subtitleIsButton {

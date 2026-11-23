@@ -63,7 +63,7 @@ func navigationBarButton(for item: UIBarButtonItem) -> NavigationBarComponent.Bu
 
 /// The bar's content for a screen's navigation item (the spec's mapping table). A title view leaves the text title
 /// empty: `NavigationBarNode` hosts title views itself.
-func navigationBarContent(item: UINavigationItem?, previousItem: NavigationPreviousAction?, hidesBackButton: Bool, backPressed: @escaping () -> Void, backContextAction: ((UIView, ContextGesture) -> Void)?, badgeChangesInPlace: Bool = false) -> NavigationBarComponent.Content {
+func navigationBarContent(item: UINavigationItem?, previousItem: NavigationPreviousAction?, hidesBackButton: Bool, backPressed: @escaping () -> Void, backContextAction: ((UIView, ContextGesture) -> Void)?, badgeChangesInPlace: Bool = false, rightButtonsChangeInLayout: Bool = false) -> NavigationBarComponent.Content {
     guard let item else {
         return NavigationBarComponent.Content(title: .text(""), back: nil, leftButton: nil, rightButtons: [], backPressed: backPressed)
     }
@@ -116,6 +116,7 @@ func navigationBarContent(item: UINavigationItem?, previousItem: NavigationPrevi
         backPressed: backAction,
         badge: badge,
         backContextAction: back != nil ? backContextAction : nil,
-        badgeChangesInPlace: badgeChangesInPlace
+        badgeChangesInPlace: badgeChangesInPlace,
+        rightButtonsChangeInLayout: rightButtonsChangeInLayout
     )
 }

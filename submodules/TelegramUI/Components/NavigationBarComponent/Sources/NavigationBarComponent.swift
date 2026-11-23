@@ -623,12 +623,14 @@ public final class NavigationBarComponent: Component {
                     // UIKit's sections change apart, compared by index from the edge.
                     let previousSections = navigationBarButtonPlacement(leftButton: previousPrimary.leftButton, rightButtons: previousPrimary.rightButtons, hasBack: previousPrimary.back != nil, columnLength: nil).rowRightSections
                     let sections = navigationBarButtonPlacement(leftButton: primary.leftButton, rightButtons: primary.rightButtons, hasBack: primary.back != nil, columnLength: nil).rowRightSections
-                    inPlaceRightPillCountChanges = previousSections.count != sections.count
-                    for index in 0 ..< max(previousSections.count, sections.count) {
-                        let previous = index < previousSections.count ? previousSections[index] : []
-                        let current = index < sections.count ? sections[index] : []
-                        if navigationBarCapsuleItemsDiffer(previous, current) {
-                            inPlaceRight.insert(index)
+                    if !primary.rightButtonsChangeInLayout {
+                        inPlaceRightPillCountChanges = previousSections.count != sections.count
+                        for index in 0 ..< max(previousSections.count, sections.count) {
+                            let previous = index < previousSections.count ? previousSections[index] : []
+                            let current = index < sections.count ? sections[index] : []
+                            if navigationBarCapsuleItemsDiffer(previous, current) {
+                                inPlaceRight.insert(index)
+                            }
                         }
                     }
                 }

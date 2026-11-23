@@ -233,8 +233,11 @@ extension NavigationBarComponent {
         /// A new badge updates the back button a transition draws instead of replacing its items (the support account,
         /// whose chat list count changes several times a second).
         public let badgeChangesInPlace: Bool
+        /// A change of the right buttons is laid out with the transition instead of animating in place (the support
+        /// chat's profile button, which zooms itself in and out beside the info sidebar button).
+        public let rightButtonsChangeInLayout: Bool
 
-        public init(title: Title, back: Back?, leftButton: Button?, rightButtons: [Button], backPressed: @escaping () -> Void, badge: String? = nil, backContextAction: ((UIView, ContextGesture) -> Void)? = nil, badgeChangesInPlace: Bool = false) {
+        public init(title: Title, back: Back?, leftButton: Button?, rightButtons: [Button], backPressed: @escaping () -> Void, badge: String? = nil, backContextAction: ((UIView, ContextGesture) -> Void)? = nil, badgeChangesInPlace: Bool = false, rightButtonsChangeInLayout: Bool = false) {
             self.title = title
             self.back = back
             self.leftButton = leftButton
@@ -243,6 +246,7 @@ extension NavigationBarComponent {
             self.badge = badge
             self.backContextAction = backContextAction
             self.badgeChangesInPlace = badgeChangesInPlace
+            self.rightButtonsChangeInLayout = rightButtonsChangeInLayout
         }
 
         public static func ==(lhs: Content, rhs: Content) -> Bool {
@@ -268,6 +272,9 @@ extension NavigationBarComponent {
                 return false
             }
             if lhs.badgeChangesInPlace != rhs.badgeChangesInPlace {
+                return false
+            }
+            if lhs.rightButtonsChangeInLayout != rhs.rightButtonsChangeInLayout {
                 return false
             }
             return true
