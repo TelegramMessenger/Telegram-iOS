@@ -76,9 +76,9 @@ are the audit's.
   `PushCharacterizationTests`, `PushOrderingPinTests`, `SeqContainerEdgeTests`, `BranchMergePushTests`,
   `EventDeliveryOrderTests`, `StateBarrierCharacterizationTests`, `PollResultLossCharacterizationTests`,
   `ChannelSyncCharacterizationTests`, `ChannelPollSiteTests`, `PinnedForumTopicsPeerTests`, `EditForumTopicTests`,
-  `NotificationExtensionPollOutcomeTests`, `PtsTotalLimit*Tests`, `Reset*Tests`, `ArchivedDialogGhostTailTests`,
-  `ChatListRecentDeletionTests`, `RecentEditTests`, `ConfirmationDeletionEventTests`, `StoryUpdateEventTests`,
-  `WidgetDataUpdateTests`.
+  `NotificationExtensionPollOutcomeTests`, `PtsTotalLimit*Tests`, `Reset*Tests`, `SupportAccountResetTests`,
+  `ArchivedDialogGhostTailTests`, `ChatListRecentDeletionTests`, `RecentEditTests`, `ConfirmationDeletionEventTests`,
+  `StoryUpdateEventTests`, `WidgetDataUpdateTests`.
 - Holes and fills: `ChatListHoleFillTests`, `ChatListForumThreadsTests`, `HistoryFill*Tests`, `ForumHistoryFillTests`,
   `MonoforumHistoryFillTests`, `PreloadFillConfirmationTests`, `ManagedHistoryHoles*Tests`; outside the directory,
   `Tests/AroundHoleFillRangeTests`, `ForumThreadResolutionGuardTests`, `WebpageUpdateEventsTests`.
@@ -502,6 +502,21 @@ in parallel, then one `messages.getDialogs` (limit 32) per referenced folder; th
 `resolveForumThreads(fetchedChatList:)`. `dialogsNotModified` completes the reset without writing: pts stays, so the
 next getDifference meets differenceTooLong again, on the backoff
 (`testDifferenceTooLongWithDialogsNotModifiedRetriesTheReset`).
+
+On a support account the reset's walk over every stored chat leaves one-to-one chats that are not in the chat list
+(root or archive) untouched, unless a folder names one (`supportHiddenChatSweepFolderPeerIds`): such a chat is hidden
+only by a reset, which put a hole over it in the same transaction, or by deleting or cleaning it up, which cleared its
+history. Of the others it skips those already empty (an untouched history, `Transaction.isMessageHistoryInitialized`
+false, or one that is all hole) and clears those holding only messages the account sent (fewer than 20, none unsent)
+with `removeHistoryAsUnseenPeer`, unless the chat has an open history view, which gets the hole
+(`supportAccountResetChat`, `SupportAccountResetTests`). Such an account keeps a chat-list record for every customer it
+ever had; the hole each one got kept the reset's transaction at about 10 s in a debug build, and checking each one still
+took about 6 s. The chats an earlier reset hid keep their messages under the hole until `managedSupportHiddenChatSweep`,
+which `managedServiceViews` starts with the account's other support tasks (main app only), clears them: 90 s after
+launch it reads every one-to-one chat Postbox has a chat-list record of and, 500 per transaction, clears with
+`removeHistoryAsUnseenPeer` each one out of the chat list that still stores Cloud messages, unless it is Saved
+Messages, a service user, named by a folder, or has a composer state, unsent messages or an open history view
+(`supportHiddenChatSweepClearsChat`, `SupportHiddenChatSweepTests`).
 
 The ghost tail is deleted inside the reset's transaction, without asking the server (spec section 3 point 3, as amended
 2026-10-24). After the top messages and reply targets are stored, `storedCloudMessagesAboveTopMessages` reads, for each
