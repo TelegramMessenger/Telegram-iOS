@@ -10,7 +10,26 @@ private enum AccountKind {
 }
 
 public struct AccountSupportUserInfo: Codable, Equatable {
-    public init() {
+    enum CodingKeys: String, CodingKey {
+        case matchesSupportPhone = "sp"
+    }
+
+    public let matchesSupportPhone: Bool
+
+    public init(matchesSupportPhone: Bool) {
+        self.matchesSupportPhone = matchesSupportPhone
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.matchesSupportPhone = (try? container.decodeIfPresent(Bool.self, forKey: .matchesSupportPhone)) ?? false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if self.matchesSupportPhone {
+            try container.encode(true, forKey: .matchesSupportPhone)
+        }
     }
 }
 
@@ -313,8 +332,8 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
                     }
                 })
                 let isSupportUser = record.1.contains(where: { attribute in
-                    if case .supportUserInfo = attribute {
-                        return true
+                    if case let .supportUserInfo(info) = attribute {
+                        return info.matchesSupportPhone
                     } else {
                         return false
                     }
@@ -490,8 +509,8 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
         }
     })
     let isSupportUser = attributes.contains(where: { attribute in
-        if case .supportUserInfo = attribute {
-            return true
+        if case let .supportUserInfo(info) = attribute {
+            return info.matchesSupportPhone
         } else {
             return false
         }

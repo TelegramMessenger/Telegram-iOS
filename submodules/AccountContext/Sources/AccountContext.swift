@@ -1917,6 +1917,7 @@ public protocol AccountContext: AnyObject {
     var tonContext: StarsContext? { get }
     var walletContext: WalletContext? { get }
     var giftAuctionsManager: GiftAuctionsManager? { get }
+    var supportContext: SupportContext? { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
