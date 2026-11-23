@@ -87,6 +87,17 @@ private func parsedSupportTemplatesFile(_ data: Data) -> Result<SupportTemplates
     return file.isEmpty ? .failure(.noTemplates) : .success(file)
 }
 
+extension SupportTemplatesError {
+    var isLocalFileProblem: Bool {
+        switch self {
+        case .file, .unreadable:
+            return true
+        case .importFailed, .invalidUrl, .updateFailed, .saveFailed:
+            return false
+        }
+    }
+}
+
 public struct SupportTemplatesFileInfo: Equatable {
     public let name: String
     public let templateCount: Int
@@ -141,6 +152,7 @@ public final class SupportTemplatesManager {
     }
 
     private let folderPath: String
+    private let dataPath: String
     private let fetch: SupportTemplatesFetch
     private let notify: (String, SupportTemplatesDelta) -> Void
     private let log: (String) -> Void
@@ -166,8 +178,9 @@ public final class SupportTemplatesManager {
     private var operationsAfterRun: [() -> Void] = []
     private var completions: [(SupportTemplatesReloadResult) -> Void] = []
 
-    public init(folderPath: String, fetch: @escaping SupportTemplatesFetch, notify: @escaping (String, SupportTemplatesDelta) -> Void, log: @escaping (String) -> Void) {
+    public init(folderPath: String, dataPath: String? = nil, fetch: @escaping SupportTemplatesFetch, notify: @escaping (String, SupportTemplatesDelta) -> Void, log: @escaping (String) -> Void) {
         self.folderPath = folderPath
+        self.dataPath = dataPath ?? folderPath
         self.fetch = fetch
         self.notify = notify
         self.log = log
@@ -219,6 +232,21 @@ public final class SupportTemplatesManager {
                 self.reloadAfterRun = true
             } else {
                 self.startRun()
+            }
+        }
+    }
+
+    public func reloadLocal(completion: ((SupportTemplatesReloadResult) -> Void)? = nil) {
+        self.whenIdle {
+            self.errors.removeAll(where: \.isLocalFileProblem)
+            self.files = self.readFiles()
+            self.log("re-read \(self.files.count) files")
+            self.publish()
+            if let completion {
+                let result = SupportTemplatesReloadResult(errors: self.errors, updatedFiles: [])
+                DispatchQueue.main.async {
+                    completion(result)
+                }
             }
         }
     }
@@ -455,11 +483,11 @@ public final class SupportTemplatesManager {
     }
 
     private var editsPath: String {
-        return self.folderPath + "/edits.json"
+        return self.dataPath + "/edits.json"
     }
 
     private var ownPath: String {
-        return self.folderPath + "/own.json"
+        return self.dataPath + "/own.json"
     }
 
     private func loadLocal() {
@@ -487,7 +515,7 @@ public final class SupportTemplatesManager {
                 }
                 return
             }
-            try self.fileManager.createDirectory(atPath: self.folderPath, withIntermediateDirectories: true)
+            try self.fileManager.createDirectory(atPath: self.dataPath, withIntermediateDirectories: true)
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
             try encoder.encode(value).write(to: URL(fileURLWithPath: path), options: .atomic)

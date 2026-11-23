@@ -182,8 +182,8 @@ final class SupportTemplatesManagerTests: XCTestCase {
         super.tearDown()
     }
 
-    private func makeManager() -> SupportTemplatesManager {
-        return SupportTemplatesManager(folderPath: self.folder.path, fetch: { [unowned self] url, completion in
+    private func makeManager(dataPath: String? = nil) -> SupportTemplatesManager {
+        return SupportTemplatesManager(folderPath: self.folder.path, dataPath: dataPath, fetch: { [unowned self] url, completion in
             self.lock.lock()
             self.fetched.append(url.absoluteString)
             let response = self.responses[url.absoluteString] ?? .failure(.network("no response"))
@@ -227,6 +227,22 @@ final class SupportTemplatesManagerTests: XCTestCase {
         })
         self.wait(for: [done], timeout: 10.0)
         return result!
+    }
+
+    private func reloadLocal(_ manager: SupportTemplatesManager) -> SupportTemplatesReloadResult {
+        let done = self.expectation(description: "reload local")
+        var result: SupportTemplatesReloadResult?
+        manager.reloadLocal(completion: {
+            result = $0
+            done.fulfill()
+        })
+        self.wait(for: [done], timeout: 10.0)
+        return result!
+    }
+
+    private func place(_ name: String, _ text: String) {
+        try! FileManager.default.createDirectory(at: self.folder, withIntermediateDirectories: true)
+        try! Data(text.utf8).write(to: self.folder.appendingPathComponent(name))
     }
 
     private func stored(_ name: String) -> SupportTemplatesFile? {
@@ -481,6 +497,69 @@ final class SupportTemplatesManagerTests: XCTestCase {
         let relaunched = self.makeManager()
         _ = self.reload(relaunched)
         XCTAssertEqual(relaunched.listEntries(.own).map(\.template.value), ["Changed"])
+    }
+
+    func testReloadLocalReadsChangedFilesWithoutFetching() {
+        let url = "https://example.com/tl_one.txt"
+        let manager = self.makeManager()
+        self.place("tl_one.txt", "{URL}\n\(url)\n{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nFirst")
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "First")
+        self.place("tl_one.txt", "{URL}\n\(url)\n{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nSecond")
+        self.place("tl_two.txt", "{QUESTION}\nB\n{KEYS}\nkb\n{VALUE}\nThird")
+        let result = self.reloadLocal(manager)
+        XCTAssertEqual(result.errors, [])
+        XCTAssertEqual(result.updatedFiles, [])
+        XCTAssertEqual(manager.templates.matchExact("ka")?.question.value, "Second")
+        XCTAssertEqual(manager.templates.matchExact("kb")?.question.value, "Third")
+        XCTAssertEqual(manager.state.files.map(\.name), ["tl_one.txt", "tl_two.txt"])
+        XCTAssertEqual(self.fetched, [])
+        XCTAssertEqual(self.notifications.count, 0)
+        XCTAssertFalse(self.fileExists("tl_one.txt.old"))
+    }
+
+    func testReloadLocalReplacesFileErrorsAndKeepsUpdateErrors() {
+        let url = "https://example.com/tl_one.txt"
+        self.responses[url] = .failure(.http(404))
+        let manager = self.makeManager()
+        self.place("tl_one.txt", "{URL}\n\(url)\n{QUESTION}\nA\n{VALUE}\nB")
+        let updateError = SupportTemplatesError.updateFailed(name: "tl_one.txt", url: url, problem: .fetch(.http(404)))
+        XCTAssertEqual(self.reload(manager).errors, [updateError])
+        self.place("tl_bad.txt", "no tokens here")
+        XCTAssertEqual(self.reloadLocal(manager).errors, [updateError, .file(name: "tl_bad.txt", problem: .noTemplates)])
+        XCTAssertEqual(manager.state.errors, [updateError, .file(name: "tl_bad.txt", problem: .noTemplates)])
+        self.place("tl_bad.txt", "{QUESTION}\nC\n{VALUE}\nD")
+        XCTAssertEqual(self.reloadLocal(manager).errors, [updateError])
+        XCTAssertEqual(self.fetched, [url])
+    }
+
+    func testRemovedFileLeavesOnReloadLocal() {
+        let manager = self.makeManager()
+        self.place("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB")
+        _ = self.reloadLocal(manager)
+        try! FileManager.default.removeItem(at: self.folder.appendingPathComponent("tl_one.txt"))
+        _ = self.reloadLocal(manager)
+        XCTAssertEqual(manager.state.files, [])
+        XCTAssertNil(manager.templates.matchExact("ka"))
+    }
+
+    func testDataPathHoldsEditsAndOwnTemplatesOutsideTheFolder() {
+        let data = self.folder.deletingLastPathComponent().appendingPathComponent("data")
+        let manager = self.makeManager(dataPath: data.path)
+        self.place("tl_one.txt", "{QUESTION}\nA\n{KEYS}\nka\n{VALUE}\nB")
+        _ = self.reloadLocal(manager)
+        manager.setEdit(file: "tl_one.txt", id: "a", edit: SupportTemplateEdit(value: "Mine"))
+        manager.saveOwnTemplate(SupportOwnTemplate(id: "1", question: "Own", keys: ["own"], value: "Own answer"))
+        _ = self.reloadLocal(manager)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: data.appendingPathComponent("edits.json").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: data.appendingPathComponent("own.json").path))
+        XCTAssertFalse(self.fileExists("edits.json"))
+        XCTAssertFalse(self.fileExists("own.json"))
+
+        let relaunched = self.makeManager(dataPath: data.path)
+        _ = self.reloadLocal(relaunched)
+        XCTAssertEqual(relaunched.templates.matchExact("ka")?.question.value, "Mine")
+        XCTAssertEqual(relaunched.templates.matchExact("own")?.question.value, "Own answer")
     }
 
     private func changeFile(_ manager: SupportTemplatesManager, _ name: String, newName: String, url: String) -> SupportTemplatesFileChangeError? {
