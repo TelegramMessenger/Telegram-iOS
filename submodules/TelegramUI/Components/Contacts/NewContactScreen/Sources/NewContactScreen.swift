@@ -1091,6 +1091,8 @@ public class NewContactScreen: ViewControllerComponentContainer {
     
     fileprivate func complete(result: NewContactScreenComponent.Result) {
         let entities = generateChatInputTextEntities(result.note)
+        let isSupport = self.context.supportContext != nil
+        let completion = self.completion
         if let peer = result.peer {
             let _ = (self.context.engine.contacts.addContactInteractively(
                 peerId: peer.id,
@@ -1100,19 +1102,40 @@ public class NewContactScreen: ViewControllerComponentContainer {
                 noteText: result.note.string,
                 noteEntities: entities,
                 addToPrivacyExceptions: result.addToPrivacyExceptions
-            ) |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
-                if !result.syncContactToPhone {
+            ) |> deliverOnMainQueue).startStandalone(error: { _ in
+                if isSupport {
+                    completion(result.peer, nil, nil)
+                }
+            }, completed: { [weak self] in
+                if isSupport {
+                    completion(result.peer, nil, nil)
+                } else if !result.syncContactToPhone {
                     self?.completion(result.peer, nil, nil)
                 }
             })
         } else {
-            let _ = self.context.engine.contacts.importContact(
+            let importContact = self.context.engine.contacts.importContact(
                 firstName: result.firstName,
                 lastName: result.lastName,
                 phoneNumber: result.phoneNumber,
                 noteText: result.note.string,
                 noteEntities: entities
-            ).startStandalone()
+            )
+            if isSupport {
+                let engine = self.context.engine
+                let _ = (importContact
+                |> mapToSignal { peerId -> Signal<EnginePeer?, NoError> in
+                    guard let peerId else {
+                        return .single(nil)
+                    }
+                    return engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                }
+                |> deliverOnMainQueue).startStandalone(next: { peer in
+                    completion(peer, nil, nil)
+                })
+            } else {
+                let _ = importContact.startStandalone()
+            }
         }
         
         if result.syncContactToPhone, let contactDataManager = self.context.sharedContext.contactDataManager {
@@ -1157,7 +1180,7 @@ public class NewContactScreen: ViewControllerComponentContainer {
             )
             let _ = (contactDataManager.createContactWithData(composedContactData)
             |> deliverOnMainQueue).start(next: { [weak self] contactIdAndData in
-                if let self, let contactIdAndData {
+                if let self, let contactIdAndData, !isSupport {
                     self.completion(result.peer, contactIdAndData.0, contactIdAndData.1)
                 }
             })
