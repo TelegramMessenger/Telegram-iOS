@@ -159,6 +159,9 @@ public extension TelegramEngine {
         }
 
         public func clearCloudDraftsInteractively() -> Signal<Void, NoError> {
+            if self.account.isSupportUser {
+                return .complete()
+            }
         	return _internal_clearCloudDraftsInteractively(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
         }
 

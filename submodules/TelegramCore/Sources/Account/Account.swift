@@ -1521,7 +1521,7 @@ public class Account {
                     pendingStoryCount: 0
                 )
             },
-            managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network, messageMediaPreuploadManager: self.messageMediaPreuploadManager, auxiliaryMethods: self.auxiliaryMethods) |> map { inputStates in
+            managedSynchronizeChatInputStateOperations(postbox: self.postbox, accountPeerId: self.peerId, network: self.network, messageMediaPreuploadManager: self.messageMediaPreuploadManager, auxiliaryMethods: self.auxiliaryMethods) |> map { inputStates in
                 return AccountRunningImportantTasks(
                     taskTypes: inputStates ? .other : [],
                     pendingMessageCount: 0,

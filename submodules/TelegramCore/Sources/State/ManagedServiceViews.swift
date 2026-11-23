@@ -13,6 +13,7 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
     if let supportContext, !supplementary {
         disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
         disposable.add(managedSupportHiddenChatSweep(postbox: postbox, accountPeerId: accountPeerId).start())
+        disposable.add(managedSupportDraftSweep(postbox: postbox).start())
         disposable.add(managedSupportDeletedUserSweep(postbox: postbox, accountPeerId: accountPeerId).start())
         disposable.add(managedSupportFolderChats(postbox: postbox, network: network, accountPeerId: accountPeerId).start())
     }

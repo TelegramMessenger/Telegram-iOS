@@ -98,7 +98,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
     } |> switchToLatest
 }
 
-func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Bool, NoError> {
+func managedSynchronizeChatInputStateOperations(postbox: Postbox, accountPeerId: PeerId, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Bool, NoError> {
     return Signal { subscriber in
         let hasRunningOperations = ValuePromise<Bool>(false, ignoreRepeated: true)
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatInputStates
@@ -118,7 +118,7 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeChatInputStateOperation {
-                            return synchronizeChatInputState(transaction: transaction, postbox: postbox, network: network, messageMediaPreuploadManager: messageMediaPreuploadManager, auxiliaryMethods: auxiliaryMethods, helper: helper, peerId: entry.peerId, threadId: operation.threadId, operation: operation)
+                            return synchronizeChatInputState(transaction: transaction, accountPeerId: accountPeerId, postbox: postbox, network: network, messageMediaPreuploadManager: messageMediaPreuploadManager, auxiliaryMethods: auxiliaryMethods, helper: helper, peerId: entry.peerId, threadId: operation.threadId, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -150,7 +150,7 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
     }
 }
 
-private func synchronizeChatInputState(transaction: Transaction, postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager, auxiliaryMethods: AccountAuxiliaryMethods, helper: Atomic<ManagedSynchronizeChatInputStateOperationsHelper>, peerId: PeerId, threadId: Int64?, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
+private func synchronizeChatInputState(transaction: Transaction, accountPeerId: PeerId, postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager, auxiliaryMethods: AccountAuxiliaryMethods, helper: Atomic<ManagedSynchronizeChatInputStateOperationsHelper>, peerId: PeerId, threadId: Int64?, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
     var inputState: SynchronizeableChatInputState?
     let peerChatInterfaceState: StoredPeerChatInterfaceState?
     if let threadId {
@@ -171,6 +171,10 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
     }
     helper.with { helperValue in
         helperValue.updatePeerMediaNeeds(peerId: peerId, media: draftMedia, network: network, postbox: postbox, messageMediaPreuploadManager: messageMediaPreuploadManager)
+    }
+
+    if supportKeepsDraftLocal(transaction: transaction, accountPeerId: accountPeerId, threadId: threadId) {
+        return .complete()
     }
 
     if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
