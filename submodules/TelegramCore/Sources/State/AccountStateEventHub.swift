@@ -144,6 +144,7 @@ final class AccountStateEventHub {
     }
 
     let walletTransferUpdatesPipe = ValuePipe<[WalletTransferUpdate]>()
+    let supportReceivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     let walletTonConnectUpdatesPipe = ValuePipe<[WalletTonConnectEvent]>()
 
     private let walletStateUpdatesPipe = ValuePipe<Api.WalletState>()
@@ -338,6 +339,9 @@ final class AccountStateEventHub {
         }
         if !events.walletTransferUpdates.isEmpty {
             self.walletTransferUpdatesPipe.putNext(events.walletTransferUpdates)
+        }
+        if !events.supportReceivedDrafts.isEmpty {
+            self.supportReceivedDraftsPipe.putNext(events.supportReceivedDrafts)
         }
         if !events.walletTonConnectEvents.isEmpty {
             self.walletTonConnectUpdatesPipe.putNext(events.walletTonConnectEvents)

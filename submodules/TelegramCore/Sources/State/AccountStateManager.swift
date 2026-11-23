@@ -298,6 +298,9 @@ public final class AccountStateManager {
         fileprivate var walletTransferUpdatesPipe: ValuePipe<[WalletTransferUpdate]> {
             return self.eventHub.walletTransferUpdatesPipe
         }
+        fileprivate var supportReceivedDraftsPipe: ValuePipe<[SupportReceivedDraft]> {
+            return self.eventHub.supportReceivedDraftsPipe
+        }
         fileprivate var walletTonConnectUpdatesPipe: ValuePipe<[WalletTonConnectEvent]> {
             return self.eventHub.walletTonConnectUpdatesPipe
         }
@@ -1320,6 +1323,12 @@ public final class AccountStateManager {
     func walletTransferUpdates() -> Signal<[WalletTransferUpdate], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.walletTransferUpdatesPipe.signal().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+
+    func supportReceivedDrafts() -> Signal<[SupportReceivedDraft], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.supportReceivedDraftsPipe.signal().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
 

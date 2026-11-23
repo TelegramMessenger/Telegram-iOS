@@ -312,6 +312,7 @@ public struct ChatListNodeState: Equatable {
     public var selectedThreadIds: Set<Int64>
     public var archiveStoryState: StoryState?
     public var supportChatListLoadTill: Int32?
+    public var supportOccupations: [EnginePeer.Id: SupportOccupation] = [:]
     
     public init(
         presentationData: ChatListPresentationData,
@@ -391,6 +392,9 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.supportChatListLoadTill != rhs.supportChatListLoadTill {
+            return false
+        }
+        if lhs.supportOccupations != rhs.supportOccupations {
             return false
         }
         return true
@@ -506,6 +510,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                             displayAsTopicList: peerEntry.displayAsTopicList,
                             tags: chatListItemTags(location: location, accountPeerId: context.account.peerId, isPremium: isPremium, peer: peer.chatMainPeer, isUnread: combinedReadState?.isUnread ?? false, isMuted: isRemovedFromTotalUnreadCount, isContact: isContact, hasUnseenMentions: hasUnseenMentions, chatListFilters: chatListFilters),
+                            supportOccupation: peerEntry.supportOccupation,
                             isSideListAllThreadsItem: peerEntry.isSideListAllThreadsItem
                         )),
                         editing: editing,
@@ -883,6 +888,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                                 displayAsTopicList: peerEntry.displayAsTopicList,
                                 tags: chatListItemTags(location: location, accountPeerId: context.account.peerId, isPremium: isPremium, peer: peer.chatMainPeer, isUnread: combinedReadState?.isUnread ?? false, isMuted: isRemovedFromTotalUnreadCount, isContact: isContact, hasUnseenMentions: hasUnseenMentions, chatListFilters: chatListFilters),
+                                supportOccupation: peerEntry.supportOccupation,
                                 isSideListAllThreadsItem: peerEntry.isSideListAllThreadsItem
                             )),
                             editing: editing,
@@ -1356,6 +1362,7 @@ public final class ChatListNode: ListViewImpl {
     private let chatListDisposable = MetaDisposable()
     private var activityStatusesDisposable: Disposable?
     private var supportChatListLoadTillDisposable: Disposable?
+    private var supportOccupationsDisposable: Disposable?
     
     private let scrollToTopOptionPromise = Promise<ChatListGlobalScrollOption>(.none)
     public var scrollToTopOption: Signal<ChatListGlobalScrollOption, NoError> {
@@ -2839,6 +2846,14 @@ public final class ChatListNode: ListViewImpl {
                     return state
                 }
             })
+            self.supportOccupationsDisposable = (supportContext.occupations
+            |> deliverOnMainQueue).startStrict(next: { [weak self] occupations in
+                self?.updateState { state in
+                    var state = state
+                    state.supportOccupations = occupations
+                    return state
+                }
+            })
         }
         
         let engine = context.engine
@@ -3285,6 +3300,7 @@ public final class ChatListNode: ListViewImpl {
         self.chatListDisposable.dispose()
         self.activityStatusesDisposable?.dispose()
         self.supportChatListLoadTillDisposable?.dispose()
+        self.supportOccupationsDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()

@@ -125,6 +125,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var storyState: ChatListNodeState.StoryState?
         var requiresPremiumForMessaging: Bool
         var displayAsTopicList: Bool
+        var supportOccupation: String?
         
         init(
             index: EngineChatList.Item.Index,
@@ -154,7 +155,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             revealed: Bool,
             storyState: ChatListNodeState.StoryState?,
             requiresPremiumForMessaging: Bool,
-            displayAsTopicList: Bool
+            displayAsTopicList: Bool,
+            supportOccupation: String? = nil
         ) {
             self.index = index
             self.presentationData = presentationData
@@ -184,6 +186,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.storyState = storyState
             self.requiresPremiumForMessaging = requiresPremiumForMessaging
             self.displayAsTopicList = displayAsTopicList
+            self.supportOccupation = supportOccupation
         }
         
         /// The chat side list's "All Messages" row (`ChatListItemContent.PeerData.isSideListAllThreadsItem`).
@@ -191,6 +194,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         
         static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
             if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.supportOccupation != rhs.supportOccupation {
                 return false
             }
             if lhs.isSideListAllThreadsItem != rhs.isSideListAllThreadsItem {
@@ -608,6 +614,13 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     }
 }
 
+func supportOccupationText(_ occupation: SupportOccupation, strings: PresentationStrings) -> String {
+    if occupation.name.isEmpty || occupation.name.hasPrefix("[rand^") {
+        return strings.Support_Claims_Taken
+    }
+    return strings.Support_Claims_Here.replacingOccurrences(of: "{name}", with: occupation.name)
+}
+
 private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt16) -> EngineChatList.Item.Index {
     if case let .chatList(index) = index, let pinningIndex = index.pinningIndex {
         return .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex + offset, messageIndex: index.messageIndex))
@@ -798,7 +811,8 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 )
             },
             requiresPremiumForMessaging: entry.isPremiumRequiredToMessage,
-            displayAsTopicList: entry.displayAsTopicList
+            displayAsTopicList: entry.displayAsTopicList,
+            supportOccupation: threadId == nil ? peerId.flatMap { state.supportOccupations[$0] }.map { supportOccupationText($0, strings: state.presentationData.strings) } : nil
         ))
         
         if let threadInfo, threadInfo.isHidden {

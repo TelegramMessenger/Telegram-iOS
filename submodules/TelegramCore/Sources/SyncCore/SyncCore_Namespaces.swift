@@ -356,6 +356,7 @@ private enum PreferencesKeyValues: Int32 {
     case unreadCounterTagsState = 51
     case stateSyncDebugSettings = 52
     case supportSettings = 1000
+    case supportInstallationTag = 1001
     case supportDraftSweep = 1002
 }
 
@@ -387,6 +388,12 @@ public struct PreferencesKeys {
     public static let supportSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.supportSettings.rawValue)
+        return key
+    }()
+    
+    public static let supportInstallationTag: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.supportInstallationTag.rawValue)
         return key
     }()
     

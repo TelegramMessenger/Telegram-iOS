@@ -17368,6 +17368,9 @@ Error: %8$@";
 "Support.ChatLoading.LoadingMore" = "Loading...";
 "Support.ChatLoading.FolderLimit" = "Older chats are not loaded, so this folder may be missing some.";
 
+"Support.Claims.Taken" = "✋️ chat taken";
+"Support.Claims.Here" = "✋️ {name} is here";
+
 "Support.Mode.LostTitle" = "Support Mode Lost";
 "Support.Mode.LostText" = "This account should have support mode, but it seems it was lost. Restart?";
 "Support.Mode.LostRestart" = "Restart";

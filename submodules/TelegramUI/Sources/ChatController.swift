@@ -448,6 +448,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     var canReadHistoryDisposable: Disposable?
+    let supportOccupationIsVisible = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var supportOccupationDisposable: Disposable?
+    let supportOpenChatDisposable = MetaDisposable()
+    var supportOccupationPeerId: EnginePeer.Id? {
+        guard case let .peer(peerId) = self.chatLocation, case .standard(.default) = self.mode else {
+            return nil
+        }
+        switch self.subject {
+        case .none, .message:
+            return peerId
+        default:
+            return nil
+        }
+    }
     var computedCanReadHistoryPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     // Screen-capture reporting must not follow canReadHistoryValue: that is also cleared while
     // sheets and context menus (attachment menu, message menus) are shown over a still-visible
@@ -7132,6 +7146,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        if let supportContext = context.supportContext {
+            self.supportOccupationDisposable = (combineLatest(
+                context.sharedContext.applicationBindings.applicationInForeground,
+                self.supportOccupationIsVisible.get()
+            ) |> deliverOnMainQueue).startStrict(next: { [weak self] inForeground, isVisible in
+                guard let self else {
+                    return
+                }
+                if inForeground && isVisible, let peerId = self.supportOccupationPeerId {
+                    self.supportOpenChatDisposable.set(supportContext.openChat(peerId: peerId))
+                } else {
+                    self.supportOpenChatDisposable.set(nil)
+                }
+            })
+        }
+        
         self.networkStateDisposable = (context.account.networkState |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             if let strongSelf = self, case .standard(.default) = strongSelf.presentationInterfaceState.mode {
                 strongSelf.chatTitleView?.updateNetworkState(networkState: state, transition: .spring(duration: 0.4))
@@ -7251,6 +7281,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.applicationInForegroundDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
+        self.supportOccupationDisposable?.dispose()
+        self.supportOpenChatDisposable.dispose()
         self.networkStateDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
@@ -7987,6 +8019,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.forwardSideListAppearance(.didAppear, animated: animated)
         
         self.didAppear = true
+        self.supportOccupationIsVisible.set(true)
         
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
         self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
@@ -8451,6 +8484,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
+        self.supportOccupationIsVisible.set(false)
         self.saveInterfaceState()
         
         self.dismissAllTooltips()

@@ -418,6 +418,8 @@ extension ReplayContext {
     func applyUpdateChatInputState(_ peerId: PeerId, _ threadId: Int64?, _ inputState: SynchronizeableChatInputState?) {
         if !supportKeepsDraftLocal(transaction: transaction, accountPeerId: accountPeerId, threadId: threadId) {
             _internal_updateChatInputState(transaction: transaction, peerId: peerId, threadId: threadId, inputState: inputState)
+        } else if supportTracksOccupation(transaction: transaction, peerId: peerId, accountPeerId: accountPeerId) {
+            supportReceivedDrafts.append(SupportReceivedDraft(peerId: peerId, text: supportReceivedDraftText(inputState)))
         }
     }
     
