@@ -815,7 +815,7 @@ public final class ChatTitleComponent: Component {
                                     participation = .kicked
                                 }
                             }
-                            let featureEnabled = isNewsFeedEnabled(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                            let featureEnabled = isNewsFeedEnabled(appConfiguration: component.context.currentAppConfiguration.with { $0 }, isSupportAccount: component.context.supportContext != nil)
                             if newsChatTitleShowsMuteIcon(isBroadcast: isBroadcast, participation: participation, isMuted: isMutedNow, isVerified: titleCredibilityIcon == .verified, featureEnabled: featureEnabled) {
                                 titleRightIcon = .mute
                             }

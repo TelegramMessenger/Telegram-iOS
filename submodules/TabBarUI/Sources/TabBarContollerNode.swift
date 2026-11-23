@@ -55,6 +55,7 @@ final class TabBarControllerNode: ASDisplayNode {
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private let maxItemLength: CGFloat?
     var hidesItems: Bool = false
     var hidesBarWithGlass: Bool = false
     private var appliedHidesBarWithGlass: Bool = false
@@ -116,9 +117,10 @@ final class TabBarControllerNode: ASDisplayNode {
         return nil
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, itemHasDoubleTapAction: @escaping (Int) -> Bool, itemDoubleTapped: @escaping (Int) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingView, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void, activateSearch: @escaping () -> Void, deactivateSearch: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, maxItemLength: CGFloat?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, itemHasDoubleTapAction: @escaping (Int) -> Bool, itemDoubleTapped: @escaping (Int) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingView, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void, activateSearch: @escaping () -> Void, deactivateSearch: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.maxItemLength = maxItemLength
         self.itemSelected = itemSelected
         self.itemHasDoubleTapAction = itemHasDoubleTapAction
         self.itemDoubleTapped = itemDoubleTapped
@@ -222,7 +224,7 @@ final class TabBarControllerNode: ASDisplayNode {
         // Where iOS 27 would switch its tab bar to the wide variant (a vertically compact phone, the bar at least
         // 568pt wide), the bar keeps its own horizontal layout; elsewhere a horizontal bar takes iOS 27's portrait one.
         let isWide = params.layout.size.width > params.layout.size.height && params.layout.size.width >= 568.0
-        let isSystemLayout = sidePlacement == nil && !isCompact && !isWide
+        let isSystemLayout = sidePlacement == nil && !isCompact && !isWide && self.maxItemLength == nil
 
         var keyboardBottomInset: CGFloat = 0.0
         if let currentController = self.currentController {
@@ -347,7 +349,9 @@ final class TabBarControllerNode: ASDisplayNode {
                 outerInsets: UIEdgeInsets(top: 0.0, left: tabBarSideInset, bottom: tabBarBottomInset, right: tabBarSideInset),
                 axis: sidePlacement == nil ? .horizontal : .vertical,
                 isCompact: isCompact,
+                maxItemLength: self.maxItemLength,
                 hidesItems: self.hidesItems,
+                inlineItems: self.maxItemLength != nil && !isCompact && sidePlacement == nil && params.layout.size.width > params.layout.size.height,
                 usesSystemLayout: !isWide
             )),
             environment: {},

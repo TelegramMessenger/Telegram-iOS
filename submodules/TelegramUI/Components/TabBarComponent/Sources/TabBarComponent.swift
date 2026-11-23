@@ -484,7 +484,10 @@ public final class TabBarComponent: Component {
     public let axis: Axis
     /// Icons without labels, on either axis.
     public let isCompact: Bool
+    public let maxItemLength: CGFloat?
     public let hidesItems: Bool
+    public let inlineItems: Bool
+    
     /// A horizontal regular bar takes iOS 27's portrait tab bar layout (`tabBarSystemItemsLayout`); without it, its
     /// items share the available width (`tabBarItemsLayout`), as where iOS would switch to its wide bar.
     public let usesSystemLayout: Bool
@@ -500,7 +503,9 @@ public final class TabBarComponent: Component {
         outerInsets: UIEdgeInsets,
         axis: Axis,
         isCompact: Bool,
+        maxItemLength: CGFloat? = nil,
         hidesItems: Bool = false,
+        inlineItems: Bool = false,
         usesSystemLayout: Bool = true
     ) {
         self.theme = theme
@@ -513,7 +518,9 @@ public final class TabBarComponent: Component {
         self.outerInsets = outerInsets
         self.axis = axis
         self.isCompact = isCompact
+        self.maxItemLength = maxItemLength
         self.hidesItems = hidesItems
+        self.inlineItems = inlineItems
         self.usesSystemLayout = usesSystemLayout
     }
     
@@ -548,7 +555,13 @@ public final class TabBarComponent: Component {
         if lhs.isCompact != rhs.isCompact {
             return false
         }
+        if lhs.maxItemLength != rhs.maxItemLength {
+            return false
+        }
         if lhs.hidesItems != rhs.hidesItems {
+            return false
+        }
+        if lhs.inlineItems != rhs.inlineItems {
             return false
         }
         if lhs.usesSystemLayout != rhs.usesSystemLayout {
@@ -788,6 +801,9 @@ public final class TabBarComponent: Component {
             if self.component?.hidesItems == true, let searchView = self.searchView, point.x < searchView.frame.minX {
                 return nil
             }
+            if self.component?.maxItemLength != nil, let searchView = self.searchView, point.x > self.contextGestureContainerView.frame.maxX, point.x < searchView.frame.minX {
+                return nil
+            }
             return super.hitTest(point, with: event)
         }
         
@@ -885,14 +901,14 @@ public final class TabBarComponent: Component {
         
         func update(component: TabBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let innerInset: CGFloat = 4.0
-            let isSystemLayout = component.axis == .horizontal && !component.isCompact && component.usesSystemLayout
+            let isSystemLayout = component.axis == .horizontal && !component.isCompact && component.usesSystemLayout && component.maxItemLength == nil
             let availableSize = CGSize(width: isSystemLayout ? availableSize.width : min(500.0, availableSize.width), height: availableSize.height)
 
             let previousComponent = self.component
             // A new axis or mode is applied without animation, so the capsule does not morph through
             // intermediate shapes.
             var transition = transition
-            if let previousComponent, previousComponent.axis != component.axis || previousComponent.isCompact != component.isCompact || previousComponent.usesSystemLayout != component.usesSystemLayout {
+            if let previousComponent, previousComponent.axis != component.axis || previousComponent.isCompact != component.isCompact || previousComponent.inlineItems != component.inlineItems || previousComponent.usesSystemLayout != component.usesSystemLayout {
                 transition = .immediate
             }
             // Search is laid out on the horizontal axis only.
@@ -907,7 +923,7 @@ public final class TabBarComponent: Component {
 
             // The search button is as tall as the bar.
             let barHeight: CGFloat
-            if component.hidesItems {
+            if component.inlineItems || component.hidesItems {
                 barHeight = tabBarCompactItemThickness + innerInset * 2.0
             } else if isSystemLayout {
                 barHeight = tabBarSystemBarThickness
@@ -939,6 +955,7 @@ public final class TabBarComponent: Component {
                         theme: component.theme,
                         isSearchActive: false,
                         showsTitle: true,
+                        inlineTitle: component.inlineItems,
                         isSelected: false,
                         tintSelectedItem: true,
                         isSystemLayout: isSystemLayout,
@@ -958,7 +975,7 @@ public final class TabBarComponent: Component {
             if isSystemLayout {
                 itemsLayout = tabBarSystemItemsLayout(fittedItemWidths: titleWidths, availableLength: availableLength, hasAccessory: search != nil)
             } else {
-                itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: titleWidths.map { $0 + 10.0 * 2.0 }, availableLength: availableLength)
+                itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: component.inlineItems ? titleWidths : titleWidths.map { $0 + 10.0 * 2.0 }, availableLength: availableLength, maxItemLength: component.maxItemLength, inlineItems: component.inlineItems)
             }
             let tabsSize = itemsLayout.size
 
@@ -1002,6 +1019,7 @@ public final class TabBarComponent: Component {
                         theme: component.theme,
                         isSearchActive: search?.isActive == true,
                         showsTitle: !component.isCompact,
+                        inlineTitle: component.inlineItems,
                         isSelected: false,
                         tintSelectedItem: component.tintSelectedItem,
                         isSystemLayout: isSystemLayout,
@@ -1017,6 +1035,7 @@ public final class TabBarComponent: Component {
                         theme: component.theme,
                         isSearchActive: search?.isActive == true,
                         showsTitle: !component.isCompact,
+                        inlineTitle: component.inlineItems,
                         isSelected: true,
                         tintSelectedItem: component.tintSelectedItem,
                         isSystemLayout: isSystemLayout,
@@ -1132,8 +1151,18 @@ public final class TabBarComponent: Component {
                     searchFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - searchSize.height), size: searchSize)
                 } else {
                     searchSize = CGSize(width: barHeight, height: barHeight)
-                    size.width += barHeight + 8.0
-                    searchFrame = CGRect(origin: CGPoint(x: tabBarSearchButtonOrigin(tabsLength: tabsSize.width, availableLength: availableSize.width, buttonLength: searchSize.width, isCompact: component.isCompact && component.axis == .horizontal), y: 0.0), size: searchSize)
+                    if component.maxItemLength != nil {
+                        if component.maxItemLength != nil && !component.inlineItems {
+                            size.width = availableSize.width
+                        } else {
+                            size.width += barHeight + 8.0
+                        }
+                        let searchX = component.inlineItems ? size.width - searchSize.width : availableSize.width - searchSize.width
+                        searchFrame = CGRect(origin: CGPoint(x: searchX, y: 0.0), size: searchSize)
+                    } else {
+                        size.width += barHeight + 8.0
+                        searchFrame = CGRect(origin: CGPoint(x: tabBarSearchButtonOrigin(tabsLength: tabsSize.width, availableLength: availableSize.width, buttonLength: searchSize.width, isCompact: component.isCompact && component.axis == .horizontal), y: 0.0), size: searchSize)
+                    }
                 }
 
                 let searchView: NavigationSearchView
@@ -1195,6 +1224,7 @@ private final class ItemComponent: Component {
     let theme: PresentationTheme
     let isSearchActive: Bool
     let showsTitle: Bool
+    let inlineTitle: Bool
     let isSelected: Bool
     let tintSelectedItem: Bool
     /// iOS 27's portrait item (`_UITabButton`, stacked): 54pt tall, the icon centered 20pt below its top and the
@@ -1203,11 +1233,12 @@ private final class ItemComponent: Component {
     /// Measures the title alone: its width at the unselected font is the item's size.
     let isUnconstrained: Bool
     
-    init(item: TabBarComponent.Item, theme: PresentationTheme, isSearchActive: Bool, showsTitle: Bool, isSelected: Bool, tintSelectedItem: Bool, isSystemLayout: Bool, isUnconstrained: Bool) {
+    init(item: TabBarComponent.Item, theme: PresentationTheme, isSearchActive: Bool, showsTitle: Bool, inlineTitle: Bool, isSelected: Bool, tintSelectedItem: Bool, isSystemLayout: Bool, isUnconstrained: Bool) {
         self.item = item
         self.theme = theme
         self.isSearchActive = isSearchActive
         self.showsTitle = showsTitle
+        self.inlineTitle = inlineTitle
         self.isSelected = isSelected
         self.tintSelectedItem = tintSelectedItem
         self.isSystemLayout = isSystemLayout
@@ -1225,6 +1256,9 @@ private final class ItemComponent: Component {
             return false
         }
         if lhs.showsTitle != rhs.showsTitle {
+            return false
+        }
+        if lhs.inlineTitle != rhs.inlineTitle {
             return false
         }
         if lhs.isSelected != rhs.isSelected {
@@ -1354,10 +1388,20 @@ private final class ItemComponent: Component {
             let title: String
             let badgeValue: String?
 
+            // An inline title sits beside the icon, so the icon keeps a fixed center near the leading edge.
+            let isIconBesideTitle = component.inlineTitle && !component.isSearchActive
+            let iconCenterX: CGFloat = isIconBesideTitle ? 27.0 : floor(availableSize.width / 2.0)
+            func iconX(width: CGFloat) -> CGFloat {
+                if isIconBesideTitle {
+                    return floor(iconCenterX - width * 0.5)
+                }
+                return floor((availableSize.width - width) * 0.5)
+            }
+
             // Compact items have no title, so the icon is centered; the badge moves with it.
             var badgeOffsetY: CGFloat = 0.0
             func iconY(regular: CGFloat, height: CGFloat) -> CGFloat {
-                if component.showsTitle {
+                if component.showsTitle && !component.inlineTitle {
                     return regular
                 }
                 let y = floor((availableSize.height - height) * 0.5)
@@ -1413,7 +1457,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale))
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
                     iconMaxX = iconFrame.midX + animationIconHalfWidth
                     if let animationIconView = animationIcon.view {
                         if animationIconView.superview == nil {
@@ -1452,7 +1496,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: imageIconY(regular: 3.0, height: iconSize.height)), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: imageIconY(regular: 3.0, height: iconSize.height)), size: iconSize)
                     iconMaxX = iconFrame.maxX
                     if let imageIconView = imageIcon.view {
                         if imageIconView.superview == nil {
@@ -1501,7 +1545,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 48.0, height: 48.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
                     iconMaxX = iconFrame.midX + animationIconHalfWidth
                     if let animationIconView = animationIcon.view {
                         if animationIconView.superview == nil {
@@ -1538,7 +1582,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: imageIconY(regular: 8.0, height: iconSize.height)), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: imageIconY(regular: 8.0, height: iconSize.height)), size: iconSize)
                     iconMaxX = iconFrame.maxX
                     if let imageIconView = imageIcon.view {
                         if imageIconView.superview == nil {
@@ -1554,18 +1598,24 @@ private final class ItemComponent: Component {
             }
 
             // `_UITabBarItemData`'s stacked title: 10pt medium, semibold when selected (its state 2).
-            let titleFont = component.isSelected ? Font.semibold(10.0) : Font.medium(10.0)
+            let inlineTitleX: CGFloat = 46.0
+            let titleFont = component.inlineTitle ? Font.semibold(13.0) : (component.isSelected ? Font.semibold(10.0) : Font.medium(10.0))
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: title, font: titleFont, textColor: (component.isSelected && component.tintSelectedItem) ? component.theme.rootController.tabBar.selectedTextColor : unselectedColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 100.0)
+                containerSize: CGSize(width: component.inlineTitle ? max(1.0, availableSize.width - inlineTitleX) : availableSize.width, height: 100.0)
             )
-            // A system item's title starts 35pt below its top: 7pt above the bottom of a 54pt item, for a 12pt line.
-            let titleBottomInset: CGFloat = component.isSystemLayout ? 7.0 : 8.0
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - titleBottomInset - titleSize.height), size: titleSize)
+            let titleFrame: CGRect
+            if component.inlineTitle {
+                titleFrame = CGRect(origin: CGPoint(x: inlineTitleX, y: floor((availableSize.height - titleSize.height) * 0.5)), size: titleSize)
+            } else {
+                // A system item's title starts 35pt below its top: 7pt above the bottom of a 54pt item, for a 12pt line.
+                let titleBottomInset: CGFloat = component.isSystemLayout ? 7.0 : 8.0
+                titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - titleBottomInset - titleSize.height), size: titleSize)
+            }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.contextContainerView.contentView.addSubview(titleView)
@@ -1600,6 +1650,9 @@ private final class ItemComponent: Component {
             self.contextContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
 
             if component.isUnconstrained {
+                if component.inlineTitle {
+                    return CGSize(width: inlineTitleX + titleSize.width + 14.0, height: availableSize.height)
+                }
                 return CGSize(width: titleSize.width, height: availableSize.height)
             } else {
                 return availableSize
