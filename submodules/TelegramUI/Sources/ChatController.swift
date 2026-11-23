@@ -452,6 +452,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var supportOccupationDisposable: Disposable?
     let supportOpenChatDisposable = MetaDisposable()
     let supportSwitchPreloadDisposable = MetaDisposable()
+    var supportDoneIgnoredUntil: Double = 0.0
+    let supportDoneUnreadDisposable = MetaDisposable()
     var supportOccupationPeerId: EnginePeer.Id? {
         guard case let .peer(peerId) = self.chatLocation, case .standard(.default) = self.mode else {
             return nil
@@ -7286,6 +7288,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.canReadHistoryDisposable?.dispose()
         self.supportOccupationDisposable?.dispose()
         self.supportSwitchPreloadDisposable.dispose()
+        self.supportDoneUnreadDisposable.dispose()
         self.supportOpenChatDisposable.dispose()
         self.networkStateDisposable?.dispose()
         self.shareStatusDisposable?.dispose()

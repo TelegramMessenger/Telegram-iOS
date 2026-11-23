@@ -68,6 +68,7 @@ func chatHistoryEntriesForView(
     subject: ChatControllerSubject?,
     view: MessageHistoryView,
     includeUnreadEntry: Bool,
+    unreadEntryAfterIncomingId: Int32?,
     includeEmptyEntry: Bool,
     includeChatInfoEntry: Bool,
     includeEmbeddedSavedChatInfo: Bool,
@@ -459,7 +460,27 @@ func chatHistoryEntriesForView(
         }
     }
         
-    if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
+    if let unreadEntryAfterIncomingId, includeUnreadEntry {
+        var previousIndex: MessageIndex?
+        for i in entries.indices {
+            let messages: [Message]
+            switch entries[i] {
+            case let .MessageEntry(message, _, _, _, _, _):
+                messages = [message]
+            case let .MessageGroupEntry(_, groupMessages, _):
+                messages = groupMessages.map { $0.0 }
+            default:
+                continue
+            }
+            if messages.contains(where: { $0.id.namespace == Namespaces.Message.Cloud && $0.flags.contains(.Incoming) && $0.id.id > unreadEntryAfterIncomingId }) {
+                if let previousIndex {
+                    entries.insert(.UnreadEntry(previousIndex, presentationData), at: i)
+                }
+                break
+            }
+            previousIndex = messages.map({ $0.index }).max() ?? previousIndex
+        }
+    } else if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
         var i = 0
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
         for entry in entries {

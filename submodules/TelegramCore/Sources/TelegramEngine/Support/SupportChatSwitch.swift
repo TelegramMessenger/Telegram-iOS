@@ -184,6 +184,37 @@ func _internal_supportSwitchTarget(account: Account, peerId: PeerId, chatListFil
     }
 }
 
+public enum SupportDoneResult {
+    case switchTo(EnginePeer)
+    case noUnreadChatLeft
+    case stay
+}
+
+func supportDoneResult(behavior: SupportSwitchBehavior, target: EnginePeer?) -> SupportDoneResult {
+    if let target {
+        return .switchTo(target)
+    }
+    return behavior == .none ? .stay : .noUnreadChatLeft
+}
+
+func _internal_supportMarkDone(account: Account, peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
+    guard account.isSupportUser else {
+        return .single(.stay)
+    }
+    return account.postbox.transaction { transaction -> SupportDoneResult in
+        let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+        Logger.shared.log("SupportSwitch", "done in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)): \(String(describing: target?.toInt64()))")
+        supportApplyReadOnSend(transaction: transaction, network: account.network, stateManager: account.stateManager, peerId: peerId, sends: [SupportSendReadInfo(isDeferred: false, threadId: nil, replyThreadId: nil)])
+        return supportDoneResult(behavior: supportSettings(transaction: transaction).switchBehavior, target: target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) })
+    }
+}
+
+func _internal_supportSendSwitchesChat(account: Account) -> Signal<Bool, NoError> {
+    return account.postbox.transaction { transaction -> Bool in
+        return supportSettings(transaction: transaction).switchBehavior != .none
+    }
+}
+
 func _internal_supportSwitchTargetUpdates(account: Account, peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<PeerId?, NoError> {
     let postbox = account.postbox
     return postbox.combinedView(keys: [

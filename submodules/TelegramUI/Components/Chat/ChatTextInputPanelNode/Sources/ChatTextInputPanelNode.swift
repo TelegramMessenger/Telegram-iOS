@@ -357,6 +357,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var keepSendButtonEnabled = false
     private var extendedSearchLayout = false
     
+    public var supportDoneAction: (() -> Void)?
+    public var supportDoneIsAvailable: () -> Bool = { false }
+    public var supportDoneChatIsUnread: Bool = false {
+        didSet {
+            if self.supportDoneChatIsUnread != oldValue {
+                self.requestLayout()
+            }
+        }
+    }
+    
     public var isMediaDeleted: Bool = false
     private var recordingPaused = false
     
@@ -2678,6 +2688,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         self.mediaActionButtons.micButton.updateMode(mode: interfaceState.interfaceState.mediaRecordingMode, animated: transition.isAnimated)
+        let showsSupportDone = self.supportDoneChatIsUnread && self.supportDoneIsAvailable() && !inputHasText && !isRecording && !hasMediaDraft && !hasForward && !isEditingMedia && interfaceState.interfaceState.editMessage == nil
+        self.mediaActionButtons.micButton.doneAction = showsSupportDone ? self.supportDoneAction : nil
         
         // The layout below reserves the send slot and scales the send button in on exactly this condition.
         let sendButtonIsLaidOut = inputHasText || hasMediaDraft || hasForward || isEditingMedia
@@ -5060,7 +5072,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             ComponentTransition(transition).setScale(view: self.mediaActionButtons.micButton, scale: 1.0)
             ComponentTransition(transition).setScale(view: self.mediaActionButtons.micButtonTintMaskView, scale: 1.0)
             
-            let micAlpha: CGFloat = self.mediaActionButtons.micButton.fadeDisabled ? 0.5 : 1.0
+            let micAlpha: CGFloat = self.mediaActionButtons.micButton.fadeDisabled && self.mediaActionButtons.micButton.doneAction == nil ? 0.5 : 1.0
             if !self.mediaActionButtons.micButton.alpha.isEqual(to: micAlpha) {
                 alphaTransition.updateAlpha(layer: self.mediaActionButtons.micButton.layer, alpha: micAlpha)
                 alphaTransition.updateAlpha(layer: self.mediaActionButtons.micButtonTintMaskView.layer, alpha: micAlpha)

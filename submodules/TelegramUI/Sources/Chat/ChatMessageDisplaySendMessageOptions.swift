@@ -83,15 +83,23 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
         }
     }
     
+    let supportSendSwitchesChat: Signal<Bool, NoError>
+    if selfController.context.supportContext != nil, selfController.supportOccupationPeerId != nil {
+        supportSendSwitchesChat = selfController.context.engine.messages.supportSendSwitchesChat()
+    } else {
+        supportSendSwitchesChat = .single(false)
+    }
+    
     let _ = (combineLatest(
         selfController.context.account.viewTracker.peerView(peerId) |> take(1),
         effectItems,
         availableMessageEffects,
         hasPremium,
         editMessages,
-        ChatSendMessageContextScreen.initialData(context: selfController.context, currentMessageEffectId: currentMessageEffect?.id)
+        ChatSendMessageContextScreen.initialData(context: selfController.context, currentMessageEffectId: currentMessageEffect?.id),
+        supportSendSwitchesChat
     )
-    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView, effectItems, availableMessageEffects, hasPremium, editMessages, initialData in
+    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView, effectItems, availableMessageEffects, hasPremium, editMessages, initialData, supportSendSwitchesChat in
         guard let selfController, let peer = peerViewMainPeer(peerView) else {
             return
         }
@@ -251,7 +259,8 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                     currentPrice: nil,
                     hasTimers: false,
                     sendPaidMessageStars: selfController.presentationInterfaceState.sendPaidMessageStars,
-                    isMonoforum: selfController.presentationInterfaceState.renderedPeer?.peer?.isMonoForum ?? false
+                    isMonoforum: selfController.presentationInterfaceState.renderedPeer?.peer?.isMonoForum ?? false,
+                    canSendWithoutSwitching: supportSendSwitchesChat && mediaPreview == nil
                 )),
                 hasEntityKeyboard: hasEntityKeyboard,
                 gesture: gesture,

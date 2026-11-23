@@ -97,4 +97,60 @@ final class SupportReadStateTests: XCTestCase {
         XCTAssertFalse(readStateOperationTargetsDeletedUser(.ReadInbox(MessageId(peerId: self.userId, namespace: Namespaces.Message.Cloud, id: 3)), getPeer: { _ in named }))
         XCTAssertFalse(readStateOperationTargetsDeletedUser(.ReadInbox(MessageId(peerId: self.userId, namespace: Namespaces.Message.Cloud, id: 3)), getPeer: { _ in nil }))
     }
+
+    private func dividerBoundary(maxIncomingReadId: Int32, maxKnownId: Int32 = 9, count: Int32 = 0, markedUnread: Bool = false, top: Int32?) -> Int32? {
+        let state = PeerReadState.idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: 0, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
+        return supportUnreadDividerBoundary(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, state)]), topMessageId: top)
+    }
+
+    func testUnreadChatKeepsTheDividerAfterItsReadMark() {
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, count: 2, top: 9), 7)
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, markedUnread: true, top: 9), 7)
+    }
+
+    func testReadChatPutsTheDividerAfterItsNewestMessage() {
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, top: 9), 9)
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 9, top: 7), 9)
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, top: nil), 7)
+    }
+
+    func testChatKeepingNoReadStateNeverGetsADivider() {
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 0, maxKnownId: Int32.max - 1, top: 9), Int32.max)
+    }
+
+    func testSequentialBatchesFinishLongSweepsWithoutDeepeningTheStack() {
+        let finished = self.expectation(description: "finished")
+        let batchCount = 20000
+        let ran = Atomic<Int>(value: 0)
+        let disposable = supportSequentialBatches(initial: 0, pause: 0.0, queue: Queue(), batch: { index -> Signal<Int?, NoError> in
+            let _ = ran.modify { $0 + 1 }
+            return .single(index + 1 < batchCount ? index + 1 : nil)
+        }).start(completed: {
+            finished.fulfill()
+        })
+        self.wait(for: [finished], timeout: 60.0)
+        disposable.dispose()
+        XCTAssertEqual(ran.with { $0 }, batchCount)
+    }
+
+    func testDisposingSequentialBatchesStopsTheSweep() {
+        let queue = Queue()
+        let ran = Atomic<Int>(value: 0)
+        let disposable = supportSequentialBatches(initial: 0, pause: 0.05, queue: queue, batch: { index -> Signal<Int?, NoError> in
+            let _ = ran.modify { $0 + 1 }
+            return .single(index + 1)
+        }).start()
+        disposable.dispose()
+        let settled = self.expectation(description: "settled")
+        queue.after(0.3, {
+            settled.fulfill()
+        })
+        self.wait(for: [settled], timeout: 5.0)
+        XCTAssertEqual(ran.with { $0 }, 1)
+    }
+
+    func testNoCloudReadStateFallsBackToTheStockDivider() {
+        XCTAssertNil(supportUnreadDividerBoundary(state: nil, topMessageId: 9))
+        XCTAssertNil(supportUnreadDividerBoundary(state: CombinedPeerReadState(states: []), topMessageId: 9))
+    }
 }
