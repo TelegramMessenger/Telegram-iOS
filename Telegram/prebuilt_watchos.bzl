@@ -191,7 +191,7 @@ apple_prebuilt_watchos_application = rule(
     attrs = {
         "bundle_id": attr.string(default = "ph.telegra.Telegraph.watchkitapp"),
         "bundle_name": attr.string(default = "tgwatch Watch App"),
-        "minimum_os_version": attr.string(default = "26.0"),
+        "minimum_os_version": attr.string(default = "10.0"),
         "srcs": attr.label(
             default = "//Telegram/WatchApp:sources",
             allow_files = True,

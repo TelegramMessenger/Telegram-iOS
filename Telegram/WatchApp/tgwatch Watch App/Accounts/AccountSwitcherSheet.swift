@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /// Where `AccountsListView` should appear from. Sheets layer on top of the
 /// current view; `.push` requires the caller to own a `NavigationStack`.
@@ -25,17 +26,9 @@ private struct AccountSwitcherSheetModifier: ViewModifier {
     @State private var showAccountsList = false
 
     func body(content: Content) -> some View {
-        // `.simultaneousGesture(LongPressGesture(...))` instead of
-        // `.onLongPressGesture { ... }` so taps on interactive children
-        // (e.g. `SecureField` in `PasswordEntryView`, the row buttons in
-        // `ChatListView`'s List) keep working. The `.onLongPressGesture`
-        // form swallows tap delivery to descendants; the simultaneous
-        // form lets both gestures fire independently.
-        content
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.6)
-                    .onEnded { _ in showActionSheet = true }
-            )
+        // Long press anywhere opens the switcher; how it is attached differs
+        // between watchOS 26 and 11 (see `longPressContent`).
+        longPressContent(content)
             .confirmationDialog(
                 "Accounts",
                 isPresented: $showActionSheet,
@@ -67,6 +60,88 @@ private struct AccountSwitcherSheetModifier: ViewModifier {
                     isPresented: $showAccountsList
                 )
             )
+    }
+
+    @ViewBuilder
+    private func longPressContent(_ content: Content) -> some View {
+        if #available(watchOS 26.0, *) {
+            content.simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.6)
+                    .onEnded { _ in showActionSheet = true }
+            )
+        } else {
+            // watchOS-11 (measured on the 11.5 simulator):
+            //   - `.simultaneousGesture(LongPressGesture)` on the content stops the
+            //     ScrollView from scrolling, and never fires over a `Button`.
+            //   - `.onLongPressGesture` on the content keeps scroll and taps
+            //     working, but a `Button` still takes the touch: a long press on a
+            //     chat row fires the row's tap.
+            // So the content gets `.onLongPressGesture` (covers everything that
+            // is not a button), and buttons that cover the screen (chat rows)
+            // pick the action up from the environment through
+            // `accountSwitcherRowButtonStyle()`.
+            content
+                .onLongPressGesture(minimumDuration: 0.6) { showActionSheet = true }
+                .environment(\.accountSwitcherLongPress, AccountSwitcherLongPressAction {
+                    showActionSheet = true
+                })
+        }
+    }
+}
+
+/// The account switcher's long-press action, published to the content on
+/// watchOS < 26 only (where the content-level gesture cannot see through
+/// buttons). `nil` everywhere else.
+struct AccountSwitcherLongPressAction {
+    let perform: () -> Void
+}
+
+private struct AccountSwitcherLongPressKey: EnvironmentKey {
+    static let defaultValue: AccountSwitcherLongPressAction? = nil
+}
+
+extension EnvironmentValues {
+    var accountSwitcherLongPress: AccountSwitcherLongPressAction? {
+        get { self[AccountSwitcherLongPressKey.self] }
+        set { self[AccountSwitcherLongPressKey.self] = newValue }
+    }
+}
+
+/// A plain button whose tap and long press are peer gestures on the label, so
+/// both fire on watchOS 11 (a `Button` with an attached long press fires its
+/// tap instead). The long press opens the account switcher when one is in
+/// the environment.
+///
+/// A primitive style draws no pressed state, so the row takes one from the
+/// long press's `onPressingChanged`: it reports touch-down at once, and the
+/// end of the touch on release, on reaching the minimum duration, or when the
+/// finger moves off (a scroll).
+private struct AccountSwitcherRowButtonStyle: PrimitiveButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        AccountSwitcherRowButton(configuration: configuration)
+    }
+}
+
+private struct AccountSwitcherRowButton: View {
+    let configuration: PrimitiveButtonStyleConfiguration
+    @Environment(\.accountSwitcherLongPress) private var longPress
+    @State private var isPressed = false
+
+    var body: some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .scaleEffect(isPressed ? 0.96 : 1)
+            .opacity(isPressed ? 0.7 : 1)
+            .animation(.easeOut(duration: 0.12), value: isPressed)
+            .onTapGesture { configuration.trigger() }
+            .onLongPressGesture(minimumDuration: 0.6) {
+                guard let longPress else { return }
+                WKInterfaceDevice.current().play(.click)
+                longPress.perform()
+            } onPressingChanged: { pressing in
+                isPressed = pressing
+            }
+            .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -103,5 +178,18 @@ extension View {
             presentation: presentation,
             logoutAffordance: logoutAffordance
         ))
+    }
+
+    /// `.buttonStyle(.plain)` for a button that fills much of an
+    /// `accountSwitcherSheet` screen (a chat row). On watchOS < 26 it also
+    /// opens the account switcher on long press, which the content-level
+    /// gesture cannot do over a button there.
+    @ViewBuilder
+    func accountSwitcherRowButtonStyle() -> some View {
+        if #available(watchOS 26.0, *) {
+            buttonStyle(.plain)
+        } else {
+            buttonStyle(AccountSwitcherRowButtonStyle())
+        }
     }
 }

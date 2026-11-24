@@ -24,6 +24,26 @@ struct FolderPillBar: View {
     let onUserInteraction: () -> Void
 
     var body: some View {
+        // onScrollGeometryChange observes content-offset changes directly on this ScrollView,
+        // so it fires even when outer gesture recognizers are cancelled.
+        if #available(watchOS 11.0, *) {
+            scrollBody.onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.x
+            } action: { _, _ in
+                pillLogger.info("folderbar.interact reason=scroll")
+                onUserInteraction()
+            }
+        } else {
+            scrollBody.simultaneousGesture(
+                DragGesture(minimumDistance: 1).onChanged { _ in
+                    pillLogger.info("folderbar.interact reason=scroll")
+                    onUserInteraction()
+                }
+            )
+        }
+    }
+
+    private var scrollBody: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(pills) { pill in
@@ -61,12 +81,7 @@ struct FolderPillBar: View {
                         )
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    // watchOS: List + ScrollView(.horizontal) gesture system can swallow
-                    // Button taps. A high-priority TapGesture on the button itself
-                    // ensures the tap reaches the pill even when the outer gestures are
-                    // competing. The Button action still fires for visual-feedback purposes.
-                    .highPriorityGesture(TapGesture().onEnded { onSelect(pill) })
+                    .modifier(PillButtonGestures(onTap: { onSelect(pill) }))
                     .accessibilityIdentifier("folderPill-\(pill.id)")
                 }
             }
@@ -75,16 +90,27 @@ struct FolderPillBar: View {
         }
         .id("folderPillBar")
         .focusable(false)
-        // Re-assert outer List crown focus whenever the user horizontally pans the pill bar.
-        // A horizontal drag moves watchOS crown focus to this inner ScrollView (bypassing the
-        // simultaneousGesture(DragGesture) on the List row, which the pan recognizer cancels).
-        // onScrollGeometryChange observes content-offset changes directly on this ScrollView,
-        // so it fires even when outer gesture recognizers are cancelled.
-        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-            geometry.contentOffset.x
-        } action: { _, _ in
-            pillLogger.info("folderbar.interact reason=scroll")
-            onUserInteraction()
+    }
+}
+
+/// How a pill takes its gestures.
+private struct PillButtonGestures: ViewModifier {
+    let onTap: () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(watchOS 26.0, *) {
+            // watchOS-26: List + ScrollView(.horizontal) gesture system can swallow
+            // Button taps. A high-priority TapGesture on the button itself
+            // ensures the tap reaches the pill even when the outer gestures are
+            // competing.
+            content
+                .buttonStyle(.plain)
+                .highPriorityGesture(TapGesture().onEnded { onTap() })
+        } else {
+            // watchOS-11: pills sit in a ScrollView, not a List, and the row style's
+            // own tap gesture reaches them. Its long press opens the account
+            // switcher, which a pill `Button` otherwise swallows there.
+            content.accountSwitcherRowButtonStyle()
         }
     }
 }

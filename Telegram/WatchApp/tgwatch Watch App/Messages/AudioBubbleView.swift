@@ -31,14 +31,22 @@ struct AudioBubbleView: View {
     }
 
     var body: some View {
-        chrome
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
-                if visible {
-                    store.requestFileDownload(fileId: audio.audioFileId)
-                } else {
-                    store.cancelFileDownload(fileId: audio.audioFileId)
-                }
+        if #available(watchOS 11.0, *) {
+            chrome.onScrollVisibilityChange(threshold: 0.01) { visible in
+                updateDownloadVisibility(visible)
             }
+        } else {
+            chrome.onAppear { updateDownloadVisibility(true) }
+                .onDisappear { updateDownloadVisibility(false) }
+        }
+    }
+
+    private func updateDownloadVisibility(_ visible: Bool) {
+        if visible {
+            store.requestFileDownload(fileId: audio.audioFileId)
+        } else {
+            store.cancelFileDownload(fileId: audio.audioFileId)
+        }
     }
 
     private var chrome: some View {

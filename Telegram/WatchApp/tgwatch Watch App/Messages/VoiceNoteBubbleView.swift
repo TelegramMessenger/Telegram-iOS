@@ -30,14 +30,18 @@ struct VoiceNoteBubbleView: View {
     }
 
     var body: some View {
-        chrome
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
+        if #available(watchOS 11.0, *) {
+            chrome.onScrollVisibilityChange(threshold: 0.01) { visible in
                 if visible {
                     store.requestFileDownload(fileId: note.voiceFileId)
                 } else {
                     store.cancelFileDownload(fileId: note.voiceFileId)
                 }
             }
+        } else {
+            chrome.onAppear { store.requestFileDownload(fileId: note.voiceFileId) }
+                .onDisappear { store.cancelFileDownload(fileId: note.voiceFileId) }
+        }
     }
 
     private var chrome: some View {

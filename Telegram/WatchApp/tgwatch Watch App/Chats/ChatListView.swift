@@ -30,17 +30,9 @@ struct ChatListView: View {
                 }
                 .navigationTitle("Chats")
                 .navigationBarTitleDisplayMode(.inline)
-                // `.toolbar(.visible)` forces the nav-bar container to
-                // materialize on the chat list. Without it, watchOS-26 skips
-                // chrome on a NavigationStack root view, leaving only the
-                // status row (clock top-right). The push to MessageListView
-                // then has to grow that minimal status row into a full glass
-                // nav bar with back chevron + title + trailing avatar, which
-                // glitches mid-reshape. With the bar present here, the push
-                // only has to morph content, not allocate a new glass surface.
                 .toolbar(.visible, for: .navigationBar)
                 // Must live INSIDE the NavigationStack so the modifier's
-                // .navigationDestination(isPresented:) attaches to it.
+                // .navigationDestination(item:) attaches to it.
                 .accountSwitcherSheet(presentation: .push, logoutAffordance: .allowed)
             }
         }
@@ -49,60 +41,68 @@ struct ChatListView: View {
 
     @ViewBuilder
     private func content(proxy: ScrollViewProxy) -> some View {
-        // One List for all states. Keeping the surrounding container stable across
-        // loading/empty/populated transitions means the FolderPillBar row keeps its
-        // SwiftUI identity — and its inner horizontal ScrollView keeps its offset —
-        // across folder switches.
         let folderLoadState = store.loadState(for: store.currentFolder)
-        List {
-            if store.pills.count > 1 {
-                FolderPillBar(pills: store.pills, onSelect: { pill in
-                    switchTo(pill: pill, proxy: proxy)
-                }, onUserInteraction: {
-                    listFocused = true
-                })
-                .id("folderPillBarRow")
-                // Negative bottom inset compresses the natural ~23pt gap between
-                // the pill row and the first chat row down to ~8pt.
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: -15, trailing: 0))
-                .listRowBackground(Color.clear)
-                // Belt-and-suspenders: also catch tap-only cases (no scroll offset change)
-                // via a simultaneous drag gesture. The onUserInteraction callback on
-                // FolderPillBar handles the horizontal-pan case via onScrollGeometryChange.
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0).onEnded { _ in
-                        listFocused = true
-                    }
-                )
+        if #available(watchOS 26.0, *) {
+            // Horizontal ScrollView inside a List row receives horizontal pans
+            // correctly on watchOS-26+, so pills live inside the List and
+            // scroll off with the chat content.
+            List {
+                pillBarSection(proxy: proxy, inList: true)
+                chatRows(folderLoadState: folderLoadState, cardChrome: false)
             }
-            if store.chats.isEmpty {
-                emptyStateRow(loadState: folderLoadState)
-            } else {
-                ForEach(Array(store.chats.enumerated()), id: \.element.id) { idx, row in
-                    Button {
-                        opener.open(row, makeStore: makeHistoryStore)
-                    } label: {
-                        ChatRowView(
-                            row: row,
-                            onRequestDownload: { store.requestFileDownload(fileId: $0) },
-                            onCancelDownload: { store.cancelFileDownload(fileId: $0) }
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .onAppear { store.ensureChatsLoaded(near: idx) }
+            .listStyle(.plain)
+            .focused($listFocused)
+            .onAppear { listFocused = true }
+            .padding(.top, store.pills.count > 1 ? -20 : 0)
+        } else {
+            // watchOS-11: List swallows horizontal drags, so a nested horizontal
+            // ScrollView can't pan. ScrollView + LazyVStack routes gestures to
+            // the matching axis correctly.
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    pillBarSection(proxy: proxy, inList: false)
+                    chatRows(folderLoadState: folderLoadState, cardChrome: true)
                 }
+                .padding(.horizontal, 4)
+            }
+            .focused($listFocused)
+            .onAppear { listFocused = true }
+        }
+    }
+
+    @ViewBuilder
+    private func pillBarSection(proxy: ScrollViewProxy, inList: Bool) -> some View {
+        if store.pills.count > 1 {
+            FolderPillBar(pills: store.pills, onSelect: { pill in
+                switchTo(pill: pill, proxy: proxy)
+            }, onUserInteraction: {
+                listFocused = true
+            })
+            .id("folderPillBarRow")
+            .modifier(PillBarRowLayout(inList: inList))
+        }
+    }
+
+    @ViewBuilder
+    private func chatRows(folderLoadState: LoadState, cardChrome: Bool) -> some View {
+        if store.chats.isEmpty {
+            emptyStateRow(loadState: folderLoadState)
+        } else {
+            ForEach(Array(store.chats.enumerated()), id: \.element.id) { idx, row in
+                Button {
+                    opener.open(row, makeStore: makeHistoryStore)
+                } label: {
+                    ChatRowView(
+                        row: row,
+                        onRequestDownload: { store.requestFileDownload(fileId: $0) },
+                        onCancelDownload: { store.cancelFileDownload(fileId: $0) }
+                    )
+                    .modifier(ChatListRowChrome(card: cardChrome))
+                }
+                .accountSwitcherRowButtonStyle()
+                .onAppear { store.ensureChatsLoaded(near: idx) }
             }
         }
-        .listStyle(.plain)
-        .focused($listFocused)
-        .onAppear { listFocused = true }
-        // Bar is intentionally visible (forced by `.toolbar(.visible, for:
-        // .navigationBar)` on the body chain). When folder pills are present,
-        // pull the pill row up by 24pt to tuck it under the bar's bottom edge
-        // — without that, the natural top-of-list inset leaves an awkward gap
-        // between the bar and the pill row. Plain chat rows (no pills) sit at
-        // the natural top.
-        .padding(.top, store.pills.count > 1 ? -20 : 0)
     }
 
     private func makeHistoryStore(for row: ChatRow) -> ChatHistoryStore? {
@@ -176,5 +176,39 @@ struct ChatListView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.thinMaterial)
+    }
+}
+
+/// List-row insets for the pill bar when embedded inside `List`.
+private struct PillBarRowLayout: ViewModifier {
+    let inList: Bool
+
+    func body(content: Content) -> some View {
+        if inList {
+            content
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: -15, trailing: 0))
+                .listRowBackground(Color.clear)
+        } else {
+            content.padding(.bottom, 4)
+        }
+    }
+}
+
+/// Explicit row chrome for the ScrollView path — `List` provides this on its own.
+private struct ChatListRowChrome: ViewModifier {
+    let card: Bool
+
+    func body(content: Content) -> some View {
+        if card {
+            content
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.fill.tertiary)
+                )
+        } else {
+            content
+        }
     }
 }

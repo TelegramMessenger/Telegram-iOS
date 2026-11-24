@@ -149,10 +149,16 @@ struct LocationBubbleView: View {
     }
 
     private func openInMaps() {
-        let mapItem = MKMapItem(
-            location: CLLocation(latitude: location.latitude, longitude: location.longitude),
-            address: nil
-        )
+        let mapItem: MKMapItem
+        if #available(watchOS 26.0, *) {
+            mapItem = MKMapItem(
+                location: CLLocation(latitude: location.latitude, longitude: location.longitude),
+                address: nil
+            )
+        } else {
+            let coordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
+            mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        }
         mapItem.name = location.title
         mapItem.openInMaps(launchOptions: nil)
     }

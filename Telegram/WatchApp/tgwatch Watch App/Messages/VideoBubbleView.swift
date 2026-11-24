@@ -31,14 +31,25 @@ struct VideoBubbleView: View {
     private var hasChrome: Bool { !caption.isEmpty || replyHeader != nil }
 
     var body: some View {
-        Group {
+        let base = Group {
             if hasChrome { chromeBubble } else { bareVideo }
         }
-        .onScrollVisibilityChange(threshold: 0.01) { visible in
-            guard let id = video.preview.previewFileId else { return }
-            if visible {
+        if #available(watchOS 11.0, *) {
+            base.onScrollVisibilityChange(threshold: 0.01) { visible in
+                guard let id = video.preview.previewFileId else { return }
+                if visible {
+                    store.requestFileDownload(fileId: id)
+                } else {
+                    store.cancelFileDownload(fileId: id)
+                }
+            }
+        } else {
+            base.onAppear {
+                guard let id = video.preview.previewFileId else { return }
                 store.requestFileDownload(fileId: id)
-            } else {
+            }
+            .onDisappear {
+                guard let id = video.preview.previewFileId else { return }
                 store.cancelFileDownload(fileId: id)
             }
         }
