@@ -13,26 +13,44 @@ struct MessageRowView: View {
     var onIncomingBubbleVisible: ((Int64) -> Void)? = nil
 
     var body: some View {
-        rowBody
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
+        if #available(watchOS 11.0, *) {
+            rowBody.onScrollVisibilityChange(threshold: 0.01) { visible in
                 guard visible else { return }
                 if index <= 2 { onEnterTopEdge?() }
                 if index >= count - 3 { onEnterBottomEdge?() }
             }
+        } else {
+            rowBody.onAppear {
+                if index <= 2 { onEnterTopEdge?() }
+                if index >= count - 3 { onEnterBottomEdge?() }
+            }
+        }
     }
 
     @ViewBuilder
     private var rowBody: some View {
         switch row {
         case .bubble(let b):
-            MessageBubbleView(bubble: b, onPhotoTap: onPhotoTap, onVideoTap: onVideoTap, onVideoNoteTap: onVideoNoteTap, onPollTap: onPollTap)
-                .onScrollVisibilityChange(threshold: 0.5) { visible in
-                    guard visible, !b.isOutgoing else { return }
-                    onIncomingBubbleVisible?(b.messageId)
-                }
+            bubbleRow(b)
         case .service(let s):      ServiceMessageView(line: s)
         case .daySeparator(let d): DaySeparatorView(label: d)
         case .unreadDivider:       UnreadDividerView()
+        }
+    }
+
+    @ViewBuilder
+    private func bubbleRow(_ b: MessageBubble) -> some View {
+        let bubble = MessageBubbleView(bubble: b, onPhotoTap: onPhotoTap, onVideoTap: onVideoTap, onVideoNoteTap: onVideoNoteTap, onPollTap: onPollTap)
+        if #available(watchOS 11.0, *) {
+            bubble.onScrollVisibilityChange(threshold: 0.5) { visible in
+                guard visible, !b.isOutgoing else { return }
+                onIncomingBubbleVisible?(b.messageId)
+            }
+        } else {
+            bubble.onAppear {
+                guard !b.isOutgoing else { return }
+                onIncomingBubbleVisible?(b.messageId)
+            }
         }
     }
 }

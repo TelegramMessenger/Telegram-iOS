@@ -139,10 +139,15 @@ final class AVRecordingBackend: RecordingBackend {
     func begin(onLevel: @escaping @MainActor (Float) -> Void) throws {
         let session = AVAudioSession.sharedInstance()
         // Use .voiceChat mode (available watchOS 2+) and .duckOthers.
-        // .allowBluetooth is deprecated on watchOS 11+; use .allowBluetoothHFP instead
-        // (available watchOS 11+, target is watchOS 26). Drop if not needed at runtime.
-        try session.setCategory(.playAndRecord, mode: .voiceChat,
-                                options: [.duckOthers, .allowBluetoothHFP])
+        // Bluetooth routing options (.allowBluetoothHFP / .allowBluetooth) are
+        // watchOS 11+ only — on 10 we skip them; built-in mic still works.
+        if #available(watchOS 11.0, *) {
+            try session.setCategory(.playAndRecord, mode: .voiceChat,
+                                    options: [.duckOthers, .allowBluetoothHFP])
+        } else {
+            try session.setCategory(.playAndRecord, mode: .voiceChat,
+                                    options: [.duckOthers])
+        }
         try session.setActive(true)
 
         let input = engine.inputNode

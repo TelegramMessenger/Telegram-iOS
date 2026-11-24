@@ -29,15 +29,20 @@ struct PhotoBubbleView: View {
     private var hasChrome: Bool { !caption.isEmpty || replyHeader != nil }
 
     var body: some View {
-        Group {
+        let base = Group {
             if hasChrome { chromeBubble } else { bareImage }
         }
-        .onScrollVisibilityChange(threshold: 0.01) { visible in
-            if visible {
-                store.requestFileDownload(fileId: photo.fileId)
-            } else {
-                store.cancelFileDownload(fileId: photo.fileId)
+        if #available(watchOS 11.0, *) {
+            base.onScrollVisibilityChange(threshold: 0.01) { visible in
+                if visible {
+                    store.requestFileDownload(fileId: photo.fileId)
+                } else {
+                    store.cancelFileDownload(fileId: photo.fileId)
+                }
             }
+        } else {
+            base.onAppear { store.requestFileDownload(fileId: photo.fileId) }
+                .onDisappear { store.cancelFileDownload(fileId: photo.fileId) }
         }
     }
 

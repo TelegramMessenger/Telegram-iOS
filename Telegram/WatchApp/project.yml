@@ -14,7 +14,7 @@ options:
   bundleIdPrefix: ph.telegra   # ph.telegra.Telegraph.watchkitapp, child of the main Telegram app id
   developmentLanguage: en
   deploymentTarget:
-    watchOS: "26.0"
+    watchOS: "10.0"
 # Both configs are required: xcodegen 2.45.4 crashes generating the scheme when
 # only one config exists. The embedded build only ever uses Release.
 configs:
@@ -42,7 +42,7 @@ targets:
   tgwatch Watch App:
     type: application
     platform: watchOS
-    deploymentTarget: "26.0"
+    deploymentTarget: "10.0"
     sources:
       - path: tgwatch Watch App
       - path: Assets/SampleStickers

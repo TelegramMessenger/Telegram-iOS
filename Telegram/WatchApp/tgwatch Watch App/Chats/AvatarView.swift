@@ -17,17 +17,28 @@ struct AvatarView: View {
     var size: CGFloat = 36
 
     var body: some View {
-        content
+        let base = content
             .frame(width: size, height: size)
             .clipShape(Circle())
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
-                guard let fileId = avatar.photoFileId, avatar.photoLocalPath == nil else { return }
-                if visible {
-                    onRequestDownload(fileId)
-                } else {
-                    onCancelDownload(fileId)
-                }
+
+        if #available(watchOS 11.0, *) {
+            base.onScrollVisibilityChange(threshold: 0.01) { visible in
+                updateDownloadVisibility(visible)
             }
+        } else {
+            // Toolbar / non-scroll hosts: appear-once semantics match watchOS 11+.
+            base.onAppear { updateDownloadVisibility(true) }
+                .onDisappear { updateDownloadVisibility(false) }
+        }
+    }
+
+    private func updateDownloadVisibility(_ visible: Bool) {
+        guard let fileId = avatar.photoFileId, avatar.photoLocalPath == nil else { return }
+        if visible {
+            onRequestDownload(fileId)
+        } else {
+            onCancelDownload(fileId)
+        }
     }
 
     @ViewBuilder

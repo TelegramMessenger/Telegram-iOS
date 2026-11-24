@@ -34,7 +34,7 @@ struct VideoNoteBubbleView: View {
                     )
                     .frame(maxWidth: diameter)
             }
-            ZStack {
+            let circle = ZStack {
                 imageView
                     .frame(width: diameter, height: diameter)
                     .clipShape(Circle())
@@ -51,14 +51,24 @@ struct VideoNoteBubbleView: View {
             }
             .contentShape(Circle())
             .onTapGesture { onTap() }
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
-                guard let id = note.thumbFileId else { return }
-                if visible {
-                    store.requestFileDownload(fileId: id)
-                } else {
-                    store.cancelFileDownload(fileId: id)
+
+            if #available(watchOS 11.0, *) {
+                circle.onScrollVisibilityChange(threshold: 0.01) { visible in
+                    updateThumbDownloadVisibility(visible)
                 }
+            } else {
+                circle.onAppear { updateThumbDownloadVisibility(true) }
+                    .onDisappear { updateThumbDownloadVisibility(false) }
             }
+        }
+    }
+
+    private func updateThumbDownloadVisibility(_ visible: Bool) {
+        guard let id = note.thumbFileId else { return }
+        if visible {
+            store.requestFileDownload(fileId: id)
+        } else {
+            store.cancelFileDownload(fileId: id)
         }
     }
 

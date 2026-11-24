@@ -58,13 +58,23 @@ struct MessageListView: View {
         .accessibilityIdentifier("messageListView")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                AvatarView(
-                    avatar: row.avatar,
-                    onRequestDownload: { fileId in store.requestFileDownload(fileId: fileId) },
-                    onCancelDownload:  { fileId in store.cancelFileDownload(fileId: fileId) },
-                    size: 36
-                )
-                .glassEffect(in: Circle())
+                if #available(watchOS 26.0, *) {
+                    AvatarView(
+                        avatar: row.avatar,
+                        onRequestDownload: { fileId in store.requestFileDownload(fileId: fileId) },
+                        onCancelDownload:  { fileId in store.cancelFileDownload(fileId: fileId) },
+                        size: 36
+                    )
+                    .glassEffect(in: Circle())
+                } else {
+                    AvatarView(
+                        avatar: row.avatar,
+                        onRequestDownload: { fileId in store.requestFileDownload(fileId: fileId) },
+                        onCancelDownload:  { fileId in store.cancelFileDownload(fileId: fileId) },
+                        size: 36
+                    )
+                    .background(Circle().fill(.thinMaterial))
+                }
             }
         }
         .sheet(item: $presentedPhoto) { photo in
@@ -248,6 +258,14 @@ struct MessageListView: View {
                         }
                         .padding(.horizontal, 4)
                         .padding(.top, 4)
+                        .background {
+                            if #unavailable(watchOS 11.0) {
+                                GeometryReader { geo in
+                                    Color.clear
+                                        .preference(key: MessageListContentHeightKey.self, value: geo.size.height)
+                                }
+                            }
+                        }
                     }
                     .ignoresSafeArea(edges: .bottom)
                     .scrollContentBackground(.hidden)
@@ -259,41 +277,11 @@ struct MessageListView: View {
                             .ignoresSafeArea()
                     }
                     .environment(store)
-                    .onScrollGeometryChange(for: ScrollSnapshot.self) { geometry in
-                        ScrollSnapshot(
-                            contentOffsetY: geometry.contentOffset.y,
-                            contentSizeH: geometry.contentSize.height,
-                            containerSizeH: geometry.containerSize.height,
-                            topInset: geometry.contentInsets.top
-                        )
-                    } action: { old, new in
-                        // isAtBottom means "user intends to be parked at bottom", NOT "the
-                        // bottom edge is visible right now". When a new message arrives while
-                        // the user is at the bottom, contentSize grows but contentOffset stays
-                        // — a naive "is the bottom edge visible" check would flip false even
-                        // though the user hasn't moved. Skipping callbacks where contentSize
-                        // changed preserves the last user-driven state.
-                        //
-                        // The .top inset (translucent nav bar overlay, ~62pt on the 46mm sim)
-                        // shrinks the maximum scroll offset; subtract it from bottomOffset or
-                        // the check is off by ~62pt and isAtBottom never reaches true. Verified
-                        // empirically — when at the bottom, contentOffset.y ==
-                        // contentSize.height - containerSize.height - contentInsets.top.
-                        guard old.contentSizeH == new.contentSizeH else { return }
-                        let bottomOffset = new.contentSizeH - new.containerSizeH - new.topInset
-                        isAtBottom = new.contentOffsetY >= bottomOffset - 8
-                        // contentSize-stable changes imply user-driven scroll; arm
-                        // pagination so it only fires after the user actually moved.
-                        userHasScrolled = true
-                    }
-                    // Dedicated content-height tracker for the initial-position
-                    // settle loop. The ScrollSnapshot observer above bails early on
-                    // contentSize changes (to preserve user-driven isAtBottom), so it
-                    // can't be used to watch growth; this one records height on every
-                    // change, including the async bubble-sizing growth we wait out.
-                    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, newValue in
-                        observedContentHeight = newValue
-                    }
+                    .scrollTracking(
+                        isAtBottom: $isAtBottom,
+                        userHasScrolled: $userHasScrolled,
+                        observedContentHeight: $observedContentHeight
+                    )
                     .task {
                         // Initial positioning. This `default` branch only renders once the
                         // store is `.loaded` (the `.loadingFirstPage` case keeps the spinner
@@ -397,6 +385,75 @@ struct MessageListView: View {
                         .background(Color.black.ignoresSafeArea())
                 }
             }
+        }
+    }
+}
+
+private struct MessageListContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private extension View {
+    /// watchOS 11+: native `onScrollGeometryChange` drives tail anchoring and pagination
+    /// gating. watchOS 10: no scroll-offset tracking — `isAtBottom` stays at its initial
+    /// value; a horizontal drag only arms pagination (`userHasScrolled`). Content height
+    /// for the initial-position settle loop comes from the inner `VStack` geometry reader.
+    @ViewBuilder
+    func scrollTracking(
+        isAtBottom: Binding<Bool>,
+        userHasScrolled: Binding<Bool>,
+        observedContentHeight: Binding<CGFloat>
+    ) -> some View {
+        if #available(watchOS 11.0, *) {
+            self
+                .onScrollGeometryChange(for: ScrollSnapshot.self) { geometry in
+                    ScrollSnapshot(
+                        contentOffsetY: geometry.contentOffset.y,
+                        contentSizeH: geometry.contentSize.height,
+                        containerSizeH: geometry.containerSize.height,
+                        topInset: geometry.contentInsets.top
+                    )
+                } action: { old, new in
+                    // isAtBottom means "user intends to be parked at bottom", NOT "the
+                    // bottom edge is visible right now". When a new message arrives while
+                    // the user is at the bottom, contentSize grows but contentOffset stays
+                    // — a naive "is the bottom edge visible" check would flip false even
+                    // though the user hasn't moved. Skipping callbacks where contentSize
+                    // changed preserves the last user-driven state.
+                    //
+                    // The .top inset (translucent nav bar overlay, ~62pt on the 46mm sim)
+                    // shrinks the maximum scroll offset; subtract it from bottomOffset or
+                    // the check is off by ~62pt and isAtBottom never reaches true. Verified
+                    // empirically — when at the bottom, contentOffset.y ==
+                    // contentSize.height - containerSize.height - contentInsets.top.
+                    guard old.contentSizeH == new.contentSizeH else { return }
+                    let bottomOffset = new.contentSizeH - new.containerSizeH - new.topInset
+                    isAtBottom.wrappedValue = new.contentOffsetY >= bottomOffset - 8
+                    // contentSize-stable changes imply user-driven scroll; arm
+                    // pagination so it only fires after the user actually moved.
+                    userHasScrolled.wrappedValue = true
+                }
+                // Dedicated content-height tracker for the initial-position
+                // settle loop. The ScrollSnapshot observer above bails early on
+                // contentSize changes (to preserve user-driven isAtBottom), so it
+                // can't be used to watch growth; this one records height on every
+                // change, including the async bubble-sizing growth we wait out.
+                .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, newValue in
+                    observedContentHeight.wrappedValue = newValue
+                }
+        } else {
+            self
+                .onPreferenceChange(MessageListContentHeightKey.self) {
+                    observedContentHeight.wrappedValue = $0
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 8)
+                        .onChanged { _ in userHasScrolled.wrappedValue = true }
+                )
         }
     }
 }

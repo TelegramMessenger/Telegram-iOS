@@ -37,7 +37,7 @@ struct StickerCellView: View {
     }
 
     var body: some View {
-        ZStack {
+        let base = ZStack {
             RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.15))
             if let image {
                 Image(uiImage: image).resizable().scaledToFit().padding(6)
@@ -46,12 +46,27 @@ struct StickerCellView: View {
         .frame(width: edge, height: edge)
         .contentShape(Rectangle())
         .modifier(TapIfPresent(onTap: onTap.map { cb in { cb(sticker) } }))
-        .onScrollVisibilityChange(threshold: 0.01) { visible in
-            guard let id = renderFileId else { return }
-            if visible { store.requestFileDownload(fileId: id, priority: 2) }
-            else { store.cancelFileDownload(fileId: id) }
+
+        Group {
+            if #available(watchOS 11.0, *) {
+                base.onScrollVisibilityChange(threshold: 0.01) { visible in
+                    updateDownloadVisibility(visible)
+                }
+            } else {
+                base.onAppear { updateDownloadVisibility(true) }
+                    .onDisappear { updateDownloadVisibility(false) }
+            }
         }
         .task(id: localPath) { decode() }
+    }
+
+    private func updateDownloadVisibility(_ visible: Bool) {
+        guard let id = renderFileId else { return }
+        if visible {
+            store.requestFileDownload(fileId: id, priority: 2)
+        } else {
+            store.cancelFileDownload(fileId: id)
+        }
     }
 
     private func decode() {

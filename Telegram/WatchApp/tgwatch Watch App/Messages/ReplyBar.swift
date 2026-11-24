@@ -15,11 +15,7 @@ struct ReplyBar: View {
     var body: some View {
         HStack(spacing: 6) {
             Button(action: onAttachTap) {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(width: Self.pillHeight, height: Self.pillHeight)
-                    .contentShape(Circle())
-                    .glassEffect(in: Circle())
+                plusButtonLabel
             }
             .buttonStyle(.plain)
             .padding(.leading, 11)
@@ -35,17 +31,7 @@ struct ReplyBar: View {
             // are not visible or editable from the watch under this design —
             // accepted regression vs. the prior ComposeSheet flow.
             TextFieldLink(prompt: Text("Reply…")) {
-                HStack(spacing: 0) {
-                    Text("Reply…")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 12)
-                .frame(height: Self.pillHeight)
-                .contentShape(Rectangle())
-                .glassEffect()
+                replyFieldLabel
             } onSubmit: { newText in
                 let snapshot = newText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !snapshot.isEmpty else { return }
@@ -54,6 +40,38 @@ struct ReplyBar: View {
             .buttonStyle(.plain)
             .layoutPriority(1)
             .accessibilityIdentifier("replyBar")
+        }
+    }
+
+    @ViewBuilder
+    private var plusButtonLabel: some View {
+        let label = Image(systemName: "plus")
+            .font(.system(size: 16, weight: .semibold))
+            .frame(width: Self.pillHeight, height: Self.pillHeight)
+            .contentShape(Circle())
+        if #available(watchOS 26.0, *) {
+            label.glassEffect(in: Circle())
+        } else {
+            label.background(.fill.tertiary, in: Circle())
+        }
+    }
+
+    @ViewBuilder
+    private var replyFieldLabel: some View {
+        let label = HStack(spacing: 0) {
+            Text("Reply…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: Self.pillHeight)
+        .contentShape(Rectangle())
+        if #available(watchOS 26.0, *) {
+            label.glassEffect()
+        } else {
+            label.background(.fill.tertiary, in: Capsule())
         }
     }
 }
@@ -70,13 +88,19 @@ private struct ReplyBarGeometryPreviewHost: View {
         ZStack {
             Color.black
 
-            Image(systemName: "chevron.left")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 35, height: 35)
-                .glassEffect(in: Circle())
-                .padding(.leading, 15)
-                .padding(.top, 6)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            Group {
+                let chevron = Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: 35, height: 35)
+                if #available(watchOS 26.0, *) {
+                    chevron.glassEffect(in: Circle())
+                } else {
+                    chevron.background(.fill.tertiary, in: Circle())
+                }
+            }
+            .padding(.leading, 15)
+            .padding(.top, 6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             ReplyBar(onAttachTap: {}, onSend: { _ in })
                 .padding(.horizontal, 4)

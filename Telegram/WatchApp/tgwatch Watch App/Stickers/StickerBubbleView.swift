@@ -42,10 +42,14 @@ struct StickerBubbleView: View {
                 )
                 .frame(maxWidth: metrics.stickerReplyCardMaxWidth)
             }
-            stickerBody
-                .onScrollVisibilityChange(threshold: 0.01) { visible in
+            if #available(watchOS 11.0, *) {
+                stickerBody.onScrollVisibilityChange(threshold: 0.01) { visible in
                     handleVisibility(visible)
                 }
+            } else {
+                stickerBody.onAppear { handleVisibility(true) }
+                    .onDisappear { handleVisibility(false) }
+            }
         }
     }
 
