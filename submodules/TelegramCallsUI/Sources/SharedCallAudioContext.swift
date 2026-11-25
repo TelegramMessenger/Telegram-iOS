@@ -356,6 +356,20 @@ public final class SharedCallAudioContext {
     }
     
     func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        // While the speaker default is pending, a request for the speaker asks for what is already
+        // being decided, and must leave that decision alone. `currentAudioOutputValue` reads
+        // `.speaker` from construction, so going on would cancel the timer and end the pending
+        // window, and the guard below would then return without applying anything: nothing else
+        // applies the speaker afterwards, and the call stays on the receiver. A video call hits
+        // this whenever its screen sees the pre-category `.builtin` report first, and has no way
+        // out, as the call screen hides the speaker button while the camera is on and relies on
+        // `CallControllerNodeV2` making this request. Applying the speaker here instead would force
+        // it over a headset the cached flag missed; `resolveInitialOutput` (without CallKit) and the
+        // re-apply timer (with CallKit) apply it only when no headset is in the route.
+        if self.isInitialOutputPending, case .speaker = output {
+            return
+        }
+
         self.initialSetupTimer?.invalidate()
         self.initialSetupTimer = nil
         self.isInitialOutputPending = false
