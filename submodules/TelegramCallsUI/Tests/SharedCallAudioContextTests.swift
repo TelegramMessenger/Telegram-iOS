@@ -258,4 +258,47 @@ final class SharedCallAudioContextTests: XCTestCase {
         XCTAssertEqual(self.control.appliedOutputModes.last, .custom(.builtin), "applied: \(self.control.appliedOutputModes)")
         XCTAssertEqual(context.currentAudioOutputValue, .builtin)
     }
+
+    /// While video is on, the call screen has no speaker button and `CallControllerNodeV2` asks
+    /// for the speaker whenever it sees the receiver. If it asks before activation has reported
+    /// the route, the cached value already reads `.speaker` (the default set at construction),
+    /// but nothing has applied it, and the request cancels the step that would. The request has
+    /// to apply the speaker itself, or the call stays on the receiver.
+    func testSpeakerRequestedWhileTheDefaultIsPendingIsApplied() {
+        self.session.isHeadsetPluggedIn = false
+        let context = self.makeContext(defaultToSpeaker: true)
+
+        self.handOutControl()
+        // The pre-category snapshot (no available inputs yet), which the pending default ignores
+        // but the call screen sees.
+        self.pushedParams.availableOutputsChanged([], .builtin)
+        self.spinMainQueue()
+        // Under the call's category, reported before activation completes.
+        self.pushedParams.availableOutputsChanged([.builtin, .speaker], .builtin)
+        self.spinMainQueue()
+        context.setCurrentAudioOutput(.speaker)
+        self.control.completeActivations(isHeadsetConnected: false)
+        self.spinMainQueue()
+        self.waitForInitialSetupTimer()
+
+        XCTAssertEqual(self.control.appliedOutputModes.last, .custom(.speaker), "applied: \(self.control.appliedOutputModes)")
+        XCTAssertEqual(context.currentAudioOutputValue, .speaker)
+    }
+
+    /// The same request must not force the speaker over a headset the cached flag missed: the
+    /// route under the call's category decides.
+    func testSpeakerRequestedWhileTheDefaultIsPendingYieldsToAHeadset() {
+        self.session.isHeadsetPluggedIn = false
+        let context = self.makeContext(defaultToSpeaker: true)
+
+        self.handOutControl()
+        self.pushedParams.availableOutputsChanged([], .builtin)
+        self.spinMainQueue()
+        context.setCurrentAudioOutput(.speaker)
+        self.completeActivation(reporting: [.builtin, .headphones], current: .headphones, isHeadsetConnected: true)
+        self.waitForInitialSetupTimer()
+
+        XCTAssertFalse(self.control.appliedOutputModes.contains(.custom(.speaker)), "applied: \(self.control.appliedOutputModes)")
+        XCTAssertEqual(context.currentAudioOutputValue, .headphones)
+    }
 }
