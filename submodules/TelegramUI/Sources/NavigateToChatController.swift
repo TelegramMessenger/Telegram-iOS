@@ -69,18 +69,62 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         }
     }
     
+    // A forum shown as tabs or as a sidebar opens on "All" (`.peer`) unless told otherwise. When nothing more specific
+    // was asked for, reopen it on the topic the user had open last time (see `PersistentPeerData.lastOpenedThreadId`).
+    var lastOpenedForumThread: Signal<ChatReplyThreadMessage?, NoError> = .single(nil)
+    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum), !channel.flags.contains(.isMonoforum), params.subject == nil, params.chatController == nil, params.activateMessageSearch == nil, params.updateTextInputState == nil, params.reportReason == nil {
+        let engine = params.context.engine
+        let peerId = peer.id
+        lastOpenedForumThread = engine.peers.getPerstistentChatInterfaceState(peerId: peerId)
+        |> mapToSignal { entry -> Signal<ChatReplyThreadMessage?, NoError> in
+            guard let threadId = entry?.get(ChatPresentationInterfaceState.PersistentPeerData.self)?.lastOpenedThreadId, threadId != EngineMessage.newTopicThreadId else {
+                return .single(nil)
+            }
+            return engine.data.get(TelegramEngine.EngineData.Item.Messages.ThreadInfo(peerId: peerId, threadId: threadId))
+            |> map { threadInfo -> ChatReplyThreadMessage? in
+                // The topic may have been deleted (or, for General, hidden) since: fall back to "All".
+                guard let threadInfo, !threadInfo.isHidden else {
+                    return nil
+                }
+                // Same shape as the location `ChatControllerImpl.updateChatLocationThread` builds for a tab switch.
+                return ChatReplyThreadMessage(
+                    peerId: peerId,
+                    threadId: threadId,
+                    channelMessageId: nil,
+                    isChannelPost: false,
+                    isForumPost: true,
+                    isMonoforumPost: false,
+                    maxMessage: nil,
+                    maxReadIncomingMessageId: nil,
+                    maxReadOutgoingMessageId: nil,
+                    unreadCount: 0,
+                    initialFilledHoles: IndexSet(),
+                    initialAnchor: .automatic,
+                    isNotAvailable: false
+                )
+            }
+        }
+    }
+
     let _ = combineLatest(
         queue: Queue.mainQueue(),
         viewForumAsMessages |> take(1),
-        requiresAgeVerification
-    ).start(next: { viewForumAsMessages, requiresAgeVerification in
+        requiresAgeVerification,
+        lastOpenedForumThread |> take(1)
+    ).start(next: { viewForumAsMessages, requiresAgeVerification, lastOpenedForumThread in
         if requiresAgeVerification, let parentController = params.navigationController.viewControllers.last as? ViewController {
             presentAgeVerification(context: params.context, parentController: parentController, completion: {
                 navigateToChatControllerImpl(params.withSkipAgeVerification(true))
             })
             return
         }
-        
+
+        // Only after the age check, so that the restored topic does not bypass it.
+        if viewForumAsMessages, let lastOpenedForumThread {
+            navigateToChatControllerImpl(params.withChatLocation(.replyThread(lastOpenedForumThread)))
+            return
+        }
+
         if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum), !viewForumAsMessages {
             for controller in params.navigationController.viewControllers.reversed() {
                 var chatListController: ChatListControllerImpl?

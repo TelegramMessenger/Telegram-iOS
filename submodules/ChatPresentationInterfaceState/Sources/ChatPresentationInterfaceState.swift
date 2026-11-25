@@ -456,22 +456,31 @@ public final class ChatPresentationInterfaceState: Equatable {
         
         private enum CodingKeys: String, CodingKey {
             case topicListPanelLocation
+            case lastOpenedThreadId
         }
-        
+
         public var topicListPanelLocation: TopicListPanelLocation
-        
-        public init(topicListPanelLocation: TopicListPanelLocation) {
+        /// The topic that was open when the user last left a forum displayed as tabs or as a sidebar
+        /// (`viewForumAsMessages`). nil means the aggregate "All" view. Used to reopen the forum on that topic
+        /// instead of always falling back to "All".
+        public var lastOpenedThreadId: Int64?
+
+        public init(topicListPanelLocation: TopicListPanelLocation, lastOpenedThreadId: Int64? = nil) {
             self.topicListPanelLocation = topicListPanelLocation
+            self.lastOpenedThreadId = lastOpenedThreadId
         }
-        
+
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.topicListPanelLocation = TopicListPanelLocation(rawValue: try container.decode(Int32.self, forKey: .topicListPanelLocation)) ?? .top
+            // Absent in data written before this field existed.
+            self.lastOpenedThreadId = try container.decodeIfPresent(Int64.self, forKey: .lastOpenedThreadId)
         }
-        
+
         public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(Int32(self.topicListPanelLocation.rawValue), forKey: .topicListPanelLocation)
+            try container.encodeIfPresent(self.lastOpenedThreadId, forKey: .lastOpenedThreadId)
         }
     }
     
