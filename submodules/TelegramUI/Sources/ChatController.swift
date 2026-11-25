@@ -8518,7 +8518,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return interfaceState
         }).startStandalone()
         
-        self.context.engine.peers.setPerstistentChatInterfaceState(peerId: peerId, state: CodableEntry(self.presentationInterfaceState.persistentData))
+        self.context.engine.peers.setPerstistentChatInterfaceState(peerId: peerId, state: CodableEntry(self.persistentPeerDataForSaving()))
+    }
+
+    /// Whether this controller is showing a forum inline (topics as tabs or as a sidebar), which is the only mode in
+    /// which the open topic is remembered across visits. The classic topic-list mode opens a chat list instead and is
+    /// unaffected; monoforums (channel direct messages) are left alone.
+    private var remembersLastOpenedForumThread: Bool {
+        guard case .standard(.default) = self.presentationInterfaceState.mode, self.subject == nil else {
+            return false
+        }
+        guard let channel = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel else {
+            return false
+        }
+        guard channel.flags.contains(.isForum), !channel.flags.contains(.isMonoforum) else {
+            return false
+        }
+        return self.presentationInterfaceState.viewForumAsMessages
+    }
+
+    /// The persistent peer data with `lastOpenedThreadId` set to the thread on screen right now.
+    private func persistentPeerDataForSaving() -> ChatPresentationInterfaceState.PersistentPeerData {
+        var persistentData = self.presentationInterfaceState.persistentData
+        if self.remembersLastOpenedForumThread {
+            persistentData.lastOpenedThreadId = self.chatLocation.threadId
+        }
+        return persistentData
+    }
+
+    /// Called after an inline topic switch so that the new topic is remembered even if the app is killed before the
+    /// controller disappears (`saveInterfaceState` in `viewWillDisappear` would otherwise be the only write).
+    func persistLastOpenedForumThread() {
+        guard self.remembersLastOpenedForumThread, let peerId = self.chatLocation.peerId else {
+            return
+        }
+        self.context.engine.peers.setPerstistentChatInterfaceState(peerId: peerId, state: CodableEntry(self.persistentPeerDataForSaving()))
     }
         
     override public func viewWillLeaveNavigation() {
@@ -11623,6 +11657,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 // together with `self.chatLocation`, and a holder left over from the previous thread would pair a
                 // stale thread context with the new location.
                 self.chatLocationContextHolder = chatLocationContextHolder
+                self.persistLastOpenedForumThread()
                 historyNode.areContentAnimationsEnabled = true
                 self.chatDisplayNode.prepareSwitchToChatLocation(chatLocation: updatedChatLocation, historyNode: historyNode, animationDirection: animationDirection)
                 

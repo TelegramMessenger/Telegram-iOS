@@ -725,12 +725,22 @@ public final class NavigateToChatControllerParams {
     }
     
     public func withSkipAgeVerification(_ skipAgeVerification: Bool) -> NavigateToChatControllerParams {
+        return self.copy(chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, skipAgeVerification: skipAgeVerification)
+    }
+    
+    /// A copy that opens `chatLocation` instead. A new location gets a fresh context holder: the old one belongs to
+    /// the old location.
+    public func withChatLocation(_ chatLocation: Location) -> NavigateToChatControllerParams {
+        return self.copy(chatLocation: chatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), skipAgeVerification: self.skipAgeVerification)
+    }
+    
+    private func copy(chatLocation: Location, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, skipAgeVerification: Bool) -> NavigateToChatControllerParams {
         return NavigateToChatControllerParams(
             navigationController: self.navigationController,
             chatController: self.chatController,
             context: self.context,
-            chatLocation: self.chatLocation,
-            chatLocationContextHolder: self.chatLocationContextHolder,
+            chatLocation: chatLocation,
+            chatLocationContextHolder: chatLocationContextHolder,
             subject: self.subject,
             botStart: self.botStart,
             attachBotStart: self.attachBotStart,
