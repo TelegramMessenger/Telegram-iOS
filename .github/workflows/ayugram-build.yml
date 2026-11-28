@@ -6,6 +6,7 @@ on:
     branches: [ayugram-ios]
     paths:
       - '.github/workflows/ayugram-build.yml'
+      - 'build-system/Make/GenerateProfiles.py'
 
 permissions:
   contents: read
