@@ -1,0 +1,113 @@
+name: AyuGram iOS Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ayugram-ios]
+    paths:
+      - '.github/workflows/ayugram-build.yml'
+      - 'build-system/Make/GenerateProfiles.py'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 360
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Select required Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          XCODE_VERSION="$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')"
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          xcodebuild -version
+
+      - name: Check build secrets
+        shell: bash
+        env:
+          AYUGRAM_API_ID: ${{ secrets.AYUGRAM_API_ID }}
+          AYUGRAM_API_HASH: ${{ secrets.AYUGRAM_API_HASH }}
+        run: |
+          set -euo pipefail
+          test -n "$AYUGRAM_API_ID" || { echo "Missing AYUGRAM_API_ID secret"; exit 1; }
+          test -n "$AYUGRAM_API_HASH" || { echo "Missing AYUGRAM_API_HASH secret"; exit 1; }
+
+      - name: Prepare verification signing and app configuration
+        shell: bash
+        env:
+          AYUGRAM_API_ID: ${{ secrets.AYUGRAM_API_ID }}
+          AYUGRAM_API_HASH: ${{ secrets.AYUGRAM_API_HASH }}
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          python3 - <<'PY'
+          import json, os
+          config = {
+              "bundle_id": "ph.telegra.Telegraph",
+              "api_id": os.environ["AYUGRAM_API_ID"],
+              "api_hash": os.environ["AYUGRAM_API_HASH"],
+              "team_id": "C67CF9S4VU",
+              "is_internal_build": "true",
+              "is_appstore_build": "false",
+              "appstore_id": "0",
+              "app_specific_url_scheme": "ayugram",
+              "premium_iap_product_id": "",
+              "enable_siri": False,
+              "enable_icloud": False
+          }
+          with open("build/ayugram-build-configuration.json", "w") as f:
+              json.dump(config, f)
+          PY
+
+          mkdir -p build/verification-codesigning
+          cp -R build-system/fake-codesigning/certs build/verification-codesigning/
+          mkdir -p build/verification-codesigning/profiles
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "build-system/Make")
+          import GenerateProfiles
+          GenerateProfiles.generate_provisioning_profiles(
+              source_path="build-system/fake-codesigning/profiles",
+              destination_path="build/verification-codesigning/profiles",
+              certs_path="build/verification-codesigning/certs"
+          )
+          PY
+
+      - name: Import verification certificate
+        run: |
+          python3 build-system/Make/ImportCertificates.py --path build/verification-codesigning/certs
+
+      - name: Build device IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_NUMBER="$(git rev-list --count HEAD)"
+          python3 -u build-system/Make/Make.py \
+            --bazelUserRoot=/private/var/tmp/_bazel_ayugram \
+            build \
+            --configurationPath=build/ayugram-build-configuration.json \
+            --codesigningInformationPath=build/verification-codesigning \
+            --configuration=release_arm64 \
+            --buildNumber="$BUILD_NUMBER" \
+            --outputBuildArtifactsPath=build/artifacts
+          test -s build/artifacts/Telegram.ipa
+          mv build/artifacts/Telegram.ipa build/artifacts/AyuGram-verification.ipa
+          shasum -a 256 build/artifacts/AyuGram-verification.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AyuGram-iOS-IPA
+          path: build/artifacts/AyuGram-verification.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+# Rebuild trigger: 2026-11-28

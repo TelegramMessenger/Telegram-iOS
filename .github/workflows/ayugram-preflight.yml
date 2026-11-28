@@ -1,0 +1,62 @@
+name: AyuGram iOS preflight
+
+on:
+  push:
+    branches: [ ayugram-ios ]
+    paths:
+      - ".github/workflows/ayugram-preflight.yml"
+      - ".gitmodules"
+      - "build-system/fake-codesigning/profiles/**"
+      - "versions.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: xcode-27
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Verify Xcode toolchain
+        run: |
+          set -euo pipefail
+          xcode-select -p
+          xcodebuild -version
+          python3 - <<'PY'
+          import json
+          with open("versions.json", encoding="utf-8") as f:
+              data = json.load(f)
+          print("Repository expects Xcode:", data["xcode"])
+          print("Repository expects Bazel:", data["bazel"])
+          PY
+
+      - name: Inspect fake provisioning profiles
+        run: |
+          set -euo pipefail
+          for profile in build-system/fake-codesigning/profiles/*.mobileprovision; do
+            echo "===== $profile ====="
+            security cms -D -i "$profile" > /tmp/profile.plist
+            /usr/libexec/PlistBuddy -c 'Print :Name' /tmp/profile.plist || true
+            /usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' /tmp/profile.plist || true
+            /usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/profile.plist || true
+            /usr/libexec/PlistBuddy -c 'Print :Entitlements:aps-environment' /tmp/profile.plist || true
+          done
+
+      - name: Inspect repository build configuration (non-secret fields only)
+        run: |
+          python3 - <<'PY'
+          import json
+          p = "build-system/appstore-configuration.json"
+          with open(p, encoding="utf-8") as f:
+              c = json.load(f)
+          for k in ("bundle_id", "team_id", "is_internal_build", "is_appstore_build", "app_specific_url_scheme"):
+              print(f"{k}={c.get(k)}")
+          print("api_id_present=", bool(c.get("api_id")))
+          print("api_hash_present=", bool(c.get("api_hash")))
+          PY

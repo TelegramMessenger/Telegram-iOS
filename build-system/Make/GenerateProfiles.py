@@ -7,6 +7,7 @@ import plistlib
 import argparse
 import subprocess
 import base64
+import datetime
 
 from BuildEnvironment import run_executable_with_output, check_run_system
 
@@ -99,9 +100,15 @@ def get_certificate_base64_from_p12(p12_path, p12_password=''):
 
 def process_provisioning_profile(source, destination, certificate_data, signing_identity, keychain_name):
     parsed_plist = run_executable_with_output('security', arguments=['cms', '-D', '-i', source], check_result=True)
+    # These are synthetic verification profiles, not Apple-issued profiles.
+    # Refresh their embedded expiry so current Xcode/Bazel can use them for
+    # a verification build. The final IPA must still be re-signed with the
+    # user's own Apple ID before installation.
+    profile_data = plistlib.loads(parsed_plist.encode('utf-8'))
+    profile_data['ExpirationDate'] = datetime.datetime(2099, 12, 31, 23, 59, 59)
     parsed_plist_file = tempfile.mktemp()
-    with open(parsed_plist_file, 'w+') as file:
-        file.write(parsed_plist)
+    with open(parsed_plist_file, 'wb') as file:
+        plistlib.dump(profile_data, file)
 
     # Remove all existing developer certificates
     while True:
