@@ -71,12 +71,20 @@ jobs:
 
           mkdir -p build/verification-codesigning
           cp -R build-system/fake-codesigning/certs build/verification-codesigning/
-          python3 -u build-system/Make/Make.py generate-verification-profiles \
-            --configurationPath=build/ayugram-build-configuration.json \
-            --codesigningInformationPath=build-system/fake-codesigning \
-            --destination=build/generated-profiles
+          # Refresh the expiry on the repository's synthetic verification profiles
+          # and re-sign them with the matching synthetic certificate. These are
+          # verification-only profiles; they are not valid Apple developer profiles.
           mkdir -p build/verification-codesigning/profiles
-          cp build/generated-profiles/*.mobileprovision build/verification-codesigning/profiles/
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "build-system/Make")
+          import GenerateProfiles
+          GenerateProfiles.generate_provisioning_profiles(
+              source_path="build-system/fake-codesigning/profiles",
+              destination_path="build/verification-codesigning/profiles",
+              certs_path="build/verification-codesigning/certs"
+          )
+          PY
 
       - name: Import verification certificate
         run: |
