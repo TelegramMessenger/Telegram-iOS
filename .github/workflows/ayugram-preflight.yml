@@ -5,6 +5,7 @@ on:
     branches: [ ayugram-ios ]
     paths:
       - ".github/workflows/ayugram-preflight.yml"
+      - ".gitmodules"
       - "build-system/fake-codesigning/profiles/**"
       - "versions.json"
   workflow_dispatch:
