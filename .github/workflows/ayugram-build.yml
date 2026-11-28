@@ -51,8 +51,6 @@ jobs:
           python3 - <<'PY'
           import json, os
           config = {
-              # The repository's verification profiles are issued for this
-              # upstream bundle/team. Sideloadly must re-sign the IPA for the user.
               "bundle_id": "ph.telegra.Telegraph",
               "api_id": os.environ["AYUGRAM_API_ID"],
               "api_hash": os.environ["AYUGRAM_API_HASH"],
@@ -71,9 +69,6 @@ jobs:
 
           mkdir -p build/verification-codesigning
           cp -R build-system/fake-codesigning/certs build/verification-codesigning/
-          # Refresh the expiry on the repository's synthetic verification profiles
-          # and re-sign them with the matching synthetic certificate. These are
-          # verification-only profiles; they are not valid Apple developer profiles.
           mkdir -p build/verification-codesigning/profiles
           python3 - <<'PY'
           import sys
@@ -114,3 +109,5 @@ jobs:
           path: build/artifacts/AyuGram-verification.ipa
           if-no-files-found: error
           retention-days: 7
+
+# Rebuild trigger: 2026-11-28
